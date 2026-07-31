@@ -1,0 +1,101 @@
+import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
+import { supabase } from './supabase';
+import type { MediaKind } from './database.types';
+
+export interface PickedAsset {
+  uri: string;
+  kind: MediaKind;
+  width?: number;
+  height?: number;
+  durationSeconds?: number;
+}
+
+function fromImagePickerAsset(asset: ImagePicker.ImagePickerAsset): PickedAsset {
+  return {
+    uri: asset.uri,
+    kind: asset.type === 'video' ? 'video' : 'photo',
+    width: asset.width,
+    height: asset.height,
+    durationSeconds: asset.duration ? asset.duration / 1000 : undefined,
+  };
+}
+
+export async function pickFromLibrary(): Promise<PickedAsset | null> {
+  const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!perm.granted) return null;
+
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images', 'videos'],
+    quality: 1,
+  });
+  if (result.canceled || !result.assets[0]) return null;
+  return fromImagePickerAsset(result.assets[0]);
+}
+
+export async function pickFromCamera(): Promise<PickedAsset | null> {
+  const perm = await ImagePicker.requestCameraPermissionsAsync();
+  if (!perm.granted) return null;
+
+  const result = await ImagePicker.launchCameraAsync({
+    mediaTypes: ['images', 'videos'],
+    quality: 1,
+  });
+  if (result.canceled || !result.assets[0]) return null;
+  return fromImagePickerAsset(result.assets[0]);
+}
+
+// Defaults to a compressed re-encode for photos (see design-doc.md §5.2);
+// videos are uploaded as-is — client-side video transcoding is out of scope for v1.
+async function prepareForUpload(asset: PickedAsset): Promise<PickedAsset> {
+  if (asset.kind !== 'photo') return asset;
+
+  const result = await ImageManipulator.manipulateAsync(
+    asset.uri,
+    [{ resize: { width: 1600 } }],
+    { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+  );
+
+  return { ...asset, uri: result.uri, width: result.width, height: result.height };
+}
+
+export interface UploadedMedia {
+  kind: MediaKind;
+  storagePath: string;
+  width?: number;
+  height?: number;
+  durationSeconds?: number;
+}
+
+export async function uploadMedia(
+  chatId: string,
+  messageId: string,
+  rawAsset: PickedAsset
+): Promise<UploadedMedia> {
+  const asset = await prepareForUpload(rawAsset);
+  const extension = asset.kind === 'video' ? 'mp4' : 'jpg';
+  const contentType = asset.kind === 'video' ? 'video/mp4' : 'image/jpeg';
+  const path = `${chatId}/${messageId}/${Date.now()}.${extension}`;
+
+  const response = await fetch(asset.uri);
+  const arrayBuffer = await response.arrayBuffer();
+
+  const { error } = await supabase.storage.from('chat-media').upload(path, arrayBuffer, {
+    contentType,
+  });
+  if (error) throw error;
+
+  return {
+    kind: asset.kind,
+    storagePath: path,
+    width: asset.width,
+    height: asset.height,
+    durationSeconds: asset.durationSeconds,
+  };
+}
+
+export async function getSignedMediaUrl(path: string): Promise<string | null> {
+  const { data, error } = await supabase.storage.from('chat-media').createSignedUrl(path, 3600);
+  if (error) return null;
+  return data.signedUrl;
+}

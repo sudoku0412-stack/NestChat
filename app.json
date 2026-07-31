@@ -2,16 +2,25 @@
   "expo": {
     "name": "NestChat",
     "slug": "NestChat",
+    "scheme": "nestchat",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#161826",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.nestchat.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "NestChat uses your camera to attach photos and videos to messages.",
+        "NSPhotoLibraryUsageDescription": "NestChat uses your photo library to attach photos and videos to messages.",
+        "NSMicrophoneUsageDescription": "NestChat uses your microphone to record video attachments."
+      }
     },
     "android": {
+      "package": "com.nestchat.app",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#161826",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -19,7 +28,30 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "NestChat uses your photo library to attach photos and videos to messages.",
+          "cameraPermission": "NestChat uses your camera to attach photos and videos to messages."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#9184d9"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
     }
   }
 }
