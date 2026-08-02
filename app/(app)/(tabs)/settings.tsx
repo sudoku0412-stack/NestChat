@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
 import { useAuth } from '../../../lib/auth';
 import { useMembers } from '../../../lib/hooks/useMembers';
 import { supabase } from '../../../lib/supabase';
@@ -54,11 +53,7 @@ export default function SettingsScreen() {
   return (
     <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: bg }]}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <Text style={styles.back}>‹</Text>
-        </Pressable>
         <Text style={styles.title}>Settings</Text>
-        <View style={{ width: 24 }} />
       </View>
       <View style={styles.headerRule} />
 
@@ -142,21 +137,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: space[6],
     paddingVertical: space[4],
   },
-  back: {
-    color: colors.text,
-    fontSize: 28,
-    width: 24,
-  },
   title: {
     color: colors.text,
-    fontSize: 17,
-    fontWeight: fontWeight.medium,
+    fontSize: 28,
+    fontWeight: fontWeight.heading,
   },
   headerRule: {
     height: 2,

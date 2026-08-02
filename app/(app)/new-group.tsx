@@ -66,7 +66,7 @@ export default function NewGroupScreen() {
     });
 
     setCreating(false);
-    router.replace('/(app)');
+    router.replace('/(app)/(tabs)');
     router.push(`/(app)/chat/${chat.id}`);
   }
 

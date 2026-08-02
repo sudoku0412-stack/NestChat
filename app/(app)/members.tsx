@@ -44,7 +44,7 @@ export default function MembersScreen() {
     const { data, error } = await supabase.rpc('find_or_create_dm', { other_user_id: userId });
     setStartingDm(null);
     if (error || !data) return;
-    router.replace('/(app)');
+    router.replace('/(app)/(tabs)');
     router.push(`/(app)/chat/${data}`);
   }
 

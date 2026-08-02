@@ -26,7 +26,7 @@ export default function OnboardingScreen() {
   const [error, setError] = useState<string | null>(null);
 
   if (!session) return <Redirect href="/login" />;
-  if (!needsOnboarding) return <Redirect href="/(app)" />;
+  if (!needsOnboarding) return <Redirect href="/(app)/(tabs)" />;
 
   async function handlePickAvatar() {
     const asset = await pickImageFromLibrary();
@@ -57,7 +57,7 @@ export default function OnboardingScreen() {
       if (updateError) throw updateError;
 
       await refreshProfile();
-      router.replace('/(app)');
+      router.replace('/(app)/(tabs)');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Try again.');
     } finally {

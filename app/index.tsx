@@ -16,5 +16,5 @@ export default function Index() {
 
   if (!session) return <Redirect href="/login" />;
   if (needsOnboarding) return <Redirect href="/onboarding" />;
-  return <Redirect href="/(app)" />;
+  return <Redirect href="/(app)/(tabs)" />;
 }
