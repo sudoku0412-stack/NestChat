@@ -4,16 +4,20 @@
 export type UserRole = 'admin' | 'member';
 export type ChatType = 'dm' | 'group';
 export type MediaKind = 'photo' | 'video';
+export type StatusType = 'text' | 'photo' | 'video';
 
 export type UsersRow = {
   id: string;
+  phone: string | null;
   display_name: string;
   avatar_url: string | null;
+  email: string | null;
   role: UserRole;
   is_online: boolean;
   last_seen_at: string | null;
   show_read_receipts: boolean;
   push_token: string | null;
+  onboarding_completed: boolean;
   created_at: string;
 }
 
@@ -60,6 +64,24 @@ export type MessageReadsRow = {
   message_id: string;
   user_id: string;
   read_at: string;
+}
+
+export type StatusesRow = {
+  id: string;
+  user_id: string;
+  type: StatusType;
+  text_content: string | null;
+  background_color: string | null;
+  storage_path: string | null;
+  thumbnail_path: string | null;
+  created_at: string;
+  expires_at: string;
+}
+
+export type StatusViewsRow = {
+  status_id: string;
+  viewer_id: string;
+  viewed_at: string;
 }
 
 export type ChatListRow = {
@@ -114,6 +136,16 @@ export interface Database {
         Row: MessageReadsRow;
         Insert: Partial<MessageReadsRow>;
         Update: Partial<MessageReadsRow>;
+      } & Relationships;
+      statuses: {
+        Row: StatusesRow;
+        Insert: Partial<StatusesRow>;
+        Update: Partial<StatusesRow>;
+      } & Relationships;
+      status_views: {
+        Row: StatusViewsRow;
+        Insert: Partial<StatusViewsRow>;
+        Update: Partial<StatusViewsRow>;
       } & Relationships;
     };
     Functions: {

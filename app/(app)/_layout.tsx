@@ -6,12 +6,12 @@ import { usePushNotificationRegistration } from '../../lib/notifications';
 import { colors } from '../../lib/theme';
 
 export default function AppLayout() {
-  const { session, profile, loading } = useAuth();
+  const { session, profile, loading, needsOnboarding } = useAuth();
 
   usePresenceHeartbeat(profile?.id ?? null);
   usePushNotificationRegistration(profile?.id ?? null);
 
-  if (loading) {
+  if (loading || (session && !profile)) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator color={colors.accent} />
@@ -20,6 +20,7 @@ export default function AppLayout() {
   }
 
   if (!session) return <Redirect href="/login" />;
+  if (needsOnboarding) return <Redirect href="/onboarding" />;
 
   return (
     <Stack
@@ -29,6 +30,8 @@ export default function AppLayout() {
       }}
     >
       <Stack.Screen name="media-viewer" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
+      <Stack.Screen name="status/new" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="status/[userId]" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
     </Stack>
   );
 }

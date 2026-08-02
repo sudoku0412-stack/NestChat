@@ -1,13 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../supabase';
 import type { ChatMembersRow, MessageMediaRow, MessagesRow } from '../database.types';
 import type { Member, MessageWithMedia } from '../types';
+
+let channelSeq = 0;
 
 export function useMessages(chatId: string, userId: string | null) {
   const [messages, setMessages] = useState<MessageWithMedia[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [memberStates, setMemberStates] = useState<ChatMembersRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const channelName = useRef(`chat-${chatId}-${++channelSeq}`);
 
   const membersById = useMemo(() => {
     const map = new Map<string, Member>();
@@ -59,7 +62,7 @@ export function useMessages(chatId: string, userId: string | null) {
     if (!userId) return;
 
     const channel = supabase
-      .channel(`chat-${chatId}`)
+      .channel(channelName.current)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'messages', filter: `chat_id=eq.${chatId}` },

@@ -7,7 +7,8 @@ interface AuthContextValue {
   session: Session | null;
   profile: UsersRow | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<string | null>;
+  needsOnboarding: boolean;
+  continueWithPhone: (phone: string) => Promise<string | null>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -51,9 +52,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       session,
       profile,
       loading,
-      async signIn(email: string, password: string) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        return error?.message ?? null;
+      needsOnboarding: !!profile && !profile.onboarding_completed,
+      // No OTP: signs in anonymously (free, instant, no SMS provider), then stamps
+      // the typed-in phone number onto the resulting profile. Unverified — see the
+      // tradeoff noted in supabase/migrations/0001_init.sql.
+      async continueWithPhone(phone: string) {
+        const { data, error } = await supabase.auth.signInAnonymously();
+        if (error) return error.message;
+        if (!data.user) return 'Could not start a session. Try again.';
+
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ phone })
+          .eq('id', data.user.id);
+        if (updateError) {
+          return updateError.code === '23505'
+            ? 'That phone number is already registered to another account.'
+            : updateError.message;
+        }
+
+        setSession(data.session);
+        await loadProfile(data.user.id);
+        return null;
       },
       async signOut() {
         await supabase.auth.signOut();

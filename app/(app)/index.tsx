@@ -4,8 +4,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useAuth } from '../../lib/auth';
 import { useChatList } from '../../lib/hooks/useChatList';
+import { useStatuses } from '../../lib/hooks/useStatuses';
 import { supabase } from '../../lib/supabase';
 import { ChatRow } from '../../components/ChatRow';
+import { StatusRing } from '../../components/StatusRing';
 import { colors, fontWeight, space } from '../../lib/theme';
 import { useThemeMode } from '../../lib/themeMode';
 
@@ -13,6 +15,7 @@ export default function ChatListScreen() {
   const insets = useSafeAreaInsets();
   const { profile } = useAuth();
   const { chats, loading, refresh } = useChatList(profile?.id ?? null);
+  const { groups: statusGroups, myStatuses } = useStatuses(profile?.id ?? null);
   const [openRowId, setOpenRowId] = useState<string | null>(null);
   const { bg } = useThemeMode();
 
@@ -42,6 +45,15 @@ export default function ChatListScreen() {
     refresh();
   }
 
+  function handleMyStatusPress() {
+    if (!profile) return;
+    if (myStatuses.length > 0) {
+      router.push(`/(app)/status/${profile.id}`);
+    } else {
+      router.push('/(app)/status/new');
+    }
+  }
+
   return (
     <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: bg }]}>
       <View style={styles.header}>
@@ -62,6 +74,37 @@ export default function ChatListScreen() {
         keyExtractor={(item) => item.id}
         refreshing={loading}
         onRefresh={refresh}
+        ListHeaderComponent={
+          <FlatList
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.statusStrip}
+            contentContainerStyle={styles.statusStripContent}
+            data={statusGroups}
+            keyExtractor={(g) => g.user.id}
+            ListHeaderComponent={
+              profile ? (
+                <StatusRing
+                  name={profile.display_name}
+                  avatarUrl={profile.avatar_url}
+                  hasStatus={myStatuses.length > 0}
+                  hasUnviewed={false}
+                  isSelf
+                  onPress={handleMyStatusPress}
+                />
+              ) : null
+            }
+            renderItem={({ item }) => (
+              <StatusRing
+                name={item.user.display_name}
+                avatarUrl={item.user.avatar_url}
+                hasStatus
+                hasUnviewed={item.hasUnviewed}
+                onPress={() => router.push(`/(app)/status/${item.user.id}`)}
+              />
+            )}
+          />
+        }
         renderItem={({ item }) => (
           <ChatRow
             chat={item}
@@ -119,6 +162,15 @@ const styles = StyleSheet.create({
   headerRule: {
     height: 2,
     backgroundColor: colors.divider,
+  },
+  statusStrip: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+  },
+  statusStripContent: {
+    paddingHorizontal: space[4],
+    paddingVertical: space[4],
+    gap: space[2],
   },
   empty: {
     padding: space[8],

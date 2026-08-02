@@ -29,14 +29,14 @@ export default function SettingsScreen() {
 
   function handleAddMember() {
     Alert.alert(
-      'Add a household member',
-      'New members are added by an admin directly in Supabase (Authentication → Add user). They appear here automatically once created.'
+      'Add a contact',
+      'There’s no invite code — just have them install NestChat and sign in with their own phone number. They’ll set up their name and photo, then show up here automatically.'
     );
   }
 
   function handleRemoveMember(userId: string, name: string) {
     if (profile?.role !== 'admin') {
-      Alert.alert('Admins only', 'Only an admin can remove a household member.');
+      Alert.alert('Admins only', 'Only an admin can remove a contact.');
       return;
     }
     Alert.alert('Remove member?', `${name} will lose access to NestChat.`, [
@@ -117,13 +117,13 @@ export default function SettingsScreen() {
               theirs from you. Per-chat muting lives on the chat list and thread header, not here.
             </Text>
 
-            <Text style={styles.sectionLabel}>Household members ({allMembers.length})</Text>
+            <Text style={styles.sectionLabel}>Contacts ({allMembers.length})</Text>
           </>
         }
         ListFooterComponent={
           <>
             <Pressable style={styles.addRow} onPress={handleAddMember}>
-              <Text style={styles.addLabel}>+ Add member</Text>
+              <Text style={styles.addLabel}>+ Add contact</Text>
             </Pressable>
 
             <View style={styles.logoutWrap}>

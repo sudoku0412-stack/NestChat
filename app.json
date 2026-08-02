@@ -14,7 +14,8 @@
       "infoPlist": {
         "NSCameraUsageDescription": "NestChat uses your camera to attach photos and videos to messages.",
         "NSPhotoLibraryUsageDescription": "NestChat uses your photo library to attach photos and videos to messages.",
-        "NSMicrophoneUsageDescription": "NestChat uses your microphone to record video attachments."
+        "NSMicrophoneUsageDescription": "NestChat uses your microphone to record video attachments.",
+        "NSContactsUsageDescription": "NestChat checks your contacts to show you which household members are already on the app."
       }
     },
     "android": {
@@ -47,6 +48,12 @@
         {
           "icon": "./assets/icon.png",
           "color": "#9184d9"
+        }
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "NestChat checks your contacts to show you which household members are already on the app."
         }
       ]
     ],

@@ -1,17 +1,32 @@
 import { useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Linking,
+  Pressable,
+  SectionList,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useAuth } from '../../lib/auth';
-import { useMembers } from '../../lib/hooks/useMembers';
+import { useAppContacts, type MatchedContact, type UnmatchedContact } from '../../lib/hooks/useAppContacts';
 import { supabase } from '../../lib/supabase';
-import { MemberRow } from '../../components/MemberRow';
-import { colors, fontWeight, space } from '../../lib/theme';
+import { Avatar } from '../../components/Avatar';
+import { colors, fontWeight, radius, space } from '../../lib/theme';
+
+type Row =
+  | { type: 'matched'; contact: MatchedContact }
+  | { type: 'unmatched'; contact: UnmatchedContact };
 
 export default function MembersScreen() {
   const insets = useSafeAreaInsets();
   const { profile } = useAuth();
-  const { members, loading } = useMembers(profile?.id);
+  const { onNestChat, alsoOnNestChat, inviteOnly, loading, permissionDenied, retry } = useAppContacts(
+    profile?.id
+  );
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [startingDm, setStartingDm] = useState<string | null>(null);
 
@@ -33,9 +48,22 @@ export default function MembersScreen() {
     router.push(`/(app)/chat/${data}`);
   }
 
+  function handleInvite(name: string) {
+    Alert.alert(
+      `Invite ${name}?`,
+      'There’s no automatic invite yet — just share the app with them directly. They can sign in with their own phone number, no code needed.'
+    );
+  }
+
   function goToNewGroup() {
     router.push({ pathname: '/(app)/new-group', params: { memberIds: Array.from(selected).join(',') } });
   }
+
+  const sections = [
+    { title: 'On NestChat', data: onNestChat.map((c) => ({ type: 'matched', contact: c } as Row)) },
+    { title: 'Also on NestChat', data: alsoOnNestChat.map((c) => ({ type: 'matched', contact: c } as Row)) },
+    { title: 'Invite to NestChat', data: inviteOnly.map((c) => ({ type: 'unmatched', contact: c } as Row)) },
+  ].filter((s) => s.data.length > 0);
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
@@ -50,23 +78,90 @@ export default function MembersScreen() {
       </View>
       <View style={styles.headerRule} />
 
+      {permissionDenied && (
+        <View style={styles.permissionBanner}>
+          <Text style={styles.permissionText}>
+            Enable Contacts access to see which household members are already on NestChat.
+          </Text>
+          <Pressable onPress={() => Linking.openSettings()}>
+            <Text style={styles.permissionAction}>Open Settings</Text>
+          </Pressable>
+          <Pressable onPress={retry} hitSlop={8}>
+            <Text style={styles.permissionAction}>Retry</Text>
+          </Pressable>
+        </View>
+      )}
+
       {loading ? (
         <ActivityIndicator color={colors.accent} style={{ marginTop: space[8] }} />
       ) : (
-        <FlatList
-          data={members}
-          keyExtractor={(m) => m.id}
-          renderItem={({ item }) => (
-            <MemberRow
-              member={item}
-              onPress={() => startDirectMessage(item.id)}
-              checkbox={{ checked: selected.has(item.id), onToggle: () => toggle(item.id) }}
-              trailing={startingDm === item.id ? <ActivityIndicator color={colors.accent} /> : null}
-            />
+        <SectionList
+          sections={sections}
+          keyExtractor={(row) => row.contact.key}
+          renderSectionHeader={({ section }) => (
+            <Text style={styles.sectionLabel}>{section.title}</Text>
           )}
+          renderItem={({ item }) =>
+            item.type === 'matched' ? (
+              <ContactRow
+                name={item.contact.displayName}
+                avatarUrl={item.contact.member.avatar_url}
+                onPress={() => startDirectMessage(item.contact.member.id)}
+                checked={selected.has(item.contact.member.id)}
+                onToggle={() => toggle(item.contact.member.id)}
+                trailing={
+                  startingDm === item.contact.member.id ? (
+                    <ActivityIndicator color={colors.accent} />
+                  ) : null
+                }
+              />
+            ) : (
+              <ContactRow
+                name={item.contact.displayName}
+                onPress={() => handleInvite(item.contact.displayName)}
+                muted
+              />
+            )
+          }
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>
+              No contacts found. Household members you message will show up here once they're on
+              NestChat.
+            </Text>
+          }
         />
       )}
     </View>
+  );
+}
+
+interface ContactRowProps {
+  name: string;
+  avatarUrl?: string | null;
+  onPress: () => void;
+  checked?: boolean;
+  onToggle?: () => void;
+  trailing?: React.ReactNode;
+  muted?: boolean;
+}
+
+function ContactRow({ name, avatarUrl, onPress, checked, onToggle, trailing, muted }: ContactRowProps) {
+  return (
+    <Pressable style={styles.row} onPress={onPress}>
+      {onToggle && (
+        <Pressable
+          style={[styles.checkbox, checked && styles.checkboxChecked]}
+          onPress={onToggle}
+          hitSlop={8}
+        >
+          {checked && <Text style={styles.checkmark}>✓</Text>}
+        </Pressable>
+      )}
+      <Avatar name={name} avatarUrl={avatarUrl} size={40} />
+      <Text style={[styles.rowName, muted && styles.rowNameMuted]}>{name}</Text>
+      {trailing}
+      {muted && <Text style={styles.inviteLabel}>Invite</Text>}
+    </Pressable>
   );
 }
 
@@ -100,5 +195,77 @@ const styles = StyleSheet.create({
   headerRule: {
     height: 2,
     backgroundColor: colors.divider,
+  },
+  permissionBanner: {
+    padding: space[4],
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+    gap: space[2],
+  },
+  permissionText: {
+    color: colors.textMuted,
+    fontSize: 13,
+  },
+  permissionAction: {
+    color: colors.accent,
+    fontSize: 13,
+    fontWeight: fontWeight.semibold,
+  },
+  sectionLabel: {
+    color: colors.textMuted,
+    fontSize: 12,
+    letterSpacing: 0.4,
+    backgroundColor: colors.bg,
+    paddingHorizontal: space[6],
+    paddingTop: space[6],
+    paddingBottom: space[2],
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: space[6],
+    paddingVertical: space[3],
+    gap: space[4],
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: radius.sm,
+    borderWidth: 1.5,
+    borderColor: colors.textMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  checkmark: {
+    color: colors.bg,
+    fontSize: 13,
+    fontWeight: fontWeight.semibold,
+  },
+  rowName: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: fontWeight.medium,
+  },
+  rowNameMuted: {
+    color: colors.textMuted,
+    fontWeight: fontWeight.body,
+  },
+  inviteLabel: {
+    color: colors.accent,
+    fontSize: 13,
+    fontWeight: fontWeight.semibold,
+  },
+  emptyText: {
+    color: colors.textMuted,
+    textAlign: 'center',
+    padding: space[8],
   },
 });

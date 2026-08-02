@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../supabase';
 import type { ChatListItem, Member } from '../types';
 
@@ -13,9 +13,12 @@ function previewFor(row: {
   return 'No messages yet';
 }
 
+let channelSeq = 0;
+
 export function useChatList(userId: string | null) {
   const [chats, setChats] = useState<ChatListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const channelName = useRef(`chat-list-updates-${++channelSeq}`);
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -75,7 +78,7 @@ export function useChatList(userId: string | null) {
     if (!userId) return;
 
     const channel = supabase
-      .channel('chat-list-updates')
+      .channel(channelName.current)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, load)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_members' }, load)
       .subscribe();

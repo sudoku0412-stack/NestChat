@@ -4,9 +4,9 @@ import { useAuth } from '../lib/auth';
 import { colors } from '../lib/theme';
 
 export default function Index() {
-  const { session, loading } = useAuth();
+  const { session, profile, loading, needsOnboarding } = useAuth();
 
-  if (loading) {
+  if (loading || (session && !profile)) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator color={colors.accent} />
@@ -14,5 +14,7 @@ export default function Index() {
     );
   }
 
-  return <Redirect href={session ? '/(app)' : '/login'} />;
+  if (!session) return <Redirect href="/login" />;
+  if (needsOnboarding) return <Redirect href="/onboarding" />;
+  return <Redirect href="/(app)" />;
 }

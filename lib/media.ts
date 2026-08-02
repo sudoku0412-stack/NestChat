@@ -45,6 +45,20 @@ export async function pickFromCamera(): Promise<PickedAsset | null> {
   return fromImagePickerAsset(result.assets[0]);
 }
 
+export async function pickImageFromLibrary(): Promise<PickedAsset | null> {
+  const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!perm.granted) return null;
+
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    quality: 1,
+    allowsEditing: true,
+    aspect: [1, 1],
+  });
+  if (result.canceled || !result.assets[0]) return null;
+  return fromImagePickerAsset(result.assets[0]);
+}
+
 // Defaults to a compressed re-encode for photos (see design-doc.md §5.2);
 // videos are uploaded as-is — client-side video transcoding is out of scope for v1.
 async function prepareForUpload(asset: PickedAsset): Promise<PickedAsset> {
@@ -98,4 +112,53 @@ export async function getSignedMediaUrl(path: string): Promise<string | null> {
   const { data, error } = await supabase.storage.from('chat-media').createSignedUrl(path, 3600);
   if (error) return null;
   return data.signedUrl;
+}
+
+export async function getSignedStatusMediaUrl(path: string): Promise<string | null> {
+  const { data, error } = await supabase.storage.from('status-media').createSignedUrl(path, 3600);
+  if (error) return null;
+  return data.signedUrl;
+}
+
+// Avatars bucket is public — no signed URL needed, just the stable public URL.
+export async function uploadAvatar(userId: string, rawAsset: PickedAsset): Promise<string> {
+  const result = await ImageManipulator.manipulateAsync(
+    rawAsset.uri,
+    [{ resize: { width: 512, height: 512 } }],
+    { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+  );
+
+  const path = `${userId}/avatar-${Date.now()}.jpg`;
+  const response = await fetch(result.uri);
+  const arrayBuffer = await response.arrayBuffer();
+
+  const { error } = await supabase.storage.from('avatars').upload(path, arrayBuffer, {
+    contentType: 'image/jpeg',
+  });
+  if (error) throw error;
+
+  return supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl;
+}
+
+export async function uploadStatusMedia(userId: string, rawAsset: PickedAsset): Promise<UploadedMedia> {
+  const asset = await prepareForUpload(rawAsset);
+  const extension = asset.kind === 'video' ? 'mp4' : 'jpg';
+  const contentType = asset.kind === 'video' ? 'video/mp4' : 'image/jpeg';
+  const path = `${userId}/${Date.now()}.${extension}`;
+
+  const response = await fetch(asset.uri);
+  const arrayBuffer = await response.arrayBuffer();
+
+  const { error } = await supabase.storage.from('status-media').upload(path, arrayBuffer, {
+    contentType,
+  });
+  if (error) throw error;
+
+  return {
+    kind: asset.kind,
+    storagePath: path,
+    width: asset.width,
+    height: asset.height,
+    durationSeconds: asset.durationSeconds,
+  };
 }

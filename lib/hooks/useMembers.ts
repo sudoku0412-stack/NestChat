@@ -1,10 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../supabase';
 import type { Member } from '../types';
+
+let channelSeq = 0;
 
 export function useMembers(excludeUserId?: string | null) {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
+  const channelName = useRef(`members-updates-${++channelSeq}`);
 
   useEffect(() => {
     let active = true;
@@ -19,7 +22,7 @@ export function useMembers(excludeUserId?: string | null) {
     load();
 
     const channel = supabase
-      .channel('members-updates')
+      .channel(channelName.current)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, load)
       .subscribe();
 
