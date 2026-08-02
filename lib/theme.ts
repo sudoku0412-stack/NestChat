@@ -49,6 +49,8 @@ export const radius = {
   sm: 4,
   md: 8,
   lg: 14,
+  xl: 18,
+  full: 999,
 } as const;
 
 export const fontWeight = {

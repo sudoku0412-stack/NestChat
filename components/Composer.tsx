@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fontWeight, radius, space } from '../lib/theme';
 
 interface ComposerProps {
@@ -12,10 +13,11 @@ interface ComposerProps {
 
 export function Composer({ value, onChangeText, onSend, onPickCamera, onPickLibrary }: ComposerProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const insets = useSafeAreaInsets();
   const canSend = value.trim().length > 0;
 
   return (
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, { paddingBottom: insets.bottom }]}>
       <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
         <Pressable style={styles.backdrop} onPress={() => setMenuOpen(false)}>
           <View style={styles.menu}>
@@ -78,7 +80,7 @@ const styles = StyleSheet.create({
   attachButton: {
     width: 36,
     height: 36,
-    borderRadius: radius.sm,
+    borderRadius: radius.full,
     borderWidth: 1,
     borderColor: colors.divider,
     alignItems: 'center',
@@ -96,12 +98,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[4],
     paddingVertical: space[3],
     backgroundColor: colors.surface,
-    borderRadius: radius.md,
+    borderRadius: radius.xl,
   },
   sendButton: {
     width: 36,
     height: 36,
-    borderRadius: radius.sm,
+    borderRadius: radius.full,
     borderWidth: 1.5,
     borderColor: colors.accent,
     alignItems: 'center',

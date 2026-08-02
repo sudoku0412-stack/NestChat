@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import { supabase } from '../supabase';
 import type { ChatListItem, Member } from '../types';
 
@@ -77,14 +78,57 @@ export function useChatList(userId: string | null) {
   useEffect(() => {
     if (!userId) return;
 
-    const channel = supabase
-      .channel(channelName.current)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, load)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_members' }, load)
-      .subscribe();
+    let cancelled = false;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let attempt = 0;
+
+    async function subscribe() {
+      // Refresh the realtime socket's auth before every (re)subscribe — a
+      // stale/expired access token makes the server close the channel
+      // immediately, which otherwise looks identical to a network drop.
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (token) supabase.realtime.setAuth(token);
+      if (cancelled) return;
+
+      channel = supabase
+        .channel(`${channelName.current}-${Date.now()}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, load)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_members' }, load)
+        .subscribe((status, err) => {
+          console.log('[realtime:chat-list] channel status', status, err?.message);
+          if (status === 'SUBSCRIBED') {
+            attempt = 0;
+            return;
+          }
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            if (cancelled) return;
+            const delay = Math.min(30000, 1000 * 2 ** attempt);
+            attempt += 1;
+            console.warn('[realtime:chat-list] channel dropped, retrying in', delay, 'ms', status);
+            if (channel) supabase.removeChannel(channel);
+            retryTimer = setTimeout(subscribe, delay);
+          }
+        });
+    }
+
+    subscribe();
+
+    const appStateSub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') load();
+    });
+
+    // Belt-and-suspenders: poll while the list is mounted so unread counts
+    // stay correct even if the realtime channel above never delivers an event.
+    const pollId = setInterval(load, 6000);
 
     return () => {
-      supabase.removeChannel(channel);
+      cancelled = true;
+      appStateSub.remove();
+      clearInterval(pollId);
+      if (retryTimer) clearTimeout(retryTimer);
+      if (channel) supabase.removeChannel(channel);
     };
   }, [userId, load]);
 

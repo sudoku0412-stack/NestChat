@@ -1,5 +1,5 @@
 import { Image, StyleSheet, Text, View } from 'react-native';
-import { colorForName, colors, initials, radius } from '../lib/theme';
+import { colorForName, colors, initials } from '../lib/theme';
 
 interface AvatarProps {
   name: string;
@@ -8,7 +8,7 @@ interface AvatarProps {
 }
 
 export function Avatar({ name, avatarUrl, size = 44 }: AvatarProps) {
-  const style = { width: size, height: size, borderRadius: radius.sm };
+  const style = { width: size, height: size, borderRadius: size / 2 };
 
   if (avatarUrl) {
     return <Image source={{ uri: avatarUrl }} style={[styles.image, style]} />;

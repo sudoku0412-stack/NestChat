@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -13,10 +13,12 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '../../../lib/auth';
 import { useMessages } from '../../../lib/hooks/useMessages';
 import { supabase } from '../../../lib/supabase';
-import { sendMediaMessage, sendTextMessage } from '../../../lib/chatActions';
+import { generateId, sendMediaMessage, sendTextMessage } from '../../../lib/chatActions';
+import type { MessageWithMedia } from '../../../lib/types';
 import { pickFromCamera, pickFromLibrary } from '../../../lib/media';
 import { Avatar } from '../../../components/Avatar';
 import { MessageBubble } from '../../../components/MessageBubble';
+import { TypingIndicator } from '../../../components/TypingIndicator';
 import { Composer } from '../../../components/Composer';
 import { colors, fontWeight, space } from '../../../lib/theme';
 import { useThemeMode } from '../../../lib/themeMode';
@@ -36,8 +38,56 @@ export default function ThreadScreen() {
   const [chatInfo, setChatInfo] = useState<{ type: string; name: string | null } | null>(null);
   const [muted, setMuted] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const [pendingMessages, setPendingMessages] = useState<MessageWithMedia[]>([]);
+  const [otherTyping, setOtherTyping] = useState(false);
   const listRef = useRef<FlatList>(null);
+  const typingChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const typingClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastTypingSentRef = useRef(0);
   const { bg } = useThemeMode();
+
+  useEffect(() => {
+    if (pendingMessages.length === 0) return;
+    setPendingMessages((prev) => prev.filter((p) => !messages.some((m) => m.id === p.id)));
+  }, [messages]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`typing-${id}`)
+      .on('broadcast', { event: 'typing' }, ({ payload }) => {
+        if (payload.userId === profile?.id) return;
+        setOtherTyping(true);
+        if (typingClearRef.current) clearTimeout(typingClearRef.current);
+        typingClearRef.current = setTimeout(() => setOtherTyping(false), 3000);
+      })
+      .subscribe();
+    typingChannelRef.current = channel;
+
+    return () => {
+      if (typingClearRef.current) clearTimeout(typingClearRef.current);
+      typingChannelRef.current = null;
+      supabase.removeChannel(channel);
+    };
+  }, [id, profile?.id]);
+
+  function handleDraftChange(text: string) {
+    setDraft(text);
+    if (!profile) return;
+    const now = Date.now();
+    if (now - lastTypingSentRef.current > 1500) {
+      lastTypingSentRef.current = now;
+      typingChannelRef.current?.send({
+        type: 'broadcast',
+        event: 'typing',
+        payload: { userId: profile.id },
+      });
+    }
+  }
+
+  const displayMessages = useMemo(
+    () => [...messages, ...pendingMessages.filter((p) => !messages.some((m) => m.id === p.id))],
+    [messages, pendingMessages]
+  );
 
   const otherMember = members.find((m) => m.id !== profile?.id);
   const isGroup = chatInfo?.type === 'group';
@@ -62,17 +112,34 @@ export default function ThreadScreen() {
   }, [id, profile]);
 
   const title = isGroup ? chatInfo?.name ?? 'Group' : otherMember?.display_name ?? '';
-  const subtitle = isGroup
-    ? `${members.length} member${members.length === 1 ? '' : 's'}`
-    : otherMember?.is_online
-      ? 'Online'
-      : formatLastSeen(otherMember?.last_seen_at ?? null);
+  const subtitle = otherTyping
+    ? 'Typing…'
+    : isGroup
+      ? `${members.length} member${members.length === 1 ? '' : 's'}`
+      : otherMember?.is_online
+        ? 'Online'
+        : formatLastSeen(otherMember?.last_seen_at ?? null);
 
   async function handleSend() {
     if (!profile || !draft.trim()) return;
     const text = draft.trim();
     setDraft('');
-    await sendTextMessage(id, profile.id, text);
+    const optimistic: MessageWithMedia = {
+      id: generateId(),
+      chat_id: id,
+      sender_id: profile.id,
+      body: text,
+      created_at: new Date().toISOString(),
+      deleted_at: null,
+      media: [],
+    };
+    setPendingMessages((prev) => [...prev, optimistic]);
+    try {
+      await sendTextMessage(id, profile.id, text, optimistic.id);
+    } catch (err) {
+      setPendingMessages((prev) => prev.filter((p) => p.id !== optimistic.id));
+      setDraft(text);
+    }
   }
 
   async function handlePick(kind: 'camera' | 'library') {
@@ -98,7 +165,7 @@ export default function ThreadScreen() {
   return (
     <KeyboardAvoidingView
       style={[styles.screen, { backgroundColor: bg }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={{ paddingTop: insets.top }}>
         <View style={styles.header}>
@@ -126,15 +193,16 @@ export default function ThreadScreen() {
 
       <FlatList
         ref={listRef}
-        data={messages}
+        data={displayMessages}
         keyExtractor={(m) => m.id}
         contentContainerStyle={{ paddingVertical: space[4] }}
         onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
+        ListFooterComponent={otherTyping ? <TypingIndicator /> : null}
         renderItem={({ item, index }) => {
           const isOwn = item.sender_id === profile?.id;
-          const prev = messages[index - 1];
+          const prev = displayMessages[index - 1];
           const showSenderName = isGroup && !isOwn && (!prev || prev.sender_id !== item.sender_id);
-          const isLastOwnWithMedia = isOwn && index === messages.length - 1;
+          const isLastOwnWithMedia = isOwn && index === displayMessages.length - 1;
           return (
             <MessageBubble
               message={{ ...item, sender: membersById.get(item.sender_id) }}
@@ -150,7 +218,7 @@ export default function ThreadScreen() {
 
       <Composer
         value={draft}
-        onChangeText={setDraft}
+        onChangeText={handleDraftChange}
         onSend={handleSend}
         onPickCamera={() => handlePick('camera')}
         onPickLibrary={() => handlePick('library')}

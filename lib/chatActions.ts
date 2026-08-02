@@ -1,9 +1,30 @@
 import { supabase } from './supabase';
 import { uploadMedia, type PickedAsset } from './media';
+import type { MessagesRow } from './database.types';
 
-export async function sendTextMessage(chatId: string, senderId: string, body: string) {
-  const { error } = await supabase.from('messages').insert({ chat_id: chatId, sender_id: senderId, body });
-  if (error) throw error;
+// Math.random-based v4 UUID — good enough for a client-generated primary key
+// (lets the UI render the sent message before the insert round-trips back).
+export function generateId() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+export async function sendTextMessage(
+  chatId: string,
+  senderId: string,
+  body: string,
+  id: string = generateId()
+): Promise<MessagesRow> {
+  const { data, error } = await supabase
+    .from('messages')
+    .insert({ id, chat_id: chatId, sender_id: senderId, body })
+    .select()
+    .single();
+  if (error || !data) throw error ?? new Error('Failed to send message');
+  return data as MessagesRow;
 }
 
 export async function sendMediaMessage(chatId: string, senderId: string, asset: PickedAsset) {

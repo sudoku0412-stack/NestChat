@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
   ring: {
     width: RING_SIZE,
     height: RING_SIZE,
-    borderRadius: 8,
+    borderRadius: RING_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
     bottom: -2,
     width: 20,
     height: 20,
-    borderRadius: 4,
+    borderRadius: 10,
     backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',

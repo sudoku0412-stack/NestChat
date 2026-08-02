@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
     marginLeft: space[1],
   },
   bubble: {
-    borderRadius: radius.sm,
+    borderRadius: radius.xl,
     paddingHorizontal: space[4],
     paddingVertical: space[3],
   },

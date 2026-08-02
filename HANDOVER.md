@@ -27,17 +27,10 @@ mid-stream: current state, what's broken/pending, what to check first.
 
 ## Immediate next step for whoever picks this up
 
-**Run `supabase/migrations/0004_fix_chat_members_rls_recursion.sql` against the live Supabase
-project if it hasn't been run yet.** This session ended by fixing a real bug — three RLS
-policies on `chat_members` queried `chat_members` from inside their own policy, which Postgres
-recurses on forever ("infinite recursion detected in policy for relation chat_members"). That
-broke the chat list and starting new chats. The fix is a `SECURITY DEFINER` helper function
-(`is_chat_member`); it's already baked into the current `0001_init.sql` for fresh installs, but
-this project's live database was set up before that fix, so migration `0004` needs to be run
-against it directly (SQL Editor, paste, run — no drop/reset needed, it's additive).
-
-After running it: force-quit the app on the phone, reopen, confirm the chat list loads and
-tapping a contact starts a DM without errors.
+Migration `0004_fix_chat_members_rls_recursion.sql` has been run against the live Supabase
+project (confirmed 2026-08-02). It fixed "infinite recursion detected in policy for relation
+chat_members" — three RLS policies on `chat_members` queried `chat_members` from inside their
+own policy definition. Chat list load and starting new DMs should now work.
 
 ## Known rough edges (not bugs, just unfinished/tradeoffs)
 
