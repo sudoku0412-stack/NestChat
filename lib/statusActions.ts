@@ -11,12 +11,13 @@ export async function postTextStatus(userId: string, text: string, backgroundCol
   if (error) throw error;
 }
 
-export async function postMediaStatus(userId: string, asset: PickedAsset) {
+export async function postMediaStatus(userId: string, asset: PickedAsset, caption?: string) {
   const uploaded = await uploadStatusMedia(userId, asset);
   const { error } = await supabase.from('statuses').insert({
     user_id: userId,
     type: uploaded.kind as 'photo' | 'video',
     storage_path: uploaded.storagePath,
+    text_content: caption?.trim() || null,
   });
   if (error) throw error;
 }

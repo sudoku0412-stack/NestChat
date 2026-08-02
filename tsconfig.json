@@ -5,7 +5,11 @@
   },
   "exclude": [
     "node_modules",
-    "supabase/functions"
+    "supabase/functions",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "lib/testUtils",
+    "jest.setup.js"
   ],
   "include": [
     "**/*.ts",

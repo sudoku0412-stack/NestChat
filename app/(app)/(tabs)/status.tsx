@@ -35,6 +35,9 @@ export default function StatusScreen() {
     <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: bg }]}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Status</Text>
+        <Pressable style={styles.addButton} onPress={() => router.push('/(app)/status/new')} hitSlop={8}>
+          <Text style={styles.addGlyph}>＋</Text>
+        </Pressable>
       </View>
       <View style={styles.headerRule} />
 
@@ -49,11 +52,16 @@ export default function StatusScreen() {
               <Pressable style={styles.row} onPress={handleMyStatusPress}>
                 <View style={[styles.ring, myStatuses.length > 0 && styles.ringViewed]}>
                   <Avatar name={profile.display_name} avatarUrl={profile.avatar_url} size={52} />
-                  {myStatuses.length === 0 && (
-                    <View style={styles.plusBadge}>
-                      <Text style={styles.plusGlyph}>+</Text>
-                    </View>
-                  )}
+                  <Pressable
+                    style={styles.plusBadge}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      router.push('/(app)/status/new');
+                    }}
+                    hitSlop={4}
+                  >
+                    <Text style={styles.plusGlyph}>+</Text>
+                  </Pressable>
                 </View>
                 <View style={styles.rowTexts}>
                   <Text style={styles.rowName}>My status</Text>
@@ -97,6 +105,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: space[6],
     paddingVertical: space[4],
   },
@@ -104,6 +115,16 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 28,
     fontWeight: fontWeight.heading,
+  },
+  addButton: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addGlyph: {
+    color: colors.text,
+    fontSize: 20,
   },
   headerRule: {
     height: 2,

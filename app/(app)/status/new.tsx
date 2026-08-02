@@ -2,7 +2,9 @@ import { useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -33,6 +35,7 @@ export default function NewStatusScreen() {
   const [text, setText] = useState('');
   const [bgIndex, setBgIndex] = useState(0);
   const [mediaAsset, setMediaAsset] = useState<PickedAsset | null>(null);
+  const [caption, setCaption] = useState('');
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
   const [posting, setPosting] = useState(false);
 
@@ -52,7 +55,7 @@ export default function NewStatusScreen() {
       if (mode === 'text' && text.trim()) {
         await postTextStatus(profile.id, text.trim(), BACKGROUND_COLORS[bgIndex]!);
       } else if (mode === 'media' && mediaAsset) {
-        await postMediaStatus(profile.id, mediaAsset);
+        await postMediaStatus(profile.id, mediaAsset, caption);
       }
       router.back();
     } finally {
@@ -158,6 +161,18 @@ export default function NewStatusScreen() {
       <View style={styles.mediaPreviewWrap}>
         {mediaAsset && <Image source={{ uri: mediaAsset.uri }} style={styles.mediaPreview} resizeMode="contain" />}
       </View>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <View style={[styles.captionRow, { paddingBottom: insets.bottom + space[4] }]}>
+          <TextInput
+            style={styles.captionInput}
+            value={caption}
+            onChangeText={setCaption}
+            placeholder="Add a caption…"
+            placeholderTextColor={colors.textMuted}
+            multiline
+          />
+        </View>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -274,5 +289,19 @@ const styles = StyleSheet.create({
   },
   mediaPreview: {
     flex: 1,
+  },
+  captionRow: {
+    backgroundColor: '#000',
+    paddingHorizontal: space[4],
+    paddingTop: space[3],
+  },
+  captionInput: {
+    color: colors.text,
+    fontSize: 16,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 20,
+    paddingHorizontal: space[4],
+    paddingVertical: space[3],
+    maxHeight: 100,
   },
 });

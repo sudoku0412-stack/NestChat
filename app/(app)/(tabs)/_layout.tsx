@@ -23,17 +23,17 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Chats',
-          tabBarIcon: ({ color }) => <TabGlyph glyph="💬" color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="status"
         options={{
           title: 'Status',
           tabBarIcon: ({ color }) => <TabGlyph glyph="◎" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Chats',
+          tabBarIcon: ({ color }) => <TabGlyph glyph="💬" color={color} />,
         }}
       />
       <Tabs.Screen

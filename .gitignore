@@ -43,3 +43,7 @@ yarn-error.*
 
 # Supabase CLI local state
 /supabase/.temp
+
+# husky's regenerated internal helper (recreated by `npm install` via the
+# "prepare" script) — only .husky/pre-push itself is committed.
+/.husky/_

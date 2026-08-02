@@ -187,6 +187,12 @@ export default function StatusViewerScreen() {
         )}
       </View>
 
+      {current.type !== 'text' && current.text_content ? (
+        <View style={[styles.captionBar, { bottom: insets.bottom + space[6] }]}>
+          <Text style={styles.captionText}>{current.text_content}</Text>
+        </View>
+      ) : null}
+
       <View style={styles.tapZones}>
         <Pressable style={{ flex: 1 }} onPress={goBackOne} />
         <Pressable style={{ flex: 2 }} onPress={advance} />
@@ -305,6 +311,23 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     flexDirection: 'row',
+  },
+  captionBar: {
+    position: 'absolute',
+    left: space[4],
+    right: space[4],
+    alignItems: 'center',
+    zIndex: 2,
+  },
+  captionText: {
+    color: colors.text,
+    fontSize: 15,
+    textAlign: 'center',
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    paddingHorizontal: space[4],
+    paddingVertical: space[2],
+    borderRadius: 14,
+    overflow: 'hidden',
   },
   viewersBar: {
     position: 'absolute',
