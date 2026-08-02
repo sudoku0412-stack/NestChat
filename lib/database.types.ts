@@ -3,7 +3,7 @@
 
 export type UserRole = 'admin' | 'member';
 export type ChatType = 'dm' | 'group';
-export type MediaKind = 'photo' | 'video';
+export type MediaKind = 'photo' | 'video' | 'document';
 export type StatusType = 'text' | 'photo' | 'video';
 
 export type UsersRow = {
@@ -46,6 +46,7 @@ export type MessagesRow = {
   body: string | null;
   created_at: string;
   deleted_at: string | null;
+  location_share_id: string | null;
 }
 
 export type MessageMediaRow = {
@@ -57,7 +58,23 @@ export type MessageMediaRow = {
   width: number | null;
   height: number | null;
   duration_seconds: number | null;
+  file_name: string | null;
+  file_size: number | null;
   created_at: string;
+}
+
+export type LiveLocationDuration = '15m' | '24h' | 'until_stopped';
+
+export type LiveLocationsRow = {
+  id: string;
+  chat_id: string;
+  user_id: string;
+  lat: number;
+  lng: number;
+  started_at: string;
+  expires_at: string | null;
+  stopped_at: string | null;
+  updated_at: string;
 }
 
 export type MessageReadsRow = {
@@ -146,6 +163,11 @@ export interface Database {
         Row: StatusViewsRow;
         Insert: Partial<StatusViewsRow>;
         Update: Partial<StatusViewsRow>;
+      } & Relationships;
+      live_locations: {
+        Row: LiveLocationsRow;
+        Insert: Partial<LiveLocationsRow>;
+        Update: Partial<LiveLocationsRow>;
       } & Relationships;
     };
     Functions: {

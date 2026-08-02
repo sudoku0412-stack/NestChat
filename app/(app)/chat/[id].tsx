@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Alert,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -15,11 +16,17 @@ import { useMessages } from '../../../lib/hooks/useMessages';
 import { supabase } from '../../../lib/supabase';
 import { generateId, sendMediaMessage, sendTextMessage } from '../../../lib/chatActions';
 import type { MessageWithMedia } from '../../../lib/types';
-import { pickFromCamera, pickFromLibrary } from '../../../lib/media';
+import { pickDocument, pickFromCamera, pickFromLibrary } from '../../../lib/media';
+import { startLiveLocationShare } from '../../../lib/liveLocation';
+import type { ShareableContact } from '../../../lib/contacts';
+import type { LiveLocationDuration } from '../../../lib/database.types';
 import { Avatar } from '../../../components/Avatar';
 import { MessageBubble } from '../../../components/MessageBubble';
+import { LiveLocationBubble } from '../../../components/LiveLocationBubble';
 import { TypingIndicator } from '../../../components/TypingIndicator';
 import { Composer } from '../../../components/Composer';
+import { ContactPickerModal } from '../../../components/ContactPickerModal';
+import { LocationDurationModal } from '../../../components/LocationDurationModal';
 import { colors, fontWeight, space } from '../../../lib/theme';
 import { useThemeMode } from '../../../lib/themeMode';
 
@@ -40,6 +47,8 @@ export default function ThreadScreen() {
   const [pendingCount, setPendingCount] = useState(0);
   const [pendingMessages, setPendingMessages] = useState<MessageWithMedia[]>([]);
   const [otherTyping, setOtherTyping] = useState(false);
+  const [contactPickerVisible, setContactPickerVisible] = useState(false);
+  const [locationModalVisible, setLocationModalVisible] = useState(false);
   const listRef = useRef<FlatList>(null);
   const typingChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const typingClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -131,6 +140,7 @@ export default function ThreadScreen() {
       body: text,
       created_at: new Date().toISOString(),
       deleted_at: null,
+      location_share_id: null,
       media: [],
     };
     setPendingMessages((prev) => [...prev, optimistic]);
@@ -142,9 +152,10 @@ export default function ThreadScreen() {
     }
   }
 
-  async function handlePick(kind: 'camera' | 'library') {
+  async function handlePick(kind: 'camera' | 'library' | 'document') {
     if (!profile) return;
-    const asset = kind === 'camera' ? await pickFromCamera() : await pickFromLibrary();
+    const asset =
+      kind === 'camera' ? await pickFromCamera() : kind === 'library' ? await pickFromLibrary() : await pickDocument();
     if (!asset) return;
     setPendingCount((c) => c + 1);
     try {
@@ -152,6 +163,24 @@ export default function ThreadScreen() {
     } finally {
       setPendingCount((c) => Math.max(0, c - 1));
       refresh();
+    }
+  }
+
+  async function handleShareContact(contact: ShareableContact) {
+    if (!profile) return;
+    const text = `📇 ${contact.name}\n${contact.phones.join(', ')}`;
+    await sendTextMessage(id, profile.id, text);
+  }
+
+  async function handleShareLocation(duration: LiveLocationDuration) {
+    if (!profile) return;
+    try {
+      const shareId = await startLiveLocationShare(id, profile.id, duration);
+      if (!shareId) {
+        Alert.alert('Location permission needed', 'Allow location access (including "Always") to share your live location.');
+      }
+    } catch (err) {
+      Alert.alert('Could not share location', err instanceof Error ? err.message : 'Try again.');
     }
   }
 
@@ -203,6 +232,15 @@ export default function ThreadScreen() {
           const prev = displayMessages[index - 1];
           const showSenderName = isGroup && !isOwn && (!prev || prev.sender_id !== item.sender_id);
           const isLastOwnWithMedia = isOwn && index === displayMessages.length - 1;
+
+          if (item.liveLocation) {
+            return (
+              <View style={isOwn ? styles.liveLocationOwn : styles.liveLocationOther}>
+                <LiveLocationBubble location={item.liveLocation} isOwn={isOwn} />
+              </View>
+            );
+          }
+
           return (
             <MessageBubble
               message={{ ...item, sender: membersById.get(item.sender_id) }}
@@ -222,6 +260,20 @@ export default function ThreadScreen() {
         onSend={handleSend}
         onPickCamera={() => handlePick('camera')}
         onPickLibrary={() => handlePick('library')}
+        onPickDocument={() => handlePick('document')}
+        onPickContact={() => setContactPickerVisible(true)}
+        onShareLocation={() => setLocationModalVisible(true)}
+      />
+
+      <ContactPickerModal
+        visible={contactPickerVisible}
+        onClose={() => setContactPickerVisible(false)}
+        onSelect={handleShareContact}
+      />
+      <LocationDurationModal
+        visible={locationModalVisible}
+        onClose={() => setLocationModalVisible(false)}
+        onSelect={handleShareLocation}
       />
     </KeyboardAvoidingView>
   );
@@ -271,5 +323,15 @@ const styles = StyleSheet.create({
   headerRule: {
     height: 2,
     backgroundColor: colors.divider,
+  },
+  liveLocationOwn: {
+    alignItems: 'flex-end',
+    paddingHorizontal: space[6],
+    marginVertical: space[1],
+  },
+  liveLocationOther: {
+    alignItems: 'flex-start',
+    paddingHorizontal: space[6],
+    marginVertical: space[1],
   },
 });

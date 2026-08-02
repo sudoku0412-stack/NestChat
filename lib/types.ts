@@ -1,5 +1,6 @@
 import type {
   ChatsRow,
+  LiveLocationsRow,
   MediaKind,
   MessageMediaRow,
   MessagesRow,
@@ -24,6 +25,7 @@ export interface MessageWithMedia extends MessagesRow {
   media: MessageMediaRow[];
   sender?: Member;
   readByOthers?: boolean;
+  liveLocation?: LiveLocationsRow | null;
 }
 
 export interface AttachmentDraft {

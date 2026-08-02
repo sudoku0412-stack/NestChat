@@ -30,3 +30,23 @@ export async function loadDeviceContacts(): Promise<DeviceContact[] | null> {
     }))
     .filter((c) => c.phoneKeys.length > 0);
 }
+
+export interface ShareableContact {
+  name: string;
+  phones: string[];
+}
+
+export async function loadDeviceContactsForShare(): Promise<ShareableContact[] | null> {
+  const perm = await requestPermissionsAsync();
+  if (!perm.granted) return null;
+
+  const details = await Contact.getAllDetails([ContactField.FULL_NAME, ContactField.PHONES]);
+
+  return details
+    .map((d) => ({
+      name: d.fullName?.trim() || 'Unknown',
+      phones: (d.phones ?? []).map((p) => p.number).filter((n): n is string => !!n),
+    }))
+    .filter((c) => c.phones.length > 0)
+    .sort((a, b) => a.name.localeCompare(b.name));
+}

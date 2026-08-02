@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Slot } from 'expo-router';
 import { AuthProvider } from '../lib/auth';
 import { ThemeModeProvider, useThemeMode } from '../lib/themeMode';
+import '../lib/locationTask';
 
 function Shell() {
   const { bg } = useThemeMode();

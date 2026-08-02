@@ -1,5 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
+import * as DocumentPicker from 'expo-document-picker';
 import { supabase } from './supabase';
 import type { MediaKind } from './database.types';
 
@@ -9,6 +10,9 @@ export interface PickedAsset {
   width?: number;
   height?: number;
   durationSeconds?: number;
+  fileName?: string;
+  fileSize?: number;
+  mimeType?: string;
 }
 
 function fromImagePickerAsset(asset: ImagePicker.ImagePickerAsset): PickedAsset {
@@ -45,6 +49,19 @@ export async function pickFromCamera(): Promise<PickedAsset | null> {
   return fromImagePickerAsset(result.assets[0]);
 }
 
+export async function pickDocument(): Promise<PickedAsset | null> {
+  const result = await DocumentPicker.getDocumentAsync({ type: '*/*', copyToCacheDirectory: true });
+  if (result.canceled || !result.assets[0]) return null;
+  const asset = result.assets[0];
+  return {
+    uri: asset.uri,
+    kind: 'document',
+    fileName: asset.name,
+    fileSize: asset.size,
+    mimeType: asset.mimeType,
+  };
+}
+
 export async function pickImageFromLibrary(): Promise<PickedAsset | null> {
   const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!perm.granted) return null;
@@ -79,6 +96,8 @@ export interface UploadedMedia {
   width?: number;
   height?: number;
   durationSeconds?: number;
+  fileName?: string;
+  fileSize?: number;
 }
 
 export async function uploadMedia(
@@ -87,8 +106,13 @@ export async function uploadMedia(
   rawAsset: PickedAsset
 ): Promise<UploadedMedia> {
   const asset = await prepareForUpload(rawAsset);
-  const extension = asset.kind === 'video' ? 'mp4' : 'jpg';
-  const contentType = asset.kind === 'video' ? 'video/mp4' : 'image/jpeg';
+
+  let extension = asset.kind === 'video' ? 'mp4' : 'jpg';
+  let contentType = asset.kind === 'video' ? 'video/mp4' : 'image/jpeg';
+  if (asset.kind === 'document') {
+    extension = asset.fileName?.split('.').pop() || 'bin';
+    contentType = asset.mimeType || 'application/octet-stream';
+  }
   const path = `${chatId}/${messageId}/${Date.now()}.${extension}`;
 
   const response = await fetch(asset.uri);
@@ -105,6 +129,8 @@ export async function uploadMedia(
     width: asset.width,
     height: asset.height,
     durationSeconds: asset.durationSeconds,
+    fileName: asset.fileName,
+    fileSize: asset.fileSize,
   };
 }
 

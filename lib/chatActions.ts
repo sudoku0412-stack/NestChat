@@ -44,6 +44,8 @@ export async function sendMediaMessage(chatId: string, senderId: string, asset: 
       width: uploaded.width,
       height: uploaded.height,
       duration_seconds: uploaded.durationSeconds,
+      file_name: uploaded.fileName,
+      file_size: uploaded.fileSize,
     });
     if (mediaError) throw mediaError;
   } catch (err) {

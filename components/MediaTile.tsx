@@ -1,4 +1,4 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useSignedUrl } from '../lib/hooks/useSignedUrl';
@@ -11,8 +11,32 @@ interface MediaTileProps {
   ownMessage: boolean;
 }
 
+function formatFileSize(bytes: number | null) {
+  if (!bytes) return '';
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export function MediaTile({ media, messageId, ownMessage }: MediaTileProps) {
   const url = useSignedUrl(media.storage_path);
+
+  if (media.kind === 'document') {
+    return (
+      <Pressable
+        style={styles.documentTile}
+        onPress={() => url && Linking.openURL(url)}
+        disabled={!url}
+      >
+        <Text style={styles.documentGlyph}>📄</Text>
+        <View style={styles.documentInfo}>
+          <Text style={styles.documentName} numberOfLines={1}>
+            {media.file_name || 'Document'}
+          </Text>
+          <Text style={styles.documentMeta}>{formatFileSize(media.file_size)}</Text>
+        </View>
+      </Pressable>
+    );
+  }
 
   return (
     <Pressable
@@ -51,6 +75,31 @@ export function PendingMediaTile() {
 }
 
 const styles = StyleSheet.create({
+  documentTile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[3],
+    width: 220,
+    padding: space[3],
+    borderRadius: radius.md,
+    backgroundColor: colors.bgDeep,
+  },
+  documentGlyph: {
+    fontSize: 28,
+  },
+  documentInfo: {
+    flex: 1,
+  },
+  documentName: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  documentMeta: {
+    color: colors.textMuted,
+    fontSize: 12,
+    marginTop: 2,
+  },
   tile: {
     width: 200,
     height: 200,

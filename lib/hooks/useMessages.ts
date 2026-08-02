@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import { supabase } from '../supabase';
-import type { ChatMembersRow, MessageMediaRow, MessagesRow } from '../database.types';
+import type { ChatMembersRow, LiveLocationsRow, MessageMediaRow, MessagesRow } from '../database.types';
 import type { Member, MessageWithMedia } from '../types';
 
 let channelSeq = 0;
@@ -21,20 +21,27 @@ export function useMessages(chatId: string, userId: string | null) {
   }, [members]);
 
   const load = useCallback(async () => {
-    const [{ data: msgRows }, { data: mediaRows }, { data: memberRows }] = await Promise.all([
-      supabase.from('messages').select('*').eq('chat_id', chatId).order('created_at'),
-      supabase
-        .from('message_media')
-        .select('*, messages!inner(chat_id)')
-        .eq('messages.chat_id', chatId),
-      supabase.from('chat_members').select('*, users(*)').eq('chat_id', chatId),
-    ]);
+    const [{ data: msgRows }, { data: mediaRows }, { data: memberRows }, { data: locationRows }] =
+      await Promise.all([
+        supabase.from('messages').select('*').eq('chat_id', chatId).order('created_at'),
+        supabase
+          .from('message_media')
+          .select('*, messages!inner(chat_id)')
+          .eq('messages.chat_id', chatId),
+        supabase.from('chat_members').select('*, users(*)').eq('chat_id', chatId),
+        supabase.from('live_locations').select('*').eq('chat_id', chatId),
+      ]);
 
     const mediaByMessage = new Map<string, MessageMediaRow[]>();
     for (const row of (mediaRows as (MessageMediaRow & { messages: unknown })[]) ?? []) {
       const list = mediaByMessage.get(row.message_id) ?? [];
       list.push(row);
       mediaByMessage.set(row.message_id, list);
+    }
+
+    const locationById = new Map<string, LiveLocationsRow>();
+    for (const row of (locationRows as LiveLocationsRow[]) ?? []) {
+      locationById.set(row.id, row);
     }
 
     const memberList: Member[] = [];
@@ -52,6 +59,7 @@ export function useMessages(chatId: string, userId: string | null) {
       rows.map((m) => ({
         ...m,
         media: mediaByMessage.get(m.id) ?? [],
+        liveLocation: m.location_share_id ? locationById.get(m.location_share_id) ?? null : null,
       }))
     );
     setLoading(false);
@@ -105,6 +113,11 @@ export function useMessages(chatId: string, userId: string | null) {
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'chat_members', filter: `chat_id=eq.${chatId}` },
+          load
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'live_locations', filter: `chat_id=eq.${chatId}` },
           load
         )
         .subscribe((status, err) => {
