@@ -20,7 +20,8 @@
         "NSLocationAlwaysAndWhenInUseUsageDescription": "NestChat uses your location in the background to keep a live location share updating while you have it turned on.",
         "UIBackgroundModes": [
           "location"
-        ]
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
