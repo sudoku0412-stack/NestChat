@@ -39,6 +39,9 @@ explicitly asked that Metro never be run for this project.** This means:
   — all three must stay in sync; see the recurring gotcha below about `expo prebuild` wiping the
   build number back down). **Build 4 has not yet been archived/uploaded** — that's the immediate
   next step, see below.
+- All of this session's work (commit `7001938`, "Hearth redesign, PIN account recovery, chat
+  overhaul, accent theming") is **committed and pushed to `origin/master`** as of 2026-08-04. Tests
+  (79/79) and `tsc --noEmit` were clean at push time.
 - Auth: **anonymous auth + typed-in phone number**, not real OTP, now with **PIN-based account
   recovery** (migrations `0006`–`0008`) so signing out or reinstalling doesn't lose your identity
   — see "This session's work" below for the full story of why that took 3 migrations to get right.
@@ -71,10 +74,8 @@ explicitly asked that Metro never be run for this project.** This means:
 
 ## Immediate next step for whoever picks this up
 
-1. **Archive and upload build 4.** Re-add the **Push Notifications capability** in Xcode first
-   (Signing & Capabilities → + Capability) — `expo prebuild` wipes this every time it runs, and it
-   ran multiple times this session (once for `expo-clipboard`, most recently not at all for build
-   4, but check anyway before archiving). Then Product → Archive → Distribute App → App Store
+1. **Archive and upload build 4.** Push Notifications capability confirmed re-added in Xcode
+   (Signing & Capabilities) as of 2026-08-04. Next: Product → Archive → Distribute App → App Store
    Connect.
 2. Once installed, **verify the App theme color picker actually works** (Settings → App theme
    color → drag hue slider or type a hex → Save). This was broken all session due to a stale-closure
