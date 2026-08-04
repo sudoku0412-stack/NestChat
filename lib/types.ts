@@ -19,6 +19,7 @@ export interface ChatListItem {
   unreadCount: number;
   muted: boolean;
   archived: boolean;
+  favorite: boolean;
 }
 
 export interface MessageWithMedia extends MessagesRow {
@@ -26,6 +27,7 @@ export interface MessageWithMedia extends MessagesRow {
   sender?: Member;
   readByOthers?: boolean;
   liveLocation?: LiveLocationsRow | null;
+  replyTo?: MessageWithMedia | null;
 }
 
 export interface AttachmentDraft {

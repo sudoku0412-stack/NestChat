@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { useAuth } from '../../../lib/auth';
 import { useStatuses, type StatusGroup } from '../../../lib/hooks/useStatuses';
 import { Avatar } from '../../../components/Avatar';
+import { useAccentTheme } from '../../../lib/accentTheme';
 import { colors, fontWeight, space } from '../../../lib/theme';
 import { useThemeMode } from '../../../lib/themeMode';
 
@@ -21,6 +22,7 @@ export default function StatusScreen() {
   const { profile } = useAuth();
   const { groups, myStatuses, loading, refresh } = useStatuses(profile?.id ?? null);
   const { bg } = useThemeMode();
+  const { colors: accentColors } = useAccentTheme();
 
   function handleMyStatusPress() {
     if (!profile) return;
@@ -53,7 +55,7 @@ export default function StatusScreen() {
                 <View style={[styles.ring, myStatuses.length > 0 && styles.ringViewed]}>
                   <Avatar name={profile.display_name} avatarUrl={profile.avatar_url} size={52} />
                   <Pressable
-                    style={styles.plusBadge}
+                    style={[styles.plusBadge, { backgroundColor: accentColors.accent }]}
                     onPress={(e) => {
                       e.stopPropagation();
                       router.push('/(app)/status/new');
@@ -76,7 +78,12 @@ export default function StatusScreen() {
         }
         renderItem={({ item }) => (
           <Pressable style={styles.row} onPress={() => router.push(`/(app)/status/${item.user.id}`)}>
-            <View style={[styles.ring, item.hasUnviewed ? styles.ringUnviewed : styles.ringViewed]}>
+            <View
+              style={[
+                styles.ring,
+                item.hasUnviewed ? { borderColor: accentColors.accent } : styles.ringViewed,
+              ]}
+            >
               <Avatar name={item.user.display_name} avatarUrl={item.user.avatar_url} size={52} />
             </View>
             <View style={styles.rowTexts}>
@@ -88,7 +95,7 @@ export default function StatusScreen() {
         ListEmptyComponent={
           !loading ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>No recent updates from your household.</Text>
+              <Text style={styles.emptyText}>No recent updates from your contacts.</Text>
             </View>
           ) : null
         }
@@ -146,9 +153,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'transparent',
   },
-  ringUnviewed: {
-    borderColor: colors.accent,
-  },
   ringViewed: {
     borderColor: colors.neutral700,
   },
@@ -159,7 +163,6 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,

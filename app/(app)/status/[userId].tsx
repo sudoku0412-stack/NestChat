@@ -20,6 +20,7 @@ import { getSignedStatusMediaUrl } from '../../../lib/media';
 import { deleteStatus, getStatusViewers, markStatusViewed, type StatusViewer } from '../../../lib/statusActions';
 import { Avatar } from '../../../components/Avatar';
 import { colors, fontWeight, space } from '../../../lib/theme';
+import { useAccentTheme } from '../../../lib/accentTheme';
 import type { StatusesRow } from '../../../lib/database.types';
 
 const DEFAULT_DURATION_MS = 5000;
@@ -34,6 +35,7 @@ export default function StatusViewerScreen() {
   const { userId } = useLocalSearchParams<{ userId: string }>();
   const insets = useSafeAreaInsets();
   const { profile } = useAuth();
+  const { colors: accentColors } = useAccentTheme();
   const [statuses, setStatuses] = useState<StatusesRow[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [userName, setUserName] = useState('');
@@ -132,7 +134,7 @@ export default function StatusViewerScreen() {
   if (!current) {
     return (
       <View style={[styles.screen, styles.centered]}>
-        <ActivityIndicator color={colors.accent} />
+        <ActivityIndicator color={accentColors.accent} />
       </View>
     );
   }
@@ -179,7 +181,7 @@ export default function StatusViewerScreen() {
         {current.type === 'text' ? (
           <Text style={styles.textContent}>{current.text_content}</Text>
         ) : !mediaUrl ? (
-          <ActivityIndicator color={colors.accent} />
+          <ActivityIndicator color={accentColors.accent} />
         ) : current.type === 'video' ? (
           <StatusVideo uri={mediaUrl} />
         ) : (

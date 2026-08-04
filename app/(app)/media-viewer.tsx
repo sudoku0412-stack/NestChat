@@ -8,6 +8,7 @@ import { supabase } from '../../lib/supabase';
 import { getSignedMediaUrl } from '../../lib/media';
 import { softDeleteMessage } from '../../lib/chatActions';
 import { colors, fontWeight, space } from '../../lib/theme';
+import { useAccentTheme } from '../../lib/accentTheme';
 import type { MediaKind } from '../../lib/database.types';
 
 function VideoPlayerView({ uri }: { uri: string }) {
@@ -21,6 +22,7 @@ function VideoPlayerView({ uri }: { uri: string }) {
 }
 
 export default function MediaViewerScreen() {
+  const { colors: accentColors } = useAccentTheme();
   const { messageId, mediaId, ownMessage } = useLocalSearchParams<{
     messageId: string;
     mediaId: string;
@@ -88,7 +90,7 @@ export default function MediaViewerScreen() {
 
       <View style={styles.center}>
         {!url ? (
-          <ActivityIndicator color={colors.accent} />
+          <ActivityIndicator color={accentColors.accent} />
         ) : kind === 'video' ? (
           <VideoPlayerView uri={url} />
         ) : (

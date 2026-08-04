@@ -19,6 +19,8 @@ export type UsersRow = {
   push_token: string | null;
   onboarding_completed: boolean;
   created_at: string;
+  pin_hash: string | null;
+  theme_accent: string | null;
 }
 
 export type ChatsRow = {
@@ -28,6 +30,7 @@ export type ChatsRow = {
   avatar_url: string | null;
   created_by: string | null;
   created_at: string;
+  pinned_message_id: string | null;
 }
 
 export type ChatMembersRow = {
@@ -37,6 +40,9 @@ export type ChatMembersRow = {
   muted: boolean;
   archived: boolean;
   last_read_message_id: string | null;
+  cleared_at: string | null;
+  wallpaper_path: string | null;
+  favorite: boolean;
 }
 
 export type MessagesRow = {
@@ -47,6 +53,7 @@ export type MessagesRow = {
   created_at: string;
   deleted_at: string | null;
   location_share_id: string | null;
+  reply_to_message_id: string | null;
 }
 
 export type MessageMediaRow = {
@@ -83,6 +90,12 @@ export type MessageReadsRow = {
   read_at: string;
 }
 
+export type MessageStarsRow = {
+  message_id: string;
+  user_id: string;
+  starred_at: string;
+}
+
 export type StatusesRow = {
   id: string;
   user_id: string;
@@ -114,6 +127,7 @@ export type ChatListRow = {
   unread_count: number;
   muted: boolean;
   archived: boolean;
+  favorite: boolean;
 }
 
 interface Relationships {
@@ -154,6 +168,11 @@ export interface Database {
         Insert: Partial<MessageReadsRow>;
         Update: Partial<MessageReadsRow>;
       } & Relationships;
+      message_stars: {
+        Row: MessageStarsRow;
+        Insert: Partial<MessageStarsRow>;
+        Update: Partial<MessageStarsRow>;
+      } & Relationships;
       statuses: {
         Row: StatusesRow;
         Insert: Partial<StatusesRow>;
@@ -171,10 +190,16 @@ export interface Database {
       } & Relationships;
     };
     Functions: {
-      get_chat_list: { Args: Record<string, never>; Returns: ChatListRow[] };
+      get_chat_list: { Args: { p_archived?: boolean }; Returns: ChatListRow[] };
       mark_chat_read: { Args: { p_chat_id: string }; Returns: void };
       find_or_create_dm: { Args: { other_user_id: string }; Returns: string };
       remove_household_member: { Args: { target_user_id: string }; Returns: void };
+      check_phone_status: { Args: { p_phone: string }; Returns: { exists: boolean; has_pin: boolean } };
+      verify_recovery_pin: { Args: { p_phone: string; p_pin: string }; Returns: boolean };
+      claim_phone: { Args: { p_phone: string; p_pin: string }; Returns: void };
+      set_pin: { Args: { p_pin: string }; Returns: void };
+      recover_account: { Args: { p_phone: string; p_pin: string }; Returns: boolean };
+      delete_self: { Args: Record<string, never>; Returns: void };
     };
   };
 }

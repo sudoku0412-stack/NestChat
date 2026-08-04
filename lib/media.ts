@@ -166,6 +166,31 @@ export async function uploadAvatar(userId: string, rawAsset: PickedAsset): Promi
   return supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl;
 }
 
+export async function getSignedWallpaperUrl(path: string): Promise<string | null> {
+  const { data, error } = await supabase.storage.from('wallpapers').createSignedUrl(path, 3600);
+  if (error) return null;
+  return data.signedUrl;
+}
+
+export async function uploadWallpaper(chatId: string, userId: string, rawAsset: PickedAsset): Promise<string> {
+  const result = await ImageManipulator.manipulateAsync(
+    rawAsset.uri,
+    [{ resize: { width: 1080 } }],
+    { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+  );
+
+  const path = `${chatId}/${userId}/wallpaper-${Date.now()}.jpg`;
+  const response = await fetch(result.uri);
+  const arrayBuffer = await response.arrayBuffer();
+
+  const { error } = await supabase.storage.from('wallpapers').upload(path, arrayBuffer, {
+    contentType: 'image/jpeg',
+  });
+  if (error) throw error;
+
+  return path;
+}
+
 export async function uploadStatusMedia(userId: string, rawAsset: PickedAsset): Promise<UploadedMedia> {
   const asset = await prepareForUpload(rawAsset);
   const extension = asset.kind === 'video' ? 'mp4' : 'jpg';

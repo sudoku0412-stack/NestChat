@@ -16,11 +16,12 @@ export async function sendTextMessage(
   chatId: string,
   senderId: string,
   body: string,
-  id: string = generateId()
+  id: string = generateId(),
+  replyToMessageId: string | null = null
 ): Promise<MessagesRow> {
   const { data, error } = await supabase
     .from('messages')
-    .insert({ id, chat_id: chatId, sender_id: senderId, body })
+    .insert({ id, chat_id: chatId, sender_id: senderId, body, reply_to_message_id: replyToMessageId })
     .select()
     .single();
   if (error || !data) throw error ?? new Error('Failed to send message');
@@ -57,4 +58,37 @@ export async function sendMediaMessage(chatId: string, senderId: string, asset: 
 
 export async function softDeleteMessage(messageId: string) {
   await supabase.from('messages').update({ deleted_at: new Date().toISOString() }).eq('id', messageId);
+}
+
+// Personal to the caller — hides messages sent before now for them only, never deletes anything
+// the other person can see. Always scoped by user_id: chat_members_update_comember lets any
+// co-member update any row in the chat, so an unscoped update could clear someone else's view.
+export async function clearChat(chatId: string, userId: string) {
+  await supabase
+    .from('chat_members')
+    .update({ cleared_at: new Date().toISOString() })
+    .eq('chat_id', chatId)
+    .eq('user_id', userId);
+}
+
+export async function setChatWallpaper(chatId: string, userId: string, path: string | null) {
+  await supabase
+    .from('chat_members')
+    .update({ wallpaper_path: path })
+    .eq('chat_id', chatId)
+    .eq('user_id', userId);
+}
+
+// Shared/visible-to-everyone-in-the-chat, unlike starMessage below — matches
+// chats_update_member's existing "any co-member can update" model.
+export async function setPinnedMessage(chatId: string, messageId: string | null) {
+  await supabase.from('chats').update({ pinned_message_id: messageId }).eq('id', chatId);
+}
+
+export async function starMessage(messageId: string, userId: string) {
+  await supabase.from('message_stars').insert({ message_id: messageId, user_id: userId });
+}
+
+export async function unstarMessage(messageId: string, userId: string) {
+  await supabase.from('message_stars').delete().eq('message_id', messageId).eq('user_id', userId);
 }

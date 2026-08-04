@@ -16,7 +16,8 @@ function previewFor(row: {
 
 let channelSeq = 0;
 
-export function useChatList(userId: string | null) {
+export function useChatList(userId: string | null, options: { archived?: boolean } = {}) {
+  const { archived = false } = options;
   const [chats, setChats] = useState<ChatListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const channelName = useRef(`chat-list-updates-${++channelSeq}`);
@@ -24,7 +25,7 @@ export function useChatList(userId: string | null) {
   const load = useCallback(async () => {
     if (!userId) return;
 
-    const { data: rows, error } = await supabase.rpc('get_chat_list');
+    const { data: rows, error } = await supabase.rpc('get_chat_list', { p_archived: archived });
     if (error) {
       console.warn('get_chat_list failed', error.message);
       setLoading(false);
@@ -64,12 +65,13 @@ export function useChatList(userId: string | null) {
         unreadCount: row.unread_count,
         muted: row.muted,
         archived: row.archived,
+        favorite: row.favorite,
       };
     });
 
     setChats(items);
     setLoading(false);
-  }, [userId]);
+  }, [userId, archived]);
 
   useEffect(() => {
     load();

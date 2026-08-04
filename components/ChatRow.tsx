@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { Avatar, GroupAvatarStack } from './Avatar';
 import { SwipeableRow } from './SwipeableRow';
+import { useAccentTheme } from '../lib/accentTheme';
 import { colors, fontWeight, radius, space } from '../lib/theme';
 import type { ChatListItem } from '../lib/types';
 
@@ -22,23 +23,58 @@ interface ChatRowProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   onPress: () => void;
+  onLongPress?: () => void;
   onMuteToggle: () => void;
   onDelete: () => void;
   onArchive: () => void;
+  onFavoriteToggle: () => void;
+  isArchived?: boolean;
+  selectMode?: boolean;
+  selected?: boolean;
 }
 
-export function ChatRow({ chat, isOpen, onOpenChange, onPress, onMuteToggle, onDelete, onArchive }: ChatRowProps) {
+export function ChatRow({
+  chat,
+  isOpen,
+  onOpenChange,
+  onPress,
+  onLongPress,
+  onMuteToggle,
+  onDelete,
+  onArchive,
+  onFavoriteToggle,
+  isArchived = false,
+  selectMode = false,
+  selected = false,
+}: ChatRowProps) {
+  const { colors: accentColors } = useAccentTheme();
   return (
     <SwipeableRow
       isOpen={isOpen}
       onOpenChange={onOpenChange}
       onPress={onPress}
+      onLongPress={onLongPress}
       onMuteToggle={onMuteToggle}
       onDelete={onDelete}
       onArchive={onArchive}
+      onFavoriteToggle={onFavoriteToggle}
       muted={chat.muted}
+      favorite={chat.favorite}
+      isArchived={isArchived}
+      disabled={selectMode}
     >
       <View style={styles.row}>
+        {selectMode && (
+          <View
+            style={[
+              styles.checkCircle,
+              selected && { backgroundColor: accentColors.accent, borderColor: accentColors.accent },
+            ]}
+          >
+            {selected && <Text style={styles.checkGlyph}>✓</Text>}
+          </View>
+        )}
+
         {chat.type === 'group' ? (
           <GroupAvatarStack members={chat.avatarMembers} />
         ) : (
@@ -47,9 +83,12 @@ export function ChatRow({ chat, isOpen, onOpenChange, onPress, onMuteToggle, onD
 
         <View style={styles.middle}>
           <View style={styles.titleLine}>
-            <Text style={styles.title} numberOfLines={1}>
-              {chat.title}
-            </Text>
+            <View style={styles.titleRow}>
+              {chat.favorite && <Text style={[styles.favoriteGlyph, { color: accentColors.accent }]}>★</Text>}
+              <Text style={styles.title} numberOfLines={1}>
+                {chat.title}
+              </Text>
+            </View>
             <Text style={styles.timestamp}>{formatTimestamp(chat.lastMessageAt)}</Text>
           </View>
           <View style={styles.previewLine}>
@@ -61,7 +100,7 @@ export function ChatRow({ chat, isOpen, onOpenChange, onPress, onMuteToggle, onD
             </Text>
             {chat.muted && <Text style={styles.muteGlyph}>♪̸</Text>}
             {chat.unreadCount > 0 && (
-              <View style={styles.badge}>
+              <View style={[styles.badge, { backgroundColor: accentColors.accent }]}>
                 <Text style={styles.badgeText}>{chat.unreadCount > 99 ? '99+' : chat.unreadCount}</Text>
               </View>
             )}
@@ -82,6 +121,20 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.divider,
   },
+  checkCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: radius.full,
+    borderWidth: 1.5,
+    borderColor: colors.divider,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkGlyph: {
+    color: colors.bg,
+    fontSize: 12,
+    fontWeight: fontWeight.semibold,
+  },
   middle: {
     flex: 1,
   },
@@ -89,6 +142,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'baseline',
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: space[1],
+    flexShrink: 1,
+  },
+  favoriteGlyph: {
+    fontSize: 13,
   },
   title: {
     color: colors.text,
@@ -120,7 +182,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   badge: {
-    backgroundColor: colors.accent,
     borderRadius: radius.sm,
     minWidth: 20,
     height: 20,

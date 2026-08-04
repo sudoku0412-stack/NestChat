@@ -32,7 +32,7 @@ describe('sendTextMessage', () => {
     expect(supabase.from).toHaveBeenCalledWith('messages');
     expect(calls[0]).toEqual({
       method: 'insert',
-      args: [{ id: 'msg-1', chat_id: 'chat-1', sender_id: 'user-1', body: 'hi' }],
+      args: [{ id: 'msg-1', chat_id: 'chat-1', sender_id: 'user-1', body: 'hi', reply_to_message_id: null }],
     });
     expect(result).toEqual(row);
   });

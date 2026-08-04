@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Avatar } from './Avatar';
+import { useAccentTheme } from '../lib/accentTheme';
 import { colors, fontWeight, radius, space } from '../lib/theme';
 import type { Member } from '../lib/types';
 
@@ -14,11 +15,15 @@ interface MemberRowProps {
 }
 
 export function MemberRow({ member, onPress, checkbox, trailing }: MemberRowProps) {
+  const { colors: accentColors } = useAccentTheme();
   return (
     <Pressable style={styles.row} onPress={onPress}>
       {checkbox && (
         <Pressable
-          style={[styles.checkbox, checkbox.checked && styles.checkboxChecked]}
+          style={[
+            styles.checkbox,
+            checkbox.checked && { backgroundColor: accentColors.accent, borderColor: accentColors.accent },
+          ]}
           onPress={checkbox.onToggle}
           hitSlop={8}
         >
@@ -53,10 +58,6 @@ const styles = StyleSheet.create({
     borderColor: colors.textMuted,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
   },
   checkmark: {
     color: colors.bg,

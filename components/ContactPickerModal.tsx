@@ -3,6 +3,7 @@ import { ActivityIndicator, FlatList, Modal, Pressable, StyleSheet, Text, View }
 import { loadDeviceContactsForShare, type ShareableContact } from '../lib/contacts';
 import { Avatar } from './Avatar';
 import { colors, fontWeight, radius, space } from '../lib/theme';
+import { useAccentTheme } from '../lib/accentTheme';
 
 interface ContactPickerModalProps {
   visible: boolean;
@@ -12,6 +13,7 @@ interface ContactPickerModalProps {
 
 export function ContactPickerModal({ visible, onClose, onSelect }: ContactPickerModalProps) {
   const [contacts, setContacts] = useState<ShareableContact[] | null>(null);
+  const { colors: accentColors } = useAccentTheme();
 
   useEffect(() => {
     if (!visible) return;
@@ -25,7 +27,7 @@ export function ContactPickerModal({ visible, onClose, onSelect }: ContactPicker
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
           <Text style={styles.title}>Share a contact</Text>
           {contacts === null ? (
-            <ActivityIndicator color={colors.accent} style={styles.loading} />
+            <ActivityIndicator color={accentColors.accent} style={styles.loading} />
           ) : contacts.length === 0 ? (
             <Text style={styles.empty}>No contacts with a phone number found, or access was denied.</Text>
           ) : (

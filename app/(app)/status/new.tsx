@@ -16,6 +16,7 @@ import { router } from 'expo-router';
 import { useAuth } from '../../../lib/auth';
 import { pickFromCamera, pickFromLibrary, type PickedAsset } from '../../../lib/media';
 import { postMediaStatus, postTextStatus } from '../../../lib/statusActions';
+import { useAccentTheme } from '../../../lib/accentTheme';
 import { colors, fontWeight, space } from '../../../lib/theme';
 
 const BACKGROUND_COLORS = [
@@ -29,6 +30,7 @@ const BACKGROUND_COLORS = [
 type Mode = 'choose' | 'text' | 'media';
 
 export default function NewStatusScreen() {
+  const { colors: accentColors } = useAccentTheme();
   const insets = useSafeAreaInsets();
   const { profile } = useAuth();
   const [mode, setMode] = useState<Mode>('choose');
@@ -113,7 +115,7 @@ export default function NewStatusScreen() {
             <ActivityIndicator color={colors.text} />
           ) : (
             <Pressable onPress={handlePost} disabled={!text.trim()} hitSlop={8}>
-              <Text style={[styles.post, !text.trim() && styles.postDisabled]}>Post</Text>
+              <Text style={[styles.post, { color: accentColors.accent }, !text.trim() && styles.postDisabled]}>Post</Text>
             </Pressable>
           )}
         </View>
@@ -200,7 +202,6 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
   },
   post: {
-    color: colors.accent,
     fontSize: 15,
     fontWeight: fontWeight.semibold,
   },

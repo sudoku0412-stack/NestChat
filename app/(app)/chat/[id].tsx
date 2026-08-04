@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   FlatList,
+  ImageBackground,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -14,9 +15,18 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '../../../lib/auth';
 import { useMessages } from '../../../lib/hooks/useMessages';
 import { supabase } from '../../../lib/supabase';
-import { generateId, sendMediaMessage, sendTextMessage } from '../../../lib/chatActions';
+import * as Clipboard from 'expo-clipboard';
+import {
+  generateId,
+  sendMediaMessage,
+  sendTextMessage,
+  setPinnedMessage,
+  softDeleteMessage,
+  starMessage,
+  unstarMessage,
+} from '../../../lib/chatActions';
 import type { MessageWithMedia } from '../../../lib/types';
-import { pickDocument, pickFromCamera, pickFromLibrary } from '../../../lib/media';
+import { getSignedWallpaperUrl, pickDocument, pickFromCamera, pickFromLibrary } from '../../../lib/media';
 import { startLiveLocationShare } from '../../../lib/liveLocation';
 import type { ShareableContact } from '../../../lib/contacts';
 import type { LiveLocationDuration } from '../../../lib/database.types';
@@ -27,6 +37,7 @@ import { TypingIndicator } from '../../../components/TypingIndicator';
 import { Composer } from '../../../components/Composer';
 import { ContactPickerModal } from '../../../components/ContactPickerModal';
 import { LocationDurationModal } from '../../../components/LocationDurationModal';
+import { MessageActionsModal } from '../../../components/MessageActionsModal';
 import { colors, fontWeight, space } from '../../../lib/theme';
 import { useThemeMode } from '../../../lib/themeMode';
 
@@ -36,19 +47,37 @@ function formatLastSeen(iso: string | null) {
   return `Last seen ${date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
 }
 
+function previewFor(message: MessageWithMedia) {
+  if (message.deleted_at) return 'This message was deleted';
+  if (message.body) return message.body;
+  if (message.media.length > 0) return message.media[0]!.kind === 'document' ? '📄 Document' : '📷 Media';
+  return '';
+}
+
 export default function ThreadScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const { profile } = useAuth();
-  const { messages, members, membersById, isReadByOthers, refresh } = useMessages(id, profile?.id ?? null);
+  const { messages, members, membersById, isReadByOthers, refresh, ownMembership, starredMessageIds } = useMessages(
+    id,
+    profile?.id ?? null
+  );
   const [draft, setDraft] = useState('');
-  const [chatInfo, setChatInfo] = useState<{ type: string; name: string | null } | null>(null);
+  const [chatInfo, setChatInfo] = useState<{
+    type: string;
+    name: string | null;
+    pinned_message_id: string | null;
+  } | null>(null);
   const [muted, setMuted] = useState(false);
+  const [wallpaperUrl, setWallpaperUrl] = useState<string | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
   const [pendingMessages, setPendingMessages] = useState<MessageWithMedia[]>([]);
   const [otherTyping, setOtherTyping] = useState(false);
   const [contactPickerVisible, setContactPickerVisible] = useState(false);
   const [locationModalVisible, setLocationModalVisible] = useState(false);
+  const [actionMessage, setActionMessage] = useState<MessageWithMedia | null>(null);
+  const [actionMenuY, setActionMenuY] = useState(0);
+  const [replyingTo, setReplyingTo] = useState<MessageWithMedia | null>(null);
   const listRef = useRef<FlatList>(null);
   const typingChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const typingClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -59,6 +88,15 @@ export default function ThreadScreen() {
     if (pendingMessages.length === 0) return;
     setPendingMessages((prev) => prev.filter((p) => !messages.some((m) => m.id === p.id)));
   }, [messages]);
+
+  useEffect(() => {
+    const path = ownMembership?.wallpaper_path ?? null;
+    if (!path) {
+      setWallpaperUrl(null);
+      return;
+    }
+    getSignedWallpaperUrl(path).then(setWallpaperUrl);
+  }, [ownMembership?.wallpaper_path]);
 
   useEffect(() => {
     const channel = supabase
@@ -104,7 +142,7 @@ export default function ThreadScreen() {
   useEffect(() => {
     supabase
       .from('chats')
-      .select('type, name')
+      .select('type, name, pinned_message_id')
       .eq('id', id)
       .single()
       .then(({ data }) => setChatInfo(data ?? null));
@@ -120,19 +158,31 @@ export default function ThreadScreen() {
     }
   }, [id, profile]);
 
+  // Online/last-seen and read receipts are mutual, like WhatsApp: if either side has the
+  // "Read receipts & online status" setting off, neither can see the other's. Groups keep
+  // showing read state regardless (matches WhatsApp: that setting doesn't apply to groups).
+  const canSeePresence = !isGroup && !!profile?.show_read_receipts && !!otherMember?.show_read_receipts;
+  const canSeeReadReceipts = isGroup
+    ? !!profile?.show_read_receipts
+    : !!profile?.show_read_receipts && !!otherMember?.show_read_receipts;
+
   const title = isGroup ? chatInfo?.name ?? 'Group' : otherMember?.display_name ?? '';
   const subtitle = otherTyping
     ? 'Typing…'
     : isGroup
       ? `${members.length} member${members.length === 1 ? '' : 's'}`
-      : otherMember?.is_online
-        ? 'Online'
-        : formatLastSeen(otherMember?.last_seen_at ?? null);
+      : !canSeePresence
+        ? ''
+        : otherMember?.is_online
+          ? 'Online'
+          : formatLastSeen(otherMember?.last_seen_at ?? null);
 
   async function handleSend() {
     if (!profile || !draft.trim()) return;
     const text = draft.trim();
+    const replyToId = replyingTo?.id ?? null;
     setDraft('');
+    setReplyingTo(null);
     const optimistic: MessageWithMedia = {
       id: generateId(),
       chat_id: id,
@@ -141,14 +191,17 @@ export default function ThreadScreen() {
       created_at: new Date().toISOString(),
       deleted_at: null,
       location_share_id: null,
+      reply_to_message_id: replyToId,
       media: [],
+      replyTo: replyingTo,
     };
     setPendingMessages((prev) => [...prev, optimistic]);
     try {
-      await sendTextMessage(id, profile.id, text, optimistic.id);
+      await sendTextMessage(id, profile.id, text, optimistic.id, replyToId);
     } catch (err) {
       setPendingMessages((prev) => prev.filter((p) => p.id !== optimistic.id));
       setDraft(text);
+      setReplyingTo(replyingTo);
     }
   }
 
@@ -191,6 +244,66 @@ export default function ThreadScreen() {
     await supabase.from('chat_members').update({ muted: next }).eq('chat_id', id).eq('user_id', profile.id);
   }
 
+  function refreshChatInfo() {
+    supabase
+      .from('chats')
+      .select('type, name, pinned_message_id')
+      .eq('id', id)
+      .single()
+      .then(({ data }) => setChatInfo(data ?? null));
+  }
+
+  async function handleToggleStar() {
+    if (!profile || !actionMessage) return;
+    if (starredMessageIds.has(actionMessage.id)) await unstarMessage(actionMessage.id, profile.id);
+    else await starMessage(actionMessage.id, profile.id);
+    refresh();
+  }
+
+  async function handleTogglePin() {
+    if (!actionMessage) return;
+    const isPinned = chatInfo?.pinned_message_id === actionMessage.id;
+    await setPinnedMessage(id, isPinned ? null : actionMessage.id);
+    refreshChatInfo();
+  }
+
+  async function handleCopy() {
+    if (!actionMessage?.body) return;
+    await Clipboard.setStringAsync(actionMessage.body);
+  }
+
+  function handleDeleteMessage() {
+    if (!actionMessage) return;
+    const messageId = actionMessage.id;
+    Alert.alert('Delete this message?', 'This deletes it for everyone in the chat.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          await softDeleteMessage(messageId);
+          refresh();
+        },
+      },
+    ]);
+  }
+
+  function handleViewContact() {
+    if (!actionMessage) return;
+    const sender = membersById.get(actionMessage.sender_id);
+    if (!sender) return;
+    router.push({ pathname: '/(app)/contact-info/[id]', params: { id: sender.id, chatId: id } });
+  }
+
+  function handleReply() {
+    if (!actionMessage) return;
+    setReplyingTo(actionMessage);
+  }
+
+  const pinnedMessage = chatInfo?.pinned_message_id
+    ? messages.find((m) => m.id === chatInfo.pinned_message_id) ?? null
+    : null;
+
   return (
     <KeyboardAvoidingView
       style={[styles.screen, { backgroundColor: bg }]}
@@ -203,7 +316,14 @@ export default function ThreadScreen() {
           </Pressable>
           <Pressable
             style={styles.headerCenter}
-            onPress={() => isGroup && router.push(`/(app)/group-info/${id}`)}
+            onPress={() => {
+              if (isGroup) router.push(`/(app)/group-info/${id}`);
+              else if (otherMember)
+                router.push({
+                  pathname: '/(app)/contact-info/[id]',
+                  params: { id: otherMember.id, chatId: id },
+                });
+            }}
           >
             <Avatar name={title} avatarUrl={isGroup ? null : otherMember?.avatar_url} size={32} />
             <View style={styles.headerTexts}>
@@ -220,39 +340,67 @@ export default function ThreadScreen() {
         <View style={styles.headerRule} />
       </View>
 
-      <FlatList
-        ref={listRef}
-        data={displayMessages}
-        keyExtractor={(m) => m.id}
-        contentContainerStyle={{ paddingVertical: space[4] }}
-        onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
-        ListFooterComponent={otherTyping ? <TypingIndicator /> : null}
-        renderItem={({ item, index }) => {
-          const isOwn = item.sender_id === profile?.id;
-          const prev = displayMessages[index - 1];
-          const showSenderName = isGroup && !isOwn && (!prev || prev.sender_id !== item.sender_id);
-          const isLastOwnWithMedia = isOwn && index === displayMessages.length - 1;
+      {pinnedMessage && (
+        <View style={styles.pinnedBanner}>
+          <Text style={styles.pinnedGlyph}>📌</Text>
+          <Text style={styles.pinnedText} numberOfLines={1}>
+            {previewFor(pinnedMessage)}
+          </Text>
+        </View>
+      )}
 
-          if (item.liveLocation) {
+      <ImageBackground
+        source={wallpaperUrl ? { uri: wallpaperUrl } : undefined}
+        style={styles.messageArea}
+      >
+        {wallpaperUrl && <View style={styles.wallpaperScrim} />}
+        <FlatList
+          ref={listRef}
+          data={displayMessages}
+          keyExtractor={(m) => m.id}
+          contentContainerStyle={{ paddingVertical: space[4] }}
+          onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
+          ListFooterComponent={otherTyping ? <TypingIndicator /> : null}
+          renderItem={({ item, index }) => {
+            const isOwn = item.sender_id === profile?.id;
+            const prev = displayMessages[index - 1];
+            const showSenderName = isGroup && !isOwn && (!prev || prev.sender_id !== item.sender_id);
+            const isLastOwnWithMedia = isOwn && index === displayMessages.length - 1;
+
+            if (item.liveLocation) {
+              return (
+                <View style={isOwn ? styles.liveLocationOwn : styles.liveLocationOther}>
+                  <LiveLocationBubble location={item.liveLocation} isOwn={isOwn} />
+                </View>
+              );
+            }
+
+            const replyTo = item.replyTo
+              ? {
+                  senderName: membersById.get(item.replyTo.sender_id)?.display_name ?? '',
+                  preview: previewFor(item.replyTo),
+                }
+              : null;
+
             return (
-              <View style={isOwn ? styles.liveLocationOwn : styles.liveLocationOther}>
-                <LiveLocationBubble location={item.liveLocation} isOwn={isOwn} />
-              </View>
+              <MessageBubble
+                message={{ ...item, sender: membersById.get(item.sender_id) }}
+                isOwn={isOwn}
+                showSenderName={showSenderName}
+                showReadReceipts={canSeeReadReceipts}
+                isRead={isReadByOthers(item)}
+                isStarred={starredMessageIds.has(item.id)}
+                replyTo={replyTo}
+                onLongPress={(y) => {
+                  setActionMessage(item);
+                  setActionMenuY(y);
+                }}
+                pendingMediaCount={isLastOwnWithMedia ? pendingCount : 0}
+              />
             );
-          }
-
-          return (
-            <MessageBubble
-              message={{ ...item, sender: membersById.get(item.sender_id) }}
-              isOwn={isOwn}
-              showSenderName={showSenderName}
-              showReadReceipts={!!profile?.show_read_receipts}
-              isRead={isReadByOthers(item)}
-              pendingMediaCount={isLastOwnWithMedia ? pendingCount : 0}
-            />
-          );
-        }}
-      />
+          }}
+        />
+      </ImageBackground>
 
       <Composer
         value={draft}
@@ -263,6 +411,15 @@ export default function ThreadScreen() {
         onPickDocument={() => handlePick('document')}
         onPickContact={() => setContactPickerVisible(true)}
         onShareLocation={() => setLocationModalVisible(true)}
+        replyingTo={
+          replyingTo
+            ? {
+                senderName: membersById.get(replyingTo.sender_id)?.display_name ?? '',
+                preview: previewFor(replyingTo),
+              }
+            : null
+        }
+        onCancelReply={() => setReplyingTo(null)}
       />
 
       <ContactPickerModal
@@ -275,11 +432,37 @@ export default function ThreadScreen() {
         onClose={() => setLocationModalVisible(false)}
         onSelect={handleShareLocation}
       />
+      <MessageActionsModal
+        visible={!!actionMessage}
+        anchorY={actionMenuY}
+        isOwn={actionMessage?.sender_id === profile?.id}
+        isStarred={!!actionMessage && starredMessageIds.has(actionMessage.id)}
+        isPinned={!!actionMessage && chatInfo?.pinned_message_id === actionMessage.id}
+        canCopy={!!actionMessage?.body}
+        onClose={() => setActionMessage(null)}
+        onReply={handleReply}
+        onCopy={handleCopy}
+        onToggleStar={handleToggleStar}
+        onTogglePin={handleTogglePin}
+        onViewContact={handleViewContact}
+        onDelete={handleDeleteMessage}
+      />
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  messageArea: {
+    flex: 1,
+  },
+  wallpaperScrim: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
   screen: {
     flex: 1,
     backgroundColor: colors.bg,
@@ -323,6 +506,24 @@ const styles = StyleSheet.create({
   headerRule: {
     height: 2,
     backgroundColor: colors.divider,
+  },
+  pinnedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[2],
+    paddingHorizontal: space[4],
+    paddingVertical: space[2],
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+  },
+  pinnedGlyph: {
+    fontSize: 13,
+  },
+  pinnedText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    flex: 1,
   },
   liveLocationOwn: {
     alignItems: 'flex-end',

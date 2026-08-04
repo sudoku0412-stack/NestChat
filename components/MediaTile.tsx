@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useSignedUrl } from '../lib/hooks/useSignedUrl';
 import { colors, radius, space } from '../lib/theme';
+import { useAccentTheme } from '../lib/accentTheme';
 import type { MessageMediaRow } from '../lib/database.types';
 
 interface MediaTileProps {
@@ -19,6 +20,7 @@ function formatFileSize(bytes: number | null) {
 
 export function MediaTile({ media, messageId, ownMessage }: MediaTileProps) {
   const url = useSignedUrl(media.storage_path);
+  const { colors: accentColors } = useAccentTheme();
 
   if (media.kind === 'document') {
     return (
@@ -52,7 +54,7 @@ export function MediaTile({ media, messageId, ownMessage }: MediaTileProps) {
         <Image source={{ uri: url }} style={styles.image} contentFit="cover" />
       ) : (
         <View style={styles.loading}>
-          <ActivityIndicator color={colors.accent} />
+          <ActivityIndicator color={accentColors.accent} />
         </View>
       )}
       {media.kind === 'video' && (
@@ -65,10 +67,11 @@ export function MediaTile({ media, messageId, ownMessage }: MediaTileProps) {
 }
 
 export function PendingMediaTile() {
+  const { colors: accentColors } = useAccentTheme();
   return (
     <View style={styles.tile}>
       <View style={styles.loading}>
-        <ActivityIndicator color={colors.accent} />
+        <ActivityIndicator color={accentColors.accent} />
       </View>
     </View>
   );

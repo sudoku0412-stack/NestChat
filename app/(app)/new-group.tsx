@@ -14,9 +14,11 @@ import { useAuth } from '../../lib/auth';
 import { useMembers } from '../../lib/hooks/useMembers';
 import { supabase } from '../../lib/supabase';
 import { MemberRow } from '../../components/MemberRow';
+import { useAccentTheme } from '../../lib/accentTheme';
 import { colors, fontWeight, space } from '../../lib/theme';
 
 export default function NewGroupScreen() {
+  const { colors: accentColors } = useAccentTheme();
   const insets = useSafeAreaInsets();
   const { profile } = useAuth();
   const { memberIds } = useLocalSearchParams<{ memberIds?: string }>();
@@ -79,9 +81,9 @@ export default function NewGroupScreen() {
         <Text style={styles.title}>New group</Text>
         <Pressable onPress={handleCreate} disabled={!canCreate} hitSlop={8}>
           {creating ? (
-            <ActivityIndicator color={colors.accent} />
+            <ActivityIndicator color={accentColors.accent} />
           ) : (
-            <Text style={[styles.action, !canCreate && styles.actionDisabled]}>Create</Text>
+            <Text style={[styles.action, { color: accentColors.accent }, !canCreate && styles.actionDisabled]}>Create</Text>
           )}
         </Pressable>
       </View>
@@ -100,7 +102,7 @@ export default function NewGroupScreen() {
       <Text style={styles.sectionLabel}>Add members ({selected.size})</Text>
 
       {loading ? (
-        <ActivityIndicator color={colors.accent} style={{ marginTop: space[8] }} />
+        <ActivityIndicator color={accentColors.accent} style={{ marginTop: space[8] }} />
       ) : (
         <FlatList
           data={members}
@@ -141,7 +143,6 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
   },
   action: {
-    color: colors.accent,
     fontSize: 15,
     fontWeight: fontWeight.semibold,
   },

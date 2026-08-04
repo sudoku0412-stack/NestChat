@@ -9,33 +9,32 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Redirect, router } from 'expo-router';
-import { useAuth } from '../lib/auth';
-import { supabase } from '../lib/supabase';
-import { pickImageFromLibrary, uploadAvatar, type PickedAsset } from '../lib/media';
-import { Avatar } from '../components/Avatar';
-import { OutlineButton } from '../components/OutlineButton';
-import { useAccentTheme } from '../lib/accentTheme';
-import { colors, fontWeight, radius, space } from '../lib/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
+import { useAuth } from '../../lib/auth';
+import { supabase } from '../../lib/supabase';
+import { pickImageFromLibrary, uploadAvatar, type PickedAsset } from '../../lib/media';
+import { Avatar } from '../../components/Avatar';
+import { OutlineButton } from '../../components/OutlineButton';
+import { useAccentTheme } from '../../lib/accentTheme';
+import { colors, fontWeight, radius, space } from '../../lib/theme';
 
-export default function OnboardingScreen() {
-  const { session, profile, needsOnboarding, refreshProfile, signOut } = useAuth();
+export default function EditProfileScreen() {
+  const { profile, refreshProfile } = useAuth();
   const { colors: accentColors } = useAccentTheme();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const insets = useSafeAreaInsets();
+  const [name, setName] = useState(profile?.display_name ?? '');
+  const [email, setEmail] = useState(profile?.email ?? '');
   const [pickedAvatar, setPickedAvatar] = useState<PickedAsset | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  if (!session) return <Redirect href="/login" />;
-  if (!needsOnboarding) return <Redirect href="/(app)/(tabs)" />;
 
   async function handlePickAvatar() {
     const asset = await pickImageFromLibrary();
     if (asset) setPickedAvatar(asset);
   }
 
-  async function handleContinue() {
+  async function handleSave() {
     if (!profile || !name.trim()) return;
     setError(null);
     setSaving(true);
@@ -51,15 +50,14 @@ export default function OnboardingScreen() {
         .update({
           display_name: name.trim(),
           email: email.trim() || null,
-          avatar_url: avatarUrl,
-          onboarding_completed: true,
+          ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
         })
         .eq('id', profile.id);
 
       if (updateError) throw updateError;
 
       await refreshProfile();
-      router.replace('/(app)/(tabs)');
+      router.back();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Try again.');
     } finally {
@@ -69,22 +67,26 @@ export default function OnboardingScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.screen}
+      style={[styles.screen, { paddingTop: insets.top }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={styles.content}>
-        <Text style={styles.title}>Set up your profile</Text>
-        <Text style={styles.subtitle}>This is how the rest of the household will see you.</Text>
+      <View style={styles.header}>
+        <Pressable onPress={() => router.back()} hitSlop={8}>
+          <Text style={styles.back}>‹</Text>
+        </Pressable>
+        <Text style={styles.title}>Edit profile</Text>
+        <View style={{ width: 24 }} />
+      </View>
+      <View style={styles.headerRule} />
 
+      <View style={styles.content}>
         <Pressable style={styles.avatarPicker} onPress={handlePickAvatar}>
-          {pickedAvatar ? (
-            <Avatar name={name || '?'} avatarUrl={pickedAvatar.uri} size={88} />
-          ) : (
-            <Avatar name={name || '?'} size={88} />
-          )}
-          <Text style={[styles.avatarLabel, { color: accentColors.accent }]}>
-            {pickedAvatar ? 'Change photo' : 'Add a photo (optional)'}
-          </Text>
+          <Avatar
+            name={name || profile?.display_name || '?'}
+            avatarUrl={pickedAvatar?.uri ?? profile?.avatar_url}
+            size={88}
+          />
+          <Text style={[styles.avatarLabel, { color: accentColors.accent }]}>Change photo</Text>
         </Pressable>
 
         <Text style={styles.fieldLabel}>Your name</Text>
@@ -114,13 +116,9 @@ export default function OnboardingScreen() {
           {saving ? (
             <ActivityIndicator color={accentColors.accent} />
           ) : (
-            <OutlineButton label="Continue" onPress={handleContinue} disabled={!name.trim()} />
+            <OutlineButton label="Save" onPress={handleSave} disabled={!name.trim()} />
           )}
         </View>
-
-        <Pressable onPress={signOut} style={{ marginTop: space[8] }}>
-          <Text style={styles.signOut}>Not you? Sign out</Text>
-        </Pressable>
       </View>
     </KeyboardAvoidingView>
   );
@@ -131,21 +129,29 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg,
   },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: space[8],
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: space[6],
+    paddingVertical: space[4],
+  },
+  back: {
+    color: colors.text,
+    fontSize: 28,
+    width: 24,
   },
   title: {
     color: colors.text,
-    fontSize: 26,
-    fontWeight: fontWeight.heading,
-    marginBottom: space[2],
+    fontSize: 17,
+    fontWeight: fontWeight.medium,
   },
-  subtitle: {
-    color: colors.textMuted,
-    fontSize: 14,
-    marginBottom: space[8],
+  headerRule: {
+    height: 2,
+    backgroundColor: colors.divider,
+  },
+  content: {
+    padding: space[8],
   },
   avatarPicker: {
     alignItems: 'center',
@@ -177,10 +183,5 @@ const styles = StyleSheet.create({
     color: colors.danger,
     marginTop: space[4],
     fontSize: 13,
-  },
-  signOut: {
-    color: colors.textMuted,
-    fontSize: 13,
-    textAlign: 'center',
   },
 });

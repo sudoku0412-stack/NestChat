@@ -1,6 +1,6 @@
 # NestChat — Handover
 
-Last updated: 2026-08-02 (end of session)
+Last updated: 2026-08-04 (end of session)
 
 ## What this is
 
@@ -9,147 +9,153 @@ Storage, Realtime). Full feature/setup docs are in [README.md](README.md) — re
 anything about running the app, Supabase setup, or design decisions. This file is for picking up
 mid-stream: current state, what's broken/pending, what to check first.
 
+## How the user actually tests this — read before assuming anything about "reload"
+
+**The user tests exclusively via TestFlight, not a dev client connected to Metro, and has
+explicitly asked that Metro never be run for this project.** This means:
+
+- **JS-only changes are NOT automatically visible.** TestFlight installs a fixed JS bundle at
+  build time. Unless/until OTA (`expo-updates`, already installed but not fully wired to actually
+  publish updates — see below) is set up and actually used, *every* change — JS-only or
+  native — needs a fresh `expo prebuild -p ios` (only if a native dependency changed) → Xcode
+  Archive → Distribute App → App Store Connect → wait for TestFlight processing → reinstall.
+- Don't tell the user "just reload, no rebuild needed" for JS-only changes — that assumption
+  caused real confusion this session (the custom theme-color feature appeared completely broken
+  for several turns; it was actually working code sitting in an old, un-rebuilt TestFlight build).
+  Always bump the build number and say a fresh archive is needed, unless OTA is confirmed live.
+- **OTA status**: `expo-updates` is installed, `app.json` has `runtimeVersion.policy: "fingerprint"`
+  and an `updates.url` + `requestHeaders.expo-channel-name: "production"` pointing at an EAS
+  Update channel (`production`) that was created (`eas channel:create production`), but **no
+  build has ever actually been confirmed running with OTA live**, and `eas update` has never been
+  run to publish anything. If picking this up, either commit to finishing that setup (so future
+  JS-only fixes ship in seconds via `eas update`) or explicitly tell the user it's still
+  archive-every-time and drop the half-finished OTA config to avoid confusion.
+
 ## Current state
 
 - Repo: https://github.com/sudoku0412-stack/NestChat (private)
 - Supabase project: `sudoku0412-stack's Org / NestChat` (project ref `hfmjigdtmjbgyqcnneqt`)
-- Auth: **anonymous auth + typed-in phone number**, not real OTP. See README's "Phone number
-  capture, no SMS" section for the tradeoff (no account recovery on logout/reinstall).
-- **Apple Developer account is now paid** (upgraded this session from the free personal team).
-  Push notifications work now; the 7-day free-team build expiry no longer applies once you're
-  running from TestFlight instead of a raw Xcode dev build.
-- Navigation is now three tabs: **Chats** (middle, default) / **Status** (left) / **Settings**
-  (right) — see `app/(app)/(tabs)/`. Opening a chat/thread/etc. still pushes on top and hides the
-  tab bar, same as WhatsApp.
-- New Chat ("＋") reads the device's Contacts and matches phone numbers against everyone on
-  NestChat (last-10-digits match, see `lib/contacts.ts`) — sectioned into On NestChat / Also on
-  NestChat / Invite to NestChat.
-- Chat attachment menu (the "+" in the composer) is a rounded icon grid: Camera, Gallery,
-  Document, Contact, Share Live Location.
-- **Live location sharing**: pick 15 min / 24 hr / until-stopped, updates in the background via
-  `expo-location` + `expo-task-manager` (`lib/liveLocation.ts`, `lib/locationTask.ts`). Renders as
-  coordinates + "Open in Maps" (no embedded map — no maps SDK in the app).
-- **Jest test suite** covering business logic (chat/status actions, media upload logic, contact
-  matching, live-location math, the useMessages/useChatList hooks). Run with `npm test`. A husky
-  **pre-push hook** (`.husky/pre-push`) runs `tsc --noEmit` + `npm test` automatically before every
-  `git push` — if either fails, the push is blocked. Does **not** cover native/device-only
-  behavior (camera, background location, real push delivery, realtime socket internals) — that
-  still needs manual on-device QA.
+- **App version 2.0.0, build 4** (`app.json` / `ios/NestChat.xcodeproj` / `ios/NestChat/Info.plist`
+  — all three must stay in sync; see the recurring gotcha below about `expo prebuild` wiping the
+  build number back down). **Build 4 has not yet been archived/uploaded** — that's the immediate
+  next step, see below.
+- Auth: **anonymous auth + typed-in phone number**, not real OTP, now with **PIN-based account
+  recovery** (migrations `0006`–`0008`) so signing out or reinstalling doesn't lose your identity
+  — see "This session's work" below for the full story of why that took 3 migrations to get right.
+- **13 migrations total** (`0001`–`0013`), all already run against the live Supabase project by the
+  user. If resuming from a git checkout on a different machine, diff `supabase/migrations/` against
+  what's actually live before assuming anything is applied.
+- Design system is **"Hearth"** (`lib/theme.ts`) — warm terracotta/cream palette, Fraunces serif
+  display font, replacing an earlier cool-blurple "Nocturne" system. **The accent color is now
+  user-customizable** (Settings → App theme color) via `lib/accentTheme.tsx`'s
+  `AccentThemeProvider`/`useAccentTheme()` — see the important pattern note below before touching
+  any color-related style.
+- Navigation: three tabs (Status / Chats / Settings) with a custom animated pill indicator and SVG
+  line icons (`components/icons/`). Chats tab now has search, filter chips (All/Unread/Groups/
+  Favorites), a real Archived view (`app/(app)/archived-chats.tsx`), and long-press multi-select
+  with bulk mute/archive/delete.
+- Chat threads support: **Star** (private, per-user), **Pin** (shared, one per chat, banner at top
+  of thread), **Reply** (quotes a message inline), **Copy**, **Delete own message** — all via a
+  WhatsApp-style long-press card menu (`components/MessageActionsModal.tsx`). "Report" and "Add to
+  contacts" were deliberately *not* copied from WhatsApp's menu — no moderation backend exists for
+  Report, and "Add to contacts" was reinterpreted as **View contact** (opens the existing Contact
+  Info screen) since everyone's already a known household member.
+- Contact Info screen (tap a 1:1 chat's header) has: media/links/docs gallery, mute toggle,
+  starred-messages count, **custom per-user-per-chat photo wallpaper**, "create group with this
+  person," and "clear chat" (hides messages from your view only — never deletes the other side's
+  copy).
+- **Jest test suite** (`npm test`, 79 tests / 9 suites, all passing as of this session) + `npx tsc
+  --noEmit`. A husky pre-push hook runs both before every `git push`. Neither covers
+  native/device-only behavior — that still needs manual on-device QA, which for this project means
+  a TestFlight round-trip (see above).
 
 ## Immediate next step for whoever picks this up
 
-**Mid-way through submitting the app to TestFlight** (household-only distribution, not a public
-App Store listing — see "Why TestFlight, not public App Store" below). Current status:
-
-1. ✅ App Store Connect app record exists (Apple ID `6797336582`), App Information filled in,
-   Age Rating done (calculated **4+**), App Privacy data-collection label fully filled out and
-   **published**.
-2. ✅ Privacy policy is live at **https://sudoku0412-stack.github.io/nestchat-privacy/** — hosted
-   from a **separate small public repo** (`sudoku0412-stack/nestchat-privacy`, just one
-   `index.html`), because GitHub Pages doesn't work on this repo (private + GitHub Free plan). The
-   source content also lives at `docs/privacy.html` in *this* repo for editing — if you change the
-   policy text, update both `docs/privacy.html` here **and** push the same content to the
-   `nestchat-privacy` repo's `index.html` (they are not auto-synced).
-3. ✅ Migration `0005_documents_and_live_location.sql` has been run against the live Supabase
-   project (confirmed via Schema Visualizer — `live_locations` table and `location_share_id`
-   column exist).
-4. ✅ Apple Push Notifications Key created via `eas credentials` and assigned to the project.
-   `send-push` Edge Function is deployed with `--no-verify-jwt`, and a `pg_net`-based trigger
-   (`notify_send_push()` function + `send_push_on_message` trigger, created directly via SQL
-   since this project's `supabase_functions` schema doesn't exist) fires it on every new message.
-5. ⏳ **An archive was built and exported, but never actually uploaded to App Store Connect.**
-   Xcode packaged a valid `.ipa` (no blocking errors — the only log noise was benign
-   "Upload Symbols Failed" dSYM warnings) but dropped it to
-   `~/Downloads/NestChat 2026-08-02 20-08-40/NestChat.ipa` instead of uploading. **Next action:**
-   either open **Transporter** (free Mac App Store app) and drag that `.ipa` in to upload it
-   directly, or go back to Xcode Organizer → Distribute App → TestFlight & App Store and let it
-   run all the way through the upload step this time.
-6. Once a build shows up and finishes processing in App Store Connect → TestFlight tab: create an
-   **External Testing** group, add household members' Apple ID emails, write a "what to test"
-   note, and submit — this triggers a lightweight Beta App Review (usually ~1 day), much lighter
-   than full App Store review.
+1. **Archive and upload build 4.** Re-add the **Push Notifications capability** in Xcode first
+   (Signing & Capabilities → + Capability) — `expo prebuild` wipes this every time it runs, and it
+   ran multiple times this session (once for `expo-clipboard`, most recently not at all for build
+   4, but check anyway before archiving). Then Product → Archive → Distribute App → App Store
+   Connect.
+2. Once installed, **verify the App theme color picker actually works** (Settings → App theme
+   color → drag hue slider or type a hex → Save). This was broken all session due to a stale-closure
+   bug in `lib/accentTheme.tsx` (fixed, see gotchas below) — confirm the fix actually landed rather
+   than assuming.
+3. Decide on the **OTA setup** question above — finish it or drop it, don't leave it half-done.
+4. Original TestFlight distribution setup (External Testing group, Beta App Review) — this was
+   completed in an earlier session; if starting fresh on a new Apple account this whole section
+   would need redoing. See git history / this file's own history for the original steps if needed.
 
 ### Why TestFlight, not public App Store
 
-This app's data model has **no invite gating or per-user visibility scoping** — `users_select_all`
-RLS lets any authenticated user see every other user's name and phone number, and anyone can sign
-up with any unverified phone number (see "No SMS OTP" below). That's fine for TestFlight (only
-people you explicitly invite by email can even install it), but would be a real privacy problem on
-a public App Store listing where anyone in the world could sign up and see the whole roster. If
-this ever needs to go fully public, that gap needs fixing first (invite codes, or scoping
-"Contacts" to only people you actually share a chat with).
+This app's data model has **no invite gating or per-user visibility scoping** —
+`users_select_all` RLS lets any authenticated user see every other user's name and phone number,
+and anyone can sign up with any unverified phone number. That's fine for TestFlight (only people
+you explicitly invite by email can even install it), but would be a real privacy problem on a
+public App Store listing. If this ever needs to go fully public, that gap needs fixing first
+(invite codes, or scoping "Contacts" to only people you actually share a chat with).
 
 ## Known rough edges (not bugs, just unfinished/tradeoffs)
 
-- No SMS OTP — anyone can create an account with any typed-in, unverified phone number. Signup is
-  intentionally open, not invite-gated. See "Why TestFlight, not public App Store" above for why
-  this matters for distribution.
-- Live location sharing asks for "Always" location permission (needed for background updates) —
-  a fairly invasive ask; worth deciding if that tradeoff is acceptable before wider rollout.
-- Expired statuses aren't cleaned up automatically (optional `pg_cron` snippet in
-  `0003_status.sql` if you want it).
-- Household member removal is admin-only — the current admin is set correctly now
-  (`b43fffb5...`, "Kaushik Majumder"). If a *new* household spins this up from scratch, first
-  login still needs a manual `update public.users set role = 'admin' where id = '...'` in the SQL
-  Editor (match by `id`, not `phone` — see the gotcha below on why).
-- No in-app account deletion flow. Not required for TestFlight-only distribution, but Apple
-  requires it (Guideline 5.1.1v) before any future public App Store submission.
+- No SMS OTP — signup is open, not invite-gated, mitigated (not eliminated) by PIN-based recovery.
+- Live location sharing asks for "Always" location permission — invasive; worth revisiting.
+- Expired statuses aren't cleaned up automatically (optional `pg_cron` snippet in `0003_status.sql`).
+- No in-app account deletion flow. Apple requires this (Guideline 5.1.1v) before any public listing.
+- Reply/Star/pinned-message banners don't scroll-to-message on tap — acceptable v1 limitation, not
+  a bug.
 - Full list of build-vs-prototype deviations is in README's "Design notes & deviations" section.
+
+## This session's work (2026-08-03/04) — large session, quick summary
+
+In rough order: PIN-based account recovery (3 follow-up migrations to get the merge-on-recovery
+logic and no-pin-yet self-service path correct) → full "Hearth" visual redesign (palette, Fraunces
+font, SVG icon set, tab bar, redesigned attach-menu drawer — went through 3 iterations: Modal
+sheet → Reanimated-height drawer → `LayoutAnimation`-driven drawer, chasing a real jank bug caused
+by animating layout height on the UI thread instead of using transforms) → chat-list overhaul
+(search/filters/archive/favorites/multi-select) → Contact Info screen + per-chat wallpaper → Star
+messages → Reply/Pin/Copy/Delete via a proper long-press menu (redesigned twice to match a
+WhatsApp reference screenshot's icon-left layout and tap-anchored position) → user-customizable
+accent color (the biggest single piece — required auditing every `colors.accent*` usage across
+~20 files to find which were frozen in module-level `StyleSheet.create` calls vs. already
+reactive, then splitting each frozen one into static-structure + inline-color-override).
 
 ## Gotchas hit this session, if they recur
 
-- **Realtime channel silently stops delivering, forever, with no error** — turned out to be a
-  stale/expiring auth token on the socket. Fixed in `useMessages.ts` / `useChatList.ts` by calling
-  `supabase.realtime.setAuth(token)` before every (re)subscribe, plus exponential backoff on
-  reconnect (the first fix attempt had no backoff and looped instantly, which is worse — watch for
-  a tight `CLOSED` → resubscribe → `CLOSED` loop in the console if this regresses). There's also a
-  belt-and-suspenders poll (`setInterval`) so the UI stays correct even if realtime never recovers.
-- **`mark_chat_read` must not fire on every realtime-triggered refetch** — it used to run
-  unconditionally inside the `postgres_changes` subscription callback, which (after the auth-token
-  fix above) could re-trigger itself via the very `chat_members` update it makes, if not gated.
-  Fixed by only calling it when the newest message id actually changed (tracked via a ref). This
-  has a regression test in `lib/hooks/useMessages.test.ts`.
-- **Never run ad-hoc test/diagnostic scripts against the live Supabase project** — earlier this
-  session I (Claude) ran Node scripts directly against the production database to debug realtime,
-  which created ~10 junk "New Member" accounts visible in Settings → Contacts. Cleaned up via
-  `delete from public.users where phone is null`, but that filter accidentally deleted the *real*
-  admin account too (it had a null phone for unrelated reasons), which required manually
-  re-inserting a profile row and re-promoting to admin — the account only survived because
-  Supabase auth sessions (`auth.users`) are separate from the `public.users` profile row, so the
-  login session itself was never lost. **Any future debugging like this belongs in a disposable
-  Supabase project, not this one.**
-- **Promote-to-admin by `phone`, not `id`, is fragile** — a phone-format mismatch (e.g. with vs.
-  without `+1`) can silently promote the wrong account. Always match by `id` when changing roles.
-- **CocoaPods locale error** ("Unicode Normalization not appropriate for ASCII-8BIT") when
-  running `pod install` or `expo prebuild` — this machine's shell locale isn't UTF-8. Fix:
-  `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 pod install` from inside `ios/`.
-- **Push Notifications capability must be added via Xcode's "+ Capability" button**, not just by
-  hand-editing the entitlements plist — doing only the latter produces a confusing Xcode error
-  ("The capability associated with PUSH_NOTIFICATIONS could not be determined"). Now that the
-  Apple Developer account is paid, `aps-environment` should stay in
-  `ios/NestChat/NestChat.entitlements` (don't strip it like the old free-team workaround did).
-- **`expo-location` + `expo-task-manager` cause `expo prebuild` to add extra `UIBackgroundModes`**
-  (`fetch`, `processing`, `external-accessory`, `audio`) that this app doesn't use. The
-  `processing` one specifically fails App Store validation with "Missing Info.plist value...
-  BGTaskSchedulerPermittedIdentifiers" since we don't use BGTaskScheduler. Fix: trim
-  `ios/NestChat/Info.plist`'s `UIBackgroundModes` down to just `location` + `remote-notification`.
-  Since `ios/` is gitignored, **this needs redoing every time `expo prebuild` runs again.**
-- **New native module added → must rebuild native project**: after `npx expo install
-  <any-native-package>`, run `npx expo prebuild -p ios` + `pod install` (with the LANG fix above)
-  and reinstall from Xcode — the JS bundle alone isn't enough, calling a native module that isn't
-  compiled into the current binary can hard-crash the app rather than throw a catchable JS error.
-- **Realtime channel names must be unique per hook instance**, not static strings — Expo
-  Router's screen freeze/pre-render behavior can briefly double-mount a screen, and two realtime
-  subscriptions with the identical channel name crash. All hooks in `lib/hooks/` generate a
-  unique suffix per mount/subscribe attempt — keep that pattern for any new realtime hook.
-- **"The database schema is invalid or incompatible"** — a Supabase Storage-service-level error
-  (not from this app's code), seen after repeatedly creating/deleting buckets via mixed
-  SQL + Dashboard actions. Fix: Project Settings → General → Restart project.
-- **`@testing-library/react-native` v14's `renderHook` is `async`** — must `await renderHook(...)`
-  or you silently get a Promise instead of `{result, unmount}` and every assertion fails
-  confusingly. It also needs the `test-renderer` npm package (the community fork), not the
-  deprecated `react-test-renderer` — `npm install --save-dev test-renderer`.
-- **`eas.json` is required just to run `eas credentials`**, even when not using EAS Build at all —
-  a minimal file with one `build` profile is enough (see the repo's `eas.json`).
-- **GitHub Pages doesn't work on private repos on the Free plan.** Hosted the privacy policy from
-  a separate throwaway public repo instead — see "Immediate next step" above.
+- **The user tests via TestFlight only — see the dedicated section at the top of this file.** This
+  caused the single biggest time-sink of the session (theme color appearing "completely broken"
+  for many turns when the actual bug was a one-line fix, just never reaching the device).
+- **Context `useMemo` deps must include every closure the memoized value exposes, not just the
+  values that look like they'd change.** `lib/accentTheme.tsx`'s context value was memoized on
+  `[themedColors, accentHex]`, but also exposed `setAccentColor`, which closes over `profile`.
+  `profile` can go from `null` → loaded without `accentHex`'s *value* changing (e.g. it's still
+  the same default string before and after). React correctly skipped recomputing the memo, so
+  `setAccentColor` stayed permanently bound to `profile = null` from the provider's first render,
+  forever. Fixed by just not memoizing that particular object (it's cheap to build). If adding any
+  other context that wraps a function closing over frequently-changing state, either include every
+  closed-over value in the deps array or don't memoize the wrapper object at all.
+- **Style colors used inside a module-level `StyleSheet.create({...})` call are frozen at import
+  time and won't react to a runtime theme/context change** — only inline `style={[...]}` overrides
+  or values read inside a component function body are reactive. This is *the* pattern for
+  `useAccentTheme()`: keep structural properties (padding, radius, border widths) in the static
+  `StyleSheet.create`, and apply any accent-dependent color as `style={[styles.x, { color:
+  accentColors.accent }]}` from inside the component. Forgetting this for a new accent-colored
+  element anywhere in the app is the most likely regression path going forward.
+- **Postgres `create or replace function` cannot change a function's return-table column list** —
+  had to `drop function if exists` before `create function` when adding a `favorite` column to
+  `get_chat_list()`'s return type (migration `0010`). Same applies to any future RPC signature
+  change that adds/removes/reorders returned columns.
+- **PIN-recovery's account-merge must reassign every FK'd row (`chats`, `messages`,
+  `chat_members`, `message_reads`, `statuses`, `status_views`, `live_locations`) *before* deleting
+  the old `auth.users` row**, and must set the new row's `phone` *after* that delete, not before —
+  the old row still holds the unique `phone` value until it's actually gone (migration `0008` was
+  a follow-up fix for getting this ordering wrong in `0006`).
+- **Never run ad-hoc test/diagnostic scripts against the live Supabase project** (carried over from
+  last session — still true, no new incidents this session, but worth repeating).
+- **`expo prebuild` wipes, every single time it runs**: the build number (`CURRENT_PROJECT_VERSION`
+  in `project.pbxproj` + `CFBundleVersion` in `Info.plist`, both reset to whatever `app.json`
+  says — keep `app.json` as source of truth and bump it *before* prebuilding), `UIBackgroundModes`
+  in `Info.plist` (trim back to just `location` + `remote-notification`), and the Push
+  Notifications capability entry in the Xcode project (must be re-added via Xcode's UI, not by
+  hand-editing files). This bit multiple times this session across `expo-clipboard`'s install and
+  others — always re-check all three after any `expo prebuild -p ios` run.
+- **CocoaPods locale error** — still fixed by `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8` prefix, carried
+  over from before, no new incidents.

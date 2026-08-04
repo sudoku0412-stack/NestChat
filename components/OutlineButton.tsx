@@ -1,4 +1,5 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
+import { useAccentTheme } from '../lib/accentTheme';
 import { colors, fontWeight, radius, space } from '../lib/theme';
 
 interface OutlineButtonProps {
@@ -10,8 +11,9 @@ interface OutlineButtonProps {
 }
 
 export function OutlineButton({ label, onPress, disabled, loading, variant = 'accent' }: OutlineButtonProps) {
+  const { colors: accentColors } = useAccentTheme();
   const color =
-    variant === 'danger' ? colors.danger : variant === 'neutral' ? colors.textMuted : colors.accent;
+    variant === 'danger' ? colors.danger : variant === 'neutral' ? colors.textMuted : accentColors.accent;
   const isDisabled = disabled || loading;
 
   return (

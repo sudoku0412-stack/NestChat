@@ -7,34 +7,47 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
+import { useAccentTheme } from '../lib/accentTheme';
 import { colors, fontWeight } from '../lib/theme';
 
 const LEFT_ACTIONS_WIDTH = 120; // Mute/Unmute + Delete
-const RIGHT_ACTION_WIDTH = 90; // Archive
+const RIGHT_ACTION_WIDTH = 120; // Favorite/Unfavorite + Archive/Unarchive
 const LEFT_OPEN_THRESHOLD = 60;
-const RIGHT_OPEN_THRESHOLD = 45;
+const RIGHT_OPEN_THRESHOLD = 60;
 
 interface SwipeableRowProps {
   children: React.ReactNode;
   onPress: () => void;
+  onLongPress?: () => void;
   onMuteToggle: () => void;
   onDelete: () => void;
   onArchive: () => void;
+  onFavoriteToggle: () => void;
   muted: boolean;
+  favorite: boolean;
+  isArchived?: boolean;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Disables swipe actions while a multi-select mode is active elsewhere in the list. */
+  disabled?: boolean;
 }
 
 export function SwipeableRow({
   children,
   onPress,
+  onLongPress,
   onMuteToggle,
   onDelete,
   onArchive,
+  onFavoriteToggle,
   muted,
+  favorite,
+  isArchived = false,
   isOpen,
   onOpenChange,
+  disabled = false,
 }: SwipeableRowProps) {
+  const { colors: accentColors } = useAccentTheme();
   const translateX = useSharedValue(0);
   const startX = useSharedValue(0);
 
@@ -75,7 +88,11 @@ export function SwipeableRow({
     }
   });
 
-  const composed = Gesture.Simultaneous(pan, tap);
+  const longPress = Gesture.LongPress().onStart(() => {
+    if (onLongPress) runOnJS(onLongPress)();
+  });
+
+  const composed = Gesture.Race(Gesture.Simultaneous(pan, tap), longPress);
 
   const rowStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value }],
@@ -87,17 +104,35 @@ export function SwipeableRow({
     }
   }, [isOpen, translateX]);
 
+  if (disabled) {
+    return (
+      <Pressable onPress={onPress} onLongPress={onLongPress}>
+        <View style={styles.foreground}>{children}</View>
+      </Pressable>
+    );
+  }
+
   return (
     <View style={styles.wrapper}>
       <View style={styles.leftActionTrack}>
         <Pressable
-          style={[styles.action, { backgroundColor: colors.accent700, width: RIGHT_ACTION_WIDTH }]}
+          style={[styles.action, { backgroundColor: accentColors.accent600, width: 60 }]}
+          onPress={() => {
+            onFavoriteToggle();
+            closeTo(0, false);
+          }}
+        >
+          <Text style={styles.actionGlyph}>{favorite ? '★' : '☆'}</Text>
+          <Text style={styles.actionLabel}>{favorite ? 'Unfavorite' : 'Favorite'}</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.action, { backgroundColor: accentColors.accent700, width: 60 }]}
           onPress={() => {
             onArchive();
             closeTo(0, false);
           }}
         >
-          <Text style={styles.actionLabel}>Archive</Text>
+          <Text style={styles.actionLabel}>{isArchived ? 'Unarchive' : 'Archive'}</Text>
         </Pressable>
       </View>
 
@@ -160,5 +195,10 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontWeight: fontWeight.medium,
     fontSize: 13,
+    textAlign: 'center',
+  },
+  actionGlyph: {
+    color: colors.text,
+    fontSize: 16,
   },
 });

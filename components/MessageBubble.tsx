@@ -1,5 +1,6 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native';
 import { MediaTile, PendingMediaTile } from './MediaTile';
+import { useAccentTheme } from '../lib/accentTheme';
 import { colors, radius, space } from '../lib/theme';
 import type { MessageWithMedia } from '../lib/types';
 
@@ -13,6 +14,9 @@ interface MessageBubbleProps {
   showSenderName: boolean;
   showReadReceipts: boolean;
   isRead: boolean;
+  isStarred?: boolean;
+  replyTo?: { senderName: string; preview: string } | null;
+  onLongPress?: (y: number) => void;
   pendingMediaCount?: number;
 }
 
@@ -22,12 +26,19 @@ export function MessageBubble({
   showSenderName,
   showReadReceipts,
   isRead,
+  isStarred = false,
+  replyTo = null,
+  onLongPress,
   pendingMediaCount = 0,
 }: MessageBubbleProps) {
   const isDeleted = !!message.deleted_at;
+  const { colors: accentColors } = useAccentTheme();
 
   return (
-    <View style={[styles.container, isOwn ? styles.containerOwn : styles.containerOther]}>
+    <Pressable
+      style={[styles.container, isOwn ? styles.containerOwn : styles.containerOther]}
+      onLongPress={(e: GestureResponderEvent) => onLongPress?.(e.nativeEvent.pageY)}
+    >
       {showSenderName && !isOwn && (
         <Text style={styles.senderName}>{message.sender?.display_name}</Text>
       )}
@@ -40,10 +51,20 @@ export function MessageBubble({
         <View
           style={[
             styles.bubble,
-            isOwn ? styles.bubbleOwn : styles.bubbleOther,
+            isOwn
+              ? [styles.bubbleOwn, { backgroundColor: accentColors.accent900, borderColor: accentColors.accent }]
+              : styles.bubbleOther,
             message.media.length > 0 && styles.bubbleMedia,
           ]}
         >
+          {replyTo && (
+            <View style={[styles.replyQuote, { borderLeftColor: accentColors.accent }]}>
+              <Text style={[styles.replyQuoteName, { color: accentColors.accent }]}>{replyTo.senderName}</Text>
+              <Text style={styles.replyQuotePreview} numberOfLines={1}>
+                {replyTo.preview}
+              </Text>
+            </View>
+          )}
           {message.media.map((m) => (
             <MediaTile key={m.id} media={m} messageId={message.id} ownMessage={isOwn} />
           ))}
@@ -60,12 +81,18 @@ export function MessageBubble({
 
       {isOwn && !isDeleted && (
         <Text style={styles.meta}>
+          {isStarred ? <Text style={[styles.starGlyph, { color: accentColors.accent }]}>★ </Text> : null}
           {formatTime(message.created_at)}
           {showReadReceipts ? `  ·  ${isRead ? 'Read' : 'Delivered'}` : ''}
         </Text>
       )}
-      {!isOwn && !isDeleted && <Text style={styles.meta}>{formatTime(message.created_at)}</Text>}
-    </View>
+      {!isOwn && !isDeleted && (
+        <Text style={styles.meta}>
+          {isStarred ? <Text style={[styles.starGlyph, { color: accentColors.accent }]}>★ </Text> : null}
+          {formatTime(message.created_at)}
+        </Text>
+      )}
+    </Pressable>
   );
 }
 
@@ -95,15 +122,30 @@ const styles = StyleSheet.create({
     paddingVertical: space[3],
   },
   bubbleOwn: {
-    backgroundColor: colors.accent900,
     borderWidth: 1,
-    borderColor: colors.accent,
+    // A tighter tail-side corner reads as a hand-folded note rather than a
+    // uniform rounded rectangle — the one detail every other chat app skips.
+    borderBottomRightRadius: radius.sm,
   },
   bubbleOther: {
     backgroundColor: colors.surface,
+    borderBottomLeftRadius: radius.sm,
   },
   bubbleMedia: {
     gap: space[2],
+  },
+  replyQuote: {
+    borderLeftWidth: 2,
+    paddingLeft: space[2],
+    marginBottom: space[2],
+  },
+  replyQuoteName: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  replyQuotePreview: {
+    color: colors.textMuted,
+    fontSize: 12,
   },
   body: {
     color: colors.text,
@@ -120,5 +162,8 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: space[1],
     marginHorizontal: space[1],
+  },
+  starGlyph: {
+    fontSize: 11,
   },
 });

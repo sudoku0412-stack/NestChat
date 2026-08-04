@@ -1,7 +1,25 @@
-import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import {
+  Keyboard,
+  LayoutAnimation,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useAccentTheme } from '../lib/accentTheme';
 import { colors, fontWeight, radius, space } from '../lib/theme';
+import {
+  CameraIcon,
+  DocumentIcon,
+  ImageIcon,
+  LocationPinIcon,
+  PersonIcon,
+  PlusIcon,
+} from './icons';
 
 interface ComposerProps {
   value: string;
@@ -12,14 +30,21 @@ interface ComposerProps {
   onPickDocument: () => void;
   onPickContact: () => void;
   onShareLocation: () => void;
+  replyingTo?: { senderName: string; preview: string } | null;
+  onCancelReply?: () => void;
 }
 
-const MENU_ITEMS = [
-  { key: 'camera', label: 'Camera', glyph: '📷', color: colors.accent700 },
-  { key: 'library', label: 'Gallery', glyph: '🖼️', color: colors.accent600 },
-  { key: 'document', label: 'Document', glyph: '📄', color: colors.neutral700 },
-  { key: 'contact', label: 'Contact', glyph: '👤', color: colors.neutral600 },
-  { key: 'location', label: 'Location', glyph: '📍', color: colors.accent800 },
+const DRAWER_HEIGHT = 176;
+
+// Tints for the Gallery/Document cells are the two that vary with the user's chosen accent
+// color; the rest are fixed neutral/success shades — see the `tints` map built inside the
+// component below.
+const MENU_META = [
+  { key: 'camera', label: 'Camera', Icon: CameraIcon },
+  { key: 'library', label: 'Gallery', Icon: ImageIcon },
+  { key: 'document', label: 'Document', Icon: DocumentIcon },
+  { key: 'contact', label: 'Contact', Icon: PersonIcon },
+  { key: 'location', label: 'Location', Icon: LocationPinIcon },
 ] as const;
 
 export function Composer({
@@ -31,12 +56,65 @@ export function Composer({
   onPickDocument,
   onPickContact,
   onShareLocation,
+  replyingTo = null,
+  onCancelReply,
 }: ComposerProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const insets = useSafeAreaInsets();
   const canSend = value.trim().length > 0;
+  const rotation = useSharedValue(0);
+  const inputRef = useRef<TextInput>(null);
+  const { colors: accentColors } = useAccentTheme();
+  const tints: Record<(typeof MENU_META)[number]['key'], string> = {
+    camera: colors.neutral600,
+    library: accentColors.accent500,
+    document: accentColors.accent700,
+    contact: colors.neutral700,
+    location: colors.success,
+  };
 
-  const handlers: Record<(typeof MENU_ITEMS)[number]['key'], () => void> = {
+  // The drawer's height is a *layout* property — animating it frame-by-frame (as this used to,
+  // via Reanimated) forces a full native layout pass every frame, which is exactly what reads as
+  // "jumping" rather than smooth, especially with the flexWrap grid inside reflowing. RN's native
+  // LayoutAnimation hands the whole size change to the platform's own animator instead of
+  // stepping through it in JS, which is the standard fix for this class of jank.
+  //
+  // The drawer and the keyboard both change the composer's height, so showing them at once is
+  // also what caused the layout to fight itself (bounce) inside the screen's
+  // KeyboardAvoidingView. Opening the drawer always dismisses the keyboard first. Closing it
+  // animates normally for a deliberate tap (the "+" again, or picking an option), but snaps shut
+  // with no animation at all when the keyboard is about to rise (the input was just focused), so
+  // it never runs alongside the keyboard's own rise animation.
+  function openMenu() {
+    Keyboard.dismiss();
+    inputRef.current?.blur();
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setMenuOpen(true);
+  }
+
+  function closeMenu(animated: boolean) {
+    if (animated) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setMenuOpen(false);
+  }
+
+  function toggleMenu() {
+    if (menuOpen) closeMenu(true);
+    else openMenu();
+  }
+
+  function handleInputFocus() {
+    if (menuOpen) closeMenu(false);
+  }
+
+  useEffect(() => {
+    rotation.value = withTiming(menuOpen ? 1 : 0, { duration: 160 });
+  }, [menuOpen, rotation]);
+
+  const plusStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${rotation.value * 45}deg` }],
+  }));
+
+  const handlers: Record<(typeof MENU_META)[number]['key'], () => void> = {
     camera: onPickCamera,
     library: onPickLibrary,
     document: onPickDocument,
@@ -44,48 +122,71 @@ export function Composer({
     location: onShareLocation,
   };
 
+  function handleSelect(key: (typeof MENU_META)[number]['key']) {
+    closeMenu(true);
+    handlers[key]();
+  }
+
   return (
     <View style={[styles.wrapper, { paddingBottom: insets.bottom }]}>
-      <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setMenuOpen(false)}>
-          <Pressable style={styles.menu} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.menuHandle} />
-            <View style={styles.menuGrid}>
-              {MENU_ITEMS.map((item) => (
-                <Pressable
-                  key={item.key}
-                  style={styles.menuCell}
-                  onPress={() => {
-                    setMenuOpen(false);
-                    handlers[item.key]();
-                  }}
-                >
-                  <View style={[styles.menuIcon, { backgroundColor: item.color }]}>
-                    <Text style={styles.menuGlyph}>{item.glyph}</Text>
-                  </View>
-                  <Text style={styles.menuLabel}>{item.label}</Text>
-                </Pressable>
-              ))}
-            </View>
+      {replyingTo && (
+        <View style={styles.replyStrip}>
+          <View style={[styles.replyStripBar, { backgroundColor: accentColors.accent }]} />
+          <View style={styles.replyStripTexts}>
+            <Text style={[styles.replyStripName, { color: accentColors.accent }]}>{replyingTo.senderName}</Text>
+            <Text style={styles.replyStripPreview} numberOfLines={1}>
+              {replyingTo.preview}
+            </Text>
+          </View>
+          <Pressable onPress={onCancelReply} hitSlop={8}>
+            <Text style={styles.replyStripClose}>✕</Text>
           </Pressable>
-        </Pressable>
-      </Modal>
-
+        </View>
+      )}
       <View style={styles.bar}>
-        <Pressable style={styles.attachButton} onPress={() => setMenuOpen(true)}>
-          <Text style={styles.attachGlyph}>+</Text>
+        <Pressable style={styles.attachButton} onPress={toggleMenu}>
+          <Animated.View style={plusStyle}>
+            <PlusIcon size={20} color={colors.text} />
+          </Animated.View>
         </Pressable>
         <TextInput
+          ref={inputRef}
           style={styles.input}
           value={value}
           onChangeText={onChangeText}
+          onFocus={handleInputFocus}
           placeholder="Message"
           placeholderTextColor={colors.textMuted}
           multiline
         />
-        <Pressable style={[styles.sendButton, !canSend && styles.sendButtonDisabled]} onPress={onSend} disabled={!canSend}>
-          <Text style={[styles.sendGlyph, !canSend && styles.sendGlyphDisabled]}>↑</Text>
+        <Pressable
+          style={[
+            styles.sendButton,
+            !canSend ? styles.sendButtonDisabled : { borderColor: accentColors.accent },
+          ]}
+          onPress={onSend}
+          disabled={!canSend}
+        >
+          <Text style={[styles.sendGlyph, !canSend ? styles.sendGlyphDisabled : { color: accentColors.accent }]}>
+            ↑
+          </Text>
         </Pressable>
+      </View>
+
+      <View
+        style={[styles.drawer, { height: menuOpen ? DRAWER_HEIGHT : 0 }]}
+        pointerEvents={menuOpen ? 'auto' : 'none'}
+      >
+        <View style={styles.grid}>
+          {MENU_META.map((item) => (
+            <Pressable key={item.key} style={styles.cell} onPress={() => handleSelect(item.key)}>
+              <View style={[styles.iconCircle, { backgroundColor: tints[item.key] }]}>
+                <item.Icon size={22} color={colors.text} />
+              </View>
+              <Text style={styles.cellLabel}>{item.label}</Text>
+            </Pressable>
+          ))}
+        </View>
       </View>
     </View>
   );
@@ -113,10 +214,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  attachGlyph: {
-    color: colors.text,
-    fontSize: 20,
-  },
   input: {
     flex: 1,
     color: colors.text,
@@ -132,7 +229,6 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: radius.full,
     borderWidth: 1.5,
-    borderColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -140,55 +236,64 @@ const styles = StyleSheet.create({
     borderColor: colors.divider,
   },
   sendGlyph: {
-    color: colors.accent,
     fontSize: 18,
     fontWeight: fontWeight.semibold,
   },
   sendGlyphDisabled: {
     color: colors.textMuted,
   },
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
-  menu: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    paddingTop: space[3],
-    paddingBottom: space[8],
-    paddingHorizontal: space[4],
-  },
-  menuHandle: {
-    alignSelf: 'center',
-    width: 36,
-    height: 4,
-    borderRadius: radius.full,
-    backgroundColor: colors.divider,
-    marginBottom: space[4],
-  },
-  menuGrid: {
+  replyStrip: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  menuCell: {
-    width: '20%',
     alignItems: 'center',
     gap: space[2],
+    paddingHorizontal: space[4],
     paddingVertical: space[2],
+    backgroundColor: colors.surface,
   },
-  menuIcon: {
+  replyStripBar: {
+    width: 3,
+    height: 32,
+    borderRadius: radius.full,
+  },
+  replyStripTexts: {
+    flex: 1,
+  },
+  replyStripName: {
+    fontSize: 12,
+    fontWeight: fontWeight.medium,
+  },
+  replyStripPreview: {
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  replyStripClose: {
+    color: colors.textMuted,
+    fontSize: 16,
+    paddingHorizontal: space[2],
+  },
+  drawer: {
+    overflow: 'hidden',
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: space[4],
+    paddingTop: space[3],
+  },
+  cell: {
+    width: '25%',
+    alignItems: 'center',
+    gap: space[2],
+    paddingVertical: space[3],
+  },
+  iconCircle: {
     width: 52,
     height: 52,
     borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  menuGlyph: {
-    fontSize: 22,
-  },
-  menuLabel: {
+  cellLabel: {
     color: colors.textMuted,
     fontSize: 11,
     textAlign: 'center',

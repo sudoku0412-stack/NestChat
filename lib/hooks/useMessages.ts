@@ -10,6 +10,7 @@ export function useMessages(chatId: string, userId: string | null) {
   const [messages, setMessages] = useState<MessageWithMedia[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [memberStates, setMemberStates] = useState<ChatMembersRow[]>([]);
+  const [starredMessageIds, setStarredMessageIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const channelName = useRef(`chat-${chatId}-${++channelSeq}`);
   const lastMarkedIdRef = useRef<string | null>(null);
@@ -21,7 +22,7 @@ export function useMessages(chatId: string, userId: string | null) {
   }, [members]);
 
   const load = useCallback(async () => {
-    const [{ data: msgRows }, { data: mediaRows }, { data: memberRows }, { data: locationRows }] =
+    const [{ data: msgRows }, { data: mediaRows }, { data: memberRows }, { data: locationRows }, { data: starRows }] =
       await Promise.all([
         supabase.from('messages').select('*').eq('chat_id', chatId).order('created_at'),
         supabase
@@ -30,7 +31,10 @@ export function useMessages(chatId: string, userId: string | null) {
           .eq('messages.chat_id', chatId),
         supabase.from('chat_members').select('*, users(*)').eq('chat_id', chatId),
         supabase.from('live_locations').select('*').eq('chat_id', chatId),
+        supabase.from('message_stars').select('message_id').eq('user_id', userId ?? ''),
       ]);
+
+    setStarredMessageIds(new Set((starRows ?? []).map((r) => r.message_id)));
 
     const mediaByMessage = new Map<string, MessageMediaRow[]>();
     for (const row of (mediaRows as (MessageMediaRow & { messages: unknown })[]) ?? []) {
@@ -54,13 +58,30 @@ export function useMessages(chatId: string, userId: string | null) {
     setMembers(memberList);
     setMemberStates(states);
 
-    const rows = (msgRows as MessagesRow[]) ?? [];
+    // "Clear chat" hides messages sent before the caller cleared it — for them only, since
+    // cleared_at lives on their own chat_members row, not the shared chats/messages rows.
+    const ownState = states.find((s) => s.user_id === userId) ?? null;
+    const clearedAt = ownState?.cleared_at ? new Date(ownState.cleared_at).getTime() : null;
+
+    const rows = ((msgRows as MessagesRow[]) ?? []).filter(
+      (m) => clearedAt === null || new Date(m.created_at).getTime() > clearedAt
+    );
+
+    // Reply quotes are resolved client-side from the same message list already fetched above —
+    // matches this hook's existing convention of joining in JS rather than via a nested select.
+    const byId = new Map<string, MessagesRow>();
+    for (const m of rows) byId.set(m.id, m);
+
     setMessages(
-      rows.map((m) => ({
-        ...m,
-        media: mediaByMessage.get(m.id) ?? [],
-        liveLocation: m.location_share_id ? locationById.get(m.location_share_id) ?? null : null,
-      }))
+      rows.map((m) => {
+        const repliedTo = m.reply_to_message_id ? byId.get(m.reply_to_message_id) : null;
+        return {
+          ...m,
+          media: mediaByMessage.get(m.id) ?? [],
+          liveLocation: m.location_share_id ? locationById.get(m.location_share_id) ?? null : null,
+          replyTo: repliedTo ? { ...repliedTo, media: [], replyTo: null } : null,
+        };
+      })
     );
     setLoading(false);
 
@@ -157,6 +178,7 @@ export function useMessages(chatId: string, userId: string | null) {
   }, [chatId, userId, load]);
 
   const otherMemberStates = memberStates.filter((s) => s.user_id !== userId);
+  const ownMembership = memberStates.find((s) => s.user_id === userId) ?? null;
 
   function isReadByOthers(message: MessagesRow) {
     if (otherMemberStates.length === 0) return false;
@@ -175,5 +197,7 @@ export function useMessages(chatId: string, userId: string | null) {
     loading,
     refresh: load,
     isReadByOthers,
+    ownMembership,
+    starredMessageIds,
   };
 }

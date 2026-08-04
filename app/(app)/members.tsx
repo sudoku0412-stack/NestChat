@@ -15,6 +15,7 @@ import { useAuth } from '../../lib/auth';
 import { useAppContacts, type MatchedContact, type UnmatchedContact } from '../../lib/hooks/useAppContacts';
 import { supabase } from '../../lib/supabase';
 import { Avatar } from '../../components/Avatar';
+import { useAccentTheme } from '../../lib/accentTheme';
 import { colors, fontWeight, radius, space } from '../../lib/theme';
 
 type Row =
@@ -29,6 +30,7 @@ export default function MembersScreen() {
   );
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [startingDm, setStartingDm] = useState<string | null>(null);
+  const { colors: accentColors } = useAccentTheme();
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -73,7 +75,9 @@ export default function MembersScreen() {
         </Pressable>
         <Text style={styles.title}>New Chat</Text>
         <Pressable onPress={goToNewGroup} hitSlop={8}>
-          <Text style={styles.action}>New Group{selected.size > 0 ? ` (${selected.size})` : ''}</Text>
+          <Text style={[styles.action, { color: accentColors.accent }]}>
+            New Group{selected.size > 0 ? ` (${selected.size})` : ''}
+          </Text>
         </Pressable>
       </View>
       <View style={styles.headerRule} />
@@ -84,16 +88,16 @@ export default function MembersScreen() {
             Enable Contacts access to see which household members are already on NestChat.
           </Text>
           <Pressable onPress={() => Linking.openSettings()}>
-            <Text style={styles.permissionAction}>Open Settings</Text>
+            <Text style={[styles.permissionAction, { color: accentColors.accent }]}>Open Settings</Text>
           </Pressable>
           <Pressable onPress={retry} hitSlop={8}>
-            <Text style={styles.permissionAction}>Retry</Text>
+            <Text style={[styles.permissionAction, { color: accentColors.accent }]}>Retry</Text>
           </Pressable>
         </View>
       )}
 
       {loading ? (
-        <ActivityIndicator color={colors.accent} style={{ marginTop: space[8] }} />
+        <ActivityIndicator color={accentColors.accent} style={{ marginTop: space[8] }} />
       ) : (
         <SectionList
           sections={sections}
@@ -111,7 +115,7 @@ export default function MembersScreen() {
                 onToggle={() => toggle(item.contact.member.id)}
                 trailing={
                   startingDm === item.contact.member.id ? (
-                    <ActivityIndicator color={colors.accent} />
+                    <ActivityIndicator color={accentColors.accent} />
                   ) : null
                 }
               />
@@ -146,11 +150,15 @@ interface ContactRowProps {
 }
 
 function ContactRow({ name, avatarUrl, onPress, checked, onToggle, trailing, muted }: ContactRowProps) {
+  const { colors: accentColors } = useAccentTheme();
   return (
     <Pressable style={styles.row} onPress={onPress}>
       {onToggle && (
         <Pressable
-          style={[styles.checkbox, checked && styles.checkboxChecked]}
+          style={[
+            styles.checkbox,
+            checked && { backgroundColor: accentColors.accent, borderColor: accentColors.accent },
+          ]}
           onPress={onToggle}
           hitSlop={8}
         >
@@ -160,7 +168,7 @@ function ContactRow({ name, avatarUrl, onPress, checked, onToggle, trailing, mut
       <Avatar name={name} avatarUrl={avatarUrl} size={40} />
       <Text style={[styles.rowName, muted && styles.rowNameMuted]}>{name}</Text>
       {trailing}
-      {muted && <Text style={styles.inviteLabel}>Invite</Text>}
+      {muted && <Text style={[styles.inviteLabel, { color: accentColors.accent }]}>Invite</Text>}
     </Pressable>
   );
 }
@@ -188,7 +196,6 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
   },
   action: {
-    color: colors.accent,
     fontSize: 14,
     fontWeight: fontWeight.semibold,
   },
@@ -208,7 +215,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   permissionAction: {
-    color: colors.accent,
     fontSize: 13,
     fontWeight: fontWeight.semibold,
   },
@@ -239,10 +245,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkboxChecked: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
   checkmark: {
     color: colors.bg,
     fontSize: 13,
@@ -259,7 +261,6 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.body,
   },
   inviteLabel: {
-    color: colors.accent,
     fontSize: 13,
     fontWeight: fontWeight.semibold,
   },

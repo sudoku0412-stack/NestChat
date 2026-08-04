@@ -7,10 +7,12 @@ import { useMembers } from '../../../lib/hooks/useMembers';
 import { supabase } from '../../../lib/supabase';
 import { GroupAvatarStack } from '../../../components/Avatar';
 import { MemberRow } from '../../../components/MemberRow';
+import { useAccentTheme } from '../../../lib/accentTheme';
 import { colors, fontWeight, space } from '../../../lib/theme';
 import type { Member } from '../../../lib/types';
 
 export default function GroupInfoScreen() {
+  const { colors: accentColors } = useAccentTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const { profile } = useAuth();
@@ -51,7 +53,7 @@ export default function GroupInfoScreen() {
   if (loading) {
     return (
       <View style={[styles.screen, styles.centered]}>
-        <ActivityIndicator color={colors.accent} />
+        <ActivityIndicator color={accentColors.accent} />
       </View>
     );
   }
@@ -106,7 +108,7 @@ export default function GroupInfoScreen() {
             )}
           />
           <Pressable style={styles.addRow} onPress={() => setAdding(true)}>
-            <Text style={styles.addLabel}>+ Add member</Text>
+            <Text style={[styles.addLabel, { color: accentColors.accent }]}>+ Add member</Text>
           </Pressable>
         </>
       )}
@@ -174,7 +176,6 @@ const styles = StyleSheet.create({
     paddingVertical: space[4],
   },
   addLabel: {
-    color: colors.accent,
     fontSize: 15,
     fontWeight: fontWeight.semibold,
   },

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useAccentTheme } from '../lib/accentTheme';
 import { colors, fontWeight, radius, space } from '../lib/theme';
 import { stopLiveLocationShare } from '../lib/liveLocation';
 import type { LiveLocationsRow } from '../lib/database.types';
@@ -34,9 +35,15 @@ export function LiveLocationBubble({ location, isOwn }: LiveLocationBubbleProps)
   }, [active]);
 
   const mapsUrl = `https://maps.google.com/?q=${location.lat},${location.lng}`;
+  const { colors: accentColors } = useAccentTheme();
 
   return (
-    <View style={[styles.bubble, isOwn ? styles.bubbleOwn : styles.bubbleOther]}>
+    <View
+      style={[
+        styles.bubble,
+        isOwn ? [styles.bubbleOwn, { backgroundColor: accentColors.accent900, borderColor: accentColors.accent }] : styles.bubbleOther,
+      ]}
+    >
       <View style={styles.header}>
         <Text style={styles.glyph}>📍</Text>
         <Text style={styles.title}>{active ? 'Live location' : 'Live location ended'}</Text>
@@ -45,7 +52,7 @@ export function LiveLocationBubble({ location, isOwn }: LiveLocationBubbleProps)
         {active ? `Updated ${timeAgo(location.updated_at)}` : `Last seen ${timeAgo(location.updated_at)}`}
       </Text>
       <Pressable onPress={() => Linking.openURL(mapsUrl)}>
-        <Text style={styles.link}>Open in Maps</Text>
+        <Text style={[styles.link, { color: accentColors.accent }]}>Open in Maps</Text>
       </Pressable>
       {isOwn && active && (
         <Pressable style={styles.stopButton} onPress={() => stopLiveLocationShare(location.id)}>
@@ -65,9 +72,7 @@ const styles = StyleSheet.create({
     gap: space[1],
   },
   bubbleOwn: {
-    backgroundColor: colors.accent900,
     borderWidth: 1,
-    borderColor: colors.accent,
   },
   bubbleOther: {
     backgroundColor: colors.surface,
@@ -90,7 +95,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   link: {
-    color: colors.accent,
     fontSize: 13,
     marginTop: space[1],
     fontWeight: fontWeight.medium,
