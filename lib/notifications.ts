@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
+import { useRouter } from 'expo-router';
 import { supabase } from './supabase';
 
 Notifications.setNotificationHandler({
@@ -51,4 +52,32 @@ export function usePushNotificationRegistration(userId: string | null) {
       console.warn('Failed to register push token', err);
     });
   }, [userId]);
+}
+
+function openChatFromResponse(
+  router: ReturnType<typeof useRouter>,
+  response: Notifications.NotificationResponse | null
+) {
+  const chatId = response?.notification.request.content.data?.chatId;
+  if (typeof chatId === 'string') {
+    router.push(`/(app)/chat/${chatId}`);
+  }
+}
+
+// Handles both cold-start (app launched by tapping a notification) and
+// foreground/background taps while the app is already running.
+export function usePushNotificationNavigation() {
+  const router = useRouter();
+
+  useEffect(() => {
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      openChatFromResponse(router, response);
+    });
+
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      openChatFromResponse(router, response);
+    });
+
+    return () => subscription.remove();
+  }, [router]);
 }
