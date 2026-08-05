@@ -40,7 +40,6 @@ import { Composer } from '../../../components/Composer';
 import { ContactPickerModal } from '../../../components/ContactPickerModal';
 import { LocationDurationModal } from '../../../components/LocationDurationModal';
 import { MessageActionsModal } from '../../../components/MessageActionsModal';
-import { GifPickerModal } from '../../../components/GifPickerModal';
 import type { GiphyItem } from '../../../lib/giphy';
 import { colors, fontWeight, space } from '../../../lib/theme';
 import { useThemeMode } from '../../../lib/themeMode';
@@ -79,7 +78,6 @@ export default function ThreadScreen() {
   const [otherTyping, setOtherTyping] = useState(false);
   const [contactPickerVisible, setContactPickerVisible] = useState(false);
   const [locationModalVisible, setLocationModalVisible] = useState(false);
-  const [gifPickerVisible, setGifPickerVisible] = useState(false);
   const [actionMessage, setActionMessage] = useState<MessageWithMedia | null>(null);
   const [actionMenuY, setActionMenuY] = useState(0);
   const [replyingTo, setReplyingTo] = useState<MessageWithMedia | null>(null);
@@ -224,7 +222,7 @@ export default function ThreadScreen() {
     }
   }
 
-  async function handleSelectGif(item: GiphyItem) {
+  async function handleSelectGif(item: GiphyItem, _kind: 'gif' | 'sticker') {
     if (!profile) return;
     setPendingCount((c) => c + 1);
     try {
@@ -447,7 +445,7 @@ export default function ThreadScreen() {
         onPickDocument={() => handlePick('document')}
         onPickContact={() => setContactPickerVisible(true)}
         onShareLocation={() => setLocationModalVisible(true)}
-        onOpenGifPicker={() => setGifPickerVisible(true)}
+        onSelectGif={handleSelectGif}
         replyingTo={
           replyingTo
             ? {
@@ -468,11 +466,6 @@ export default function ThreadScreen() {
         visible={locationModalVisible}
         onClose={() => setLocationModalVisible(false)}
         onSelect={handleShareLocation}
-      />
-      <GifPickerModal
-        visible={gifPickerVisible}
-        onClose={() => setGifPickerVisible(false)}
-        onSelect={handleSelectGif}
       />
       <MessageActionsModal
         visible={!!actionMessage}

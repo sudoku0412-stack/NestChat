@@ -216,6 +216,19 @@ export function TrashIcon({ size = DEFAULT_SIZE, color = DEFAULT_COLOR, strokeWi
   );
 }
 
+export function KeyboardIcon({ size = DEFAULT_SIZE, color = DEFAULT_COLOR, strokeWidth = 1.8 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Rect x={3} y={6.5} width={18} height={11} rx={2} stroke={color} strokeWidth={strokeWidth} />
+      <Circle cx={7} cy={10.5} r={0.9} fill={color} />
+      <Circle cx={11} cy={10.5} r={0.9} fill={color} />
+      <Circle cx={15} cy={10.5} r={0.9} fill={color} />
+      <Circle cx={17.5} cy={10.5} r={0.9} fill={color} />
+      <Path d="M7 14.5h10" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
 export function StickerIcon({ size = DEFAULT_SIZE, color = DEFAULT_COLOR, strokeWidth = 1.8 }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">

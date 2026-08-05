@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Keyboard,
   LayoutAnimation,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -16,11 +17,14 @@ import {
   CameraIcon,
   DocumentIcon,
   ImageIcon,
+  KeyboardIcon,
   LocationPinIcon,
   PersonIcon,
   PlusIcon,
   StickerIcon,
 } from './icons';
+import { GifStickerPanel } from './GifStickerPanel';
+import type { GiphyItem } from '../lib/giphy';
 
 interface ComposerProps {
   value: string;
@@ -31,12 +35,16 @@ interface ComposerProps {
   onPickDocument: () => void;
   onPickContact: () => void;
   onShareLocation: () => void;
-  onOpenGifPicker: () => void;
+  onSelectGif: (item: GiphyItem, kind: 'gif' | 'sticker') => void;
   replyingTo?: { senderName: string; preview: string } | null;
   onCancelReply?: () => void;
 }
 
 const DRAWER_HEIGHT = 176;
+// No keyboard has been measured yet this session (e.g. sticker icon tapped before the user ever
+// focused the text input) -- a reasonable device-default until a real keyboardWillShow/
+// keyboardDidShow event reports the actual height.
+const DEFAULT_KEYBOARD_HEIGHT = Platform.OS === 'ios' ? 300 : 250;
 
 // Tints for the Gallery/Document cells are the two that vary with the user's chosen accent
 // color; the rest are fixed neutral/success shades — see the `tints` map built inside the
@@ -58,16 +66,29 @@ export function Composer({
   onPickDocument,
   onPickContact,
   onShareLocation,
-  onOpenGifPicker,
+  onSelectGif,
   replyingTo = null,
   onCancelReply,
 }: ComposerProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [stickerOpen, setStickerOpen] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(DEFAULT_KEYBOARD_HEIGHT);
   const insets = useSafeAreaInsets();
   const canSend = value.trim().length > 0;
   const rotation = useSharedValue(0);
   const inputRef = useRef<TextInput>(null);
   const { colors: accentColors } = useAccentTheme();
+
+  // Remembers the device's real keyboard height so the sticker panel can be sized to exactly
+  // swap into that footprint instead of guessing — see DEFAULT_KEYBOARD_HEIGHT above for the
+  // fallback before this has fired at least once.
+  useEffect(() => {
+    const event = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const sub = Keyboard.addListener(event, (e) => {
+      if (e.endCoordinates?.height) setKeyboardHeight(e.endCoordinates.height);
+    });
+    return () => sub.remove();
+  }, []);
   const tints: Record<(typeof MENU_META)[number]['key'], string> = {
     camera: colors.neutral600,
     library: accentColors.accent500,
@@ -92,6 +113,7 @@ export function Composer({
     Keyboard.dismiss();
     inputRef.current?.blur();
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setStickerOpen(false);
     setMenuOpen(true);
   }
 
@@ -105,8 +127,38 @@ export function Composer({
     else openMenu();
   }
 
+  // Same swap-in-place behavior as the attach drawer above, sized to keyboardHeight instead of
+  // the fixed DRAWER_HEIGHT so it reads as "docked where the keyboard was" rather than a sheet.
+  function openSticker() {
+    Keyboard.dismiss();
+    inputRef.current?.blur();
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setMenuOpen(false);
+    setStickerOpen(true);
+  }
+
+  function closeSticker(animated: boolean) {
+    if (animated) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setStickerOpen(false);
+  }
+
+  function toggleSticker() {
+    if (stickerOpen) {
+      closeSticker(true);
+      inputRef.current?.focus();
+    } else {
+      openSticker();
+    }
+  }
+
   function handleInputFocus() {
     if (menuOpen) closeMenu(false);
+    if (stickerOpen) closeSticker(false);
+  }
+
+  function handleSelectGif(item: GiphyItem, kind: 'gif' | 'sticker') {
+    closeSticker(true);
+    onSelectGif(item, kind);
   }
 
   useEffect(() => {
@@ -162,8 +214,12 @@ export function Composer({
           placeholderTextColor={colors.textMuted}
           multiline
         />
-        <Pressable style={styles.stickerButton} onPress={onOpenGifPicker} hitSlop={8}>
-          <StickerIcon size={22} color={colors.textMuted} />
+        <Pressable style={styles.stickerButton} onPress={toggleSticker} hitSlop={8}>
+          {stickerOpen ? (
+            <KeyboardIcon size={22} color={colors.textMuted} />
+          ) : (
+            <StickerIcon size={22} color={colors.textMuted} />
+          )}
         </Pressable>
         <Pressable
           style={[
@@ -180,19 +236,22 @@ export function Composer({
       </View>
 
       <View
-        style={[styles.drawer, { height: menuOpen ? DRAWER_HEIGHT : 0 }]}
-        pointerEvents={menuOpen ? 'auto' : 'none'}
+        style={[styles.drawer, { height: menuOpen ? DRAWER_HEIGHT : stickerOpen ? keyboardHeight : 0 }]}
+        pointerEvents={menuOpen || stickerOpen ? 'auto' : 'none'}
       >
-        <View style={styles.grid}>
-          {MENU_META.map((item) => (
-            <Pressable key={item.key} style={styles.cell} onPress={() => handleSelect(item.key)}>
-              <View style={[styles.iconCircle, { backgroundColor: tints[item.key] }]}>
-                <item.Icon size={22} color={colors.text} />
-              </View>
-              <Text style={styles.cellLabel}>{item.label}</Text>
-            </Pressable>
-          ))}
-        </View>
+        {menuOpen && (
+          <View style={styles.grid}>
+            {MENU_META.map((item) => (
+              <Pressable key={item.key} style={styles.cell} onPress={() => handleSelect(item.key)}>
+                <View style={[styles.iconCircle, { backgroundColor: tints[item.key] }]}>
+                  <item.Icon size={22} color={colors.text} />
+                </View>
+                <Text style={styles.cellLabel}>{item.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
+        <GifStickerPanel open={stickerOpen} onSelect={handleSelectGif} />
       </View>
     </View>
   );
