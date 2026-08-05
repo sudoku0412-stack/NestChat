@@ -98,10 +98,15 @@ Fill in:
 ```
 EXPO_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+EXPO_PUBLIC_GIPHY_API_KEY=your-giphy-api-key
 ```
 
 These are read at build time via Expo's built-in `EXPO_PUBLIC_*` env support — no extra config
 needed. `.env` is gitignored; don't commit real keys.
+
+The Giphy key powers the composer's GIF/sticker picker (`lib/giphy.ts`) — get a free one at
+https://developers.giphy.com/dashboard/ (Create an App → API, not SDK). Without it, the picker
+just stays empty (see the console warning in `lib/giphy.ts`) rather than crashing.
 
 ## 3. Run the app
 

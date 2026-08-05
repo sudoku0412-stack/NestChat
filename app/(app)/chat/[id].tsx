@@ -17,9 +17,11 @@ import { useMessages } from '../../../lib/hooks/useMessages';
 import { supabase } from '../../../lib/supabase';
 import * as Clipboard from 'expo-clipboard';
 import {
+  clearMessageReaction,
   generateId,
   sendMediaMessage,
   sendTextMessage,
+  setMessageReaction,
   setPinnedMessage,
   softDeleteMessage,
   starMessage,
@@ -38,6 +40,8 @@ import { Composer } from '../../../components/Composer';
 import { ContactPickerModal } from '../../../components/ContactPickerModal';
 import { LocationDurationModal } from '../../../components/LocationDurationModal';
 import { MessageActionsModal } from '../../../components/MessageActionsModal';
+import { GifPickerModal } from '../../../components/GifPickerModal';
+import type { GiphyItem } from '../../../lib/giphy';
 import { colors, fontWeight, space } from '../../../lib/theme';
 import { useThemeMode } from '../../../lib/themeMode';
 
@@ -75,6 +79,7 @@ export default function ThreadScreen() {
   const [otherTyping, setOtherTyping] = useState(false);
   const [contactPickerVisible, setContactPickerVisible] = useState(false);
   const [locationModalVisible, setLocationModalVisible] = useState(false);
+  const [gifPickerVisible, setGifPickerVisible] = useState(false);
   const [actionMessage, setActionMessage] = useState<MessageWithMedia | null>(null);
   const [actionMenuY, setActionMenuY] = useState(0);
   const [replyingTo, setReplyingTo] = useState<MessageWithMedia | null>(null);
@@ -219,6 +224,22 @@ export default function ThreadScreen() {
     }
   }
 
+  async function handleSelectGif(item: GiphyItem) {
+    if (!profile) return;
+    setPendingCount((c) => c + 1);
+    try {
+      await sendMediaMessage(id, profile.id, {
+        uri: item.url,
+        kind: 'gif',
+        width: item.width,
+        height: item.height,
+      });
+    } finally {
+      setPendingCount((c) => Math.max(0, c - 1));
+      refresh();
+    }
+  }
+
   async function handleShareContact(contact: ShareableContact) {
     if (!profile) return;
     const text = `📇 ${contact.name}\n${contact.phones.join(', ')}`;
@@ -258,6 +279,20 @@ export default function ThreadScreen() {
     if (starredMessageIds.has(actionMessage.id)) await unstarMessage(actionMessage.id, profile.id);
     else await starMessage(actionMessage.id, profile.id);
     refresh();
+  }
+
+  async function reactToMessage(messageId: string, emoji: string) {
+    if (!profile) return;
+    const message = messages.find((m) => m.id === messageId) ?? pendingMessages.find((m) => m.id === messageId);
+    const current = message?.reactions?.find((r) => r.reactedByMe);
+    if (current?.emoji === emoji) await clearMessageReaction(messageId, profile.id);
+    else await setMessageReaction(messageId, profile.id, emoji);
+    refresh();
+  }
+
+  function handleReact(emoji: string) {
+    if (!actionMessage) return;
+    reactToMessage(actionMessage.id, emoji);
   }
 
   async function handleTogglePin() {
@@ -395,6 +430,7 @@ export default function ThreadScreen() {
                   setActionMessage(item);
                   setActionMenuY(y);
                 }}
+                onReactionPress={(emoji) => reactToMessage(item.id, emoji)}
                 pendingMediaCount={isLastOwnWithMedia ? pendingCount : 0}
               />
             );
@@ -411,6 +447,7 @@ export default function ThreadScreen() {
         onPickDocument={() => handlePick('document')}
         onPickContact={() => setContactPickerVisible(true)}
         onShareLocation={() => setLocationModalVisible(true)}
+        onOpenGifPicker={() => setGifPickerVisible(true)}
         replyingTo={
           replyingTo
             ? {
@@ -432,6 +469,11 @@ export default function ThreadScreen() {
         onClose={() => setLocationModalVisible(false)}
         onSelect={handleShareLocation}
       />
+      <GifPickerModal
+        visible={gifPickerVisible}
+        onClose={() => setGifPickerVisible(false)}
+        onSelect={handleSelectGif}
+      />
       <MessageActionsModal
         visible={!!actionMessage}
         anchorY={actionMenuY}
@@ -439,6 +481,7 @@ export default function ThreadScreen() {
         isStarred={!!actionMessage && starredMessageIds.has(actionMessage.id)}
         isPinned={!!actionMessage && chatInfo?.pinned_message_id === actionMessage.id}
         canCopy={!!actionMessage?.body}
+        currentReaction={actionMessage?.reactions?.find((r) => r.reactedByMe)?.emoji ?? null}
         onClose={() => setActionMessage(null)}
         onReply={handleReply}
         onCopy={handleCopy}
@@ -446,6 +489,7 @@ export default function ThreadScreen() {
         onTogglePin={handleTogglePin}
         onViewContact={handleViewContact}
         onDelete={handleDeleteMessage}
+        onReact={handleReact}
       />
     </KeyboardAvoidingView>
   );

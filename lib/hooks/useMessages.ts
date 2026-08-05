@@ -1,8 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import { supabase } from '../supabase';
-import type { ChatMembersRow, LiveLocationsRow, MessageMediaRow, MessagesRow } from '../database.types';
-import type { Member, MessageWithMedia } from '../types';
+import type {
+  ChatMembersRow,
+  LiveLocationsRow,
+  MessageMediaRow,
+  MessageReactionsRow,
+  MessagesRow,
+} from '../database.types';
+import type { Member, MessageReactionSummary, MessageWithMedia } from '../types';
 
 let channelSeq = 0;
 
@@ -22,17 +28,27 @@ export function useMessages(chatId: string, userId: string | null) {
   }, [members]);
 
   const load = useCallback(async () => {
-    const [{ data: msgRows }, { data: mediaRows }, { data: memberRows }, { data: locationRows }, { data: starRows }] =
-      await Promise.all([
-        supabase.from('messages').select('*').eq('chat_id', chatId).order('created_at'),
-        supabase
-          .from('message_media')
-          .select('*, messages!inner(chat_id)')
-          .eq('messages.chat_id', chatId),
-        supabase.from('chat_members').select('*, users(*)').eq('chat_id', chatId),
-        supabase.from('live_locations').select('*').eq('chat_id', chatId),
-        supabase.from('message_stars').select('message_id').eq('user_id', userId ?? ''),
-      ]);
+    const [
+      { data: msgRows },
+      { data: mediaRows },
+      { data: memberRows },
+      { data: locationRows },
+      { data: starRows },
+      { data: reactionRows },
+    ] = await Promise.all([
+      supabase.from('messages').select('*').eq('chat_id', chatId).order('created_at'),
+      supabase
+        .from('message_media')
+        .select('*, messages!inner(chat_id)')
+        .eq('messages.chat_id', chatId),
+      supabase.from('chat_members').select('*, users(*)').eq('chat_id', chatId),
+      supabase.from('live_locations').select('*').eq('chat_id', chatId),
+      supabase.from('message_stars').select('message_id').eq('user_id', userId ?? ''),
+      supabase
+        .from('message_reactions')
+        .select('*, messages!inner(chat_id)')
+        .eq('messages.chat_id', chatId),
+    ]);
 
     setStarredMessageIds(new Set((starRows ?? []).map((r) => r.message_id)));
 
@@ -41,6 +57,19 @@ export function useMessages(chatId: string, userId: string | null) {
       const list = mediaByMessage.get(row.message_id) ?? [];
       list.push(row);
       mediaByMessage.set(row.message_id, list);
+    }
+
+    const reactionsByMessage = new Map<string, MessageReactionSummary[]>();
+    for (const row of (reactionRows as (MessageReactionsRow & { messages: unknown })[]) ?? []) {
+      const summaries = reactionsByMessage.get(row.message_id) ?? [];
+      const existing = summaries.find((s) => s.emoji === row.emoji);
+      if (existing) {
+        existing.count += 1;
+        existing.reactedByMe = existing.reactedByMe || row.user_id === userId;
+      } else {
+        summaries.push({ emoji: row.emoji, count: 1, reactedByMe: row.user_id === userId });
+      }
+      reactionsByMessage.set(row.message_id, summaries);
     }
 
     const locationById = new Map<string, LiveLocationsRow>();
@@ -80,6 +109,7 @@ export function useMessages(chatId: string, userId: string | null) {
           media: mediaByMessage.get(m.id) ?? [],
           liveLocation: m.location_share_id ? locationById.get(m.location_share_id) ?? null : null,
           replyTo: repliedTo ? { ...repliedTo, media: [], replyTo: null } : null,
+          reactions: reactionsByMessage.get(m.id) ?? [],
         };
       })
     );
@@ -131,6 +161,7 @@ export function useMessages(chatId: string, userId: string | null) {
           }
         )
         .on('postgres_changes', { event: '*', schema: 'public', table: 'message_media' }, load)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'message_reactions' }, load)
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'chat_members', filter: `chat_id=eq.${chatId}` },

@@ -22,12 +22,19 @@ export interface ChatListItem {
   favorite: boolean;
 }
 
+export interface MessageReactionSummary {
+  emoji: string;
+  count: number;
+  reactedByMe: boolean;
+}
+
 export interface MessageWithMedia extends MessagesRow {
   media: MessageMediaRow[];
   sender?: Member;
   readByOthers?: boolean;
   liveLocation?: LiveLocationsRow | null;
   replyTo?: MessageWithMedia | null;
+  reactions?: MessageReactionSummary[];
 }
 
 export interface AttachmentDraft {

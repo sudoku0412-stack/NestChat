@@ -3,7 +3,7 @@
 
 export type UserRole = 'admin' | 'member';
 export type ChatType = 'dm' | 'group';
-export type MediaKind = 'photo' | 'video' | 'document';
+export type MediaKind = 'photo' | 'video' | 'document' | 'gif';
 export type StatusType = 'text' | 'photo' | 'video';
 
 export type UsersRow = {
@@ -96,6 +96,13 @@ export type MessageStarsRow = {
   starred_at: string;
 }
 
+export type MessageReactionsRow = {
+  message_id: string;
+  user_id: string;
+  emoji: string;
+  reacted_at: string;
+}
+
 export type StatusesRow = {
   id: string;
   user_id: string;
@@ -172,6 +179,11 @@ export interface Database {
         Row: MessageStarsRow;
         Insert: Partial<MessageStarsRow>;
         Update: Partial<MessageStarsRow>;
+      } & Relationships;
+      message_reactions: {
+        Row: MessageReactionsRow;
+        Insert: Partial<MessageReactionsRow>;
+        Update: Partial<MessageReactionsRow>;
       } & Relationships;
       statuses: {
         Row: StatusesRow;

@@ -86,7 +86,7 @@ export default function MediaGalleryScreen() {
       });
   }, [chatId]);
 
-  const photos = items.filter((i) => i.kind === 'photo' || i.kind === 'video');
+  const photos = items.filter((i) => i.kind === 'photo' || i.kind === 'video' || i.kind === 'gif');
   const documents = items.filter((i) => i.kind === 'document');
 
   return (

@@ -215,3 +215,19 @@ export function TrashIcon({ size = DEFAULT_SIZE, color = DEFAULT_COLOR, strokeWi
     </Svg>
   );
 }
+
+export function StickerIcon({ size = DEFAULT_SIZE, color = DEFAULT_COLOR, strokeWidth = 1.8 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx={12} cy={12} r={7.5} stroke={color} strokeWidth={strokeWidth} />
+      <Circle cx={9.3} cy={10} r={1.1} fill={color} />
+      <Circle cx={14.7} cy={10} r={1.1} fill={color} />
+      <Path
+        d="M8.5 13.5c1 1.3 2.2 2 3.5 2s2.5-.7 3.5-2"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}

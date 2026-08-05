@@ -78,7 +78,7 @@ export default function MediaViewerScreen() {
         <Pressable onPress={() => router.back()} hitSlop={8}>
           <Text style={styles.close}>✕</Text>
         </Pressable>
-        <Text style={styles.kindLabel}>{kind === 'video' ? 'Video' : 'Photo'}</Text>
+        <Text style={styles.kindLabel}>{kind === 'video' ? 'Video' : kind === 'gif' ? 'GIF' : 'Photo'}</Text>
         {ownMessage === '1' ? (
           <Pressable onPress={handleDelete} hitSlop={8}>
             <Text style={styles.trash}>🗑</Text>

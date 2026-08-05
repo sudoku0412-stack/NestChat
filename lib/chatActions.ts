@@ -92,3 +92,14 @@ export async function starMessage(messageId: string, userId: string) {
 export async function unstarMessage(messageId: string, userId: string) {
   await supabase.from('message_stars').delete().eq('message_id', messageId).eq('user_id', userId);
 }
+
+// One reaction per user per message -- setting a new emoji replaces whatever was there before.
+export async function setMessageReaction(messageId: string, userId: string, emoji: string) {
+  await supabase
+    .from('message_reactions')
+    .upsert({ message_id: messageId, user_id: userId, emoji }, { onConflict: 'message_id,user_id' });
+}
+
+export async function clearMessageReaction(messageId: string, userId: string) {
+  await supabase.from('message_reactions').delete().eq('message_id', messageId).eq('user_id', userId);
+}

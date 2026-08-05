@@ -10,6 +10,7 @@ interface MessageActionsModalProps {
   isStarred: boolean;
   isPinned: boolean;
   canCopy: boolean;
+  currentReaction: string | null;
   onClose: () => void;
   onReply: () => void;
   onCopy: () => void;
@@ -17,7 +18,11 @@ interface MessageActionsModalProps {
   onTogglePin: () => void;
   onViewContact: () => void;
   onDelete: () => void;
+  onReact: (emoji: string) => void;
 }
+
+const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+const REACTION_BAR_HEIGHT = 56;
 
 interface Row {
   key: string;
@@ -40,6 +45,7 @@ export function MessageActionsModal({
   isStarred,
   isPinned,
   canCopy,
+  currentReaction,
   onClose,
   onReply,
   onCopy,
@@ -47,11 +53,17 @@ export function MessageActionsModal({
   onTogglePin,
   onViewContact,
   onDelete,
+  onReact,
 }: MessageActionsModalProps) {
   const { colors: accentColors } = useAccentTheme();
   function run(action: () => void) {
     onClose();
     action();
+  }
+
+  function handleReact(emoji: string) {
+    onClose();
+    onReact(emoji);
   }
 
   const rows: Row[] = [
@@ -75,12 +87,26 @@ export function MessageActionsModal({
 
   const screenHeight = Dimensions.get('window').height;
   const cardHeight = rows.length * ROW_HEIGHT + space[2] * 2;
-  const top = Math.min(Math.max(anchorY, TOP_MARGIN), screenHeight - BOTTOM_MARGIN - cardHeight);
+  const totalHeight = REACTION_BAR_HEIGHT + space[2] + cardHeight;
+  const top = Math.min(Math.max(anchorY, TOP_MARGIN), screenHeight - BOTTOM_MARGIN - totalHeight);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
-        <View style={[styles.card, { top, width: CARD_WIDTH }]}>
+        <View
+          style={[styles.reactionBar, { top, width: CARD_WIDTH, height: REACTION_BAR_HEIGHT }]}
+        >
+          {QUICK_REACTIONS.map((emoji) => (
+            <Pressable
+              key={emoji}
+              style={[styles.reactionCell, currentReaction === emoji && styles.reactionCellActive]}
+              onPress={() => handleReact(emoji)}
+            >
+              <Text style={styles.reactionGlyph}>{emoji}</Text>
+            </Pressable>
+          ))}
+        </View>
+        <View style={[styles.card, { top: top + REACTION_BAR_HEIGHT + space[2], width: CARD_WIDTH }]}>
           {rows.map((row) => (
             <Pressable key={row.key} style={styles.row} onPress={row.onPress}>
               <row.Icon
@@ -109,6 +135,29 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     paddingVertical: space[2],
     overflow: 'hidden',
+  },
+  reactionBar: {
+    position: 'absolute',
+    left: space[6],
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    backgroundColor: colors.neutral900,
+    borderRadius: radius.full,
+    paddingHorizontal: space[2],
+  },
+  reactionCell: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reactionCellActive: {
+    backgroundColor: colors.neutral700,
+  },
+  reactionGlyph: {
+    fontSize: 22,
   },
   row: {
     flexDirection: 'row',

@@ -19,6 +19,7 @@ import {
   LocationPinIcon,
   PersonIcon,
   PlusIcon,
+  StickerIcon,
 } from './icons';
 
 interface ComposerProps {
@@ -30,6 +31,7 @@ interface ComposerProps {
   onPickDocument: () => void;
   onPickContact: () => void;
   onShareLocation: () => void;
+  onOpenGifPicker: () => void;
   replyingTo?: { senderName: string; preview: string } | null;
   onCancelReply?: () => void;
 }
@@ -56,6 +58,7 @@ export function Composer({
   onPickDocument,
   onPickContact,
   onShareLocation,
+  onOpenGifPicker,
   replyingTo = null,
   onCancelReply,
 }: ComposerProps) {
@@ -159,6 +162,9 @@ export function Composer({
           placeholderTextColor={colors.textMuted}
           multiline
         />
+        <Pressable style={styles.stickerButton} onPress={onOpenGifPicker} hitSlop={8}>
+          <StickerIcon size={22} color={colors.textMuted} />
+        </Pressable>
         <Pressable
           style={[
             styles.sendButton,
@@ -204,6 +210,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[4],
     paddingVertical: space[3],
     gap: space[2],
+  },
+  stickerButton: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   attachButton: {
     width: 36,

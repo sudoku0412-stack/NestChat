@@ -45,9 +45,23 @@ explicitly asked that Metro never be run for this project.** This means:
 - Auth: **anonymous auth + typed-in phone number**, not real OTP, now with **PIN-based account
   recovery** (migrations `0006`–`0008`) so signing out or reinstalling doesn't lose your identity
   — see "This session's work" below for the full story of why that took 3 migrations to get right.
-- **13 migrations total** (`0001`–`0013`), all already run against the live Supabase project by the
-  user. If resuming from a git checkout on a different machine, diff `supabase/migrations/` against
-  what's actually live before assuming anything is applied.
+- **15 migrations total** (`0001`–`0015`). `0001`–`0013` are already run against the live Supabase
+  project. **`0014_message_reactions.sql` and `0015_gif_media_kind.sql` are new this session and
+  have NOT been run against the live project yet** — run those before the emoji-reaction / GIF
+  features will work end-to-end. If resuming from a git checkout on a different machine, diff
+  `supabase/migrations/` against what's actually live before assuming anything is applied.
+- **Message reactions** (WhatsApp-style long-press emoji bar, 👍❤️😂😮😢🙏, one per user per
+  message) — `supabase/migrations/0014_message_reactions.sql`, `lib/chatActions.ts`'s
+  `setMessageReaction`/`clearMessageReaction`, wired through `useMessages` and
+  `MessageActionsModal`/`MessageBubble`.
+- **GIF/sticker picker** in the composer (`components/GifPickerModal.tsx`, `lib/giphy.ts`) — a
+  centered pill segmented toggle (GIF/Stickers) over a search + grid, via the **Giphy API** (Tenor
+  was the original plan but Tenor stopped onboarding new API clients as of Jan 2026 — don't re-try
+  that path). Needs `EXPO_PUBLIC_GIPHY_API_KEY` in `.env` (already set locally as of this session;
+  see README's env-var section) and migration `0015` (widens `message_media.kind` to allow `'gif'`)
+  run against Supabase before it'll actually send. Sent as a normal `message_media` row with
+  `kind: 'gif'` — reuses the existing upload pipeline in `lib/media.ts` (fetches the Giphy CDN URL,
+  re-uploads to Supabase Storage) rather than depending on Giphy's CDN staying up long-term.
 - Design system is **"Hearth"** (`lib/theme.ts`) — warm terracotta/cream palette, Fraunces serif
   display font, replacing an earlier cool-blurple "Nocturne" system. **The accent color is now
   user-customizable** (Settings → App theme color) via `lib/accentTheme.tsx`'s

@@ -4,6 +4,36 @@ import { useAccentTheme } from '../lib/accentTheme';
 import { colors, radius, space } from '../lib/theme';
 import type { MessageWithMedia } from '../lib/types';
 
+function ReactionRow({
+  reactions,
+  isOwn,
+  onPress,
+}: {
+  reactions: NonNullable<MessageWithMedia['reactions']>;
+  isOwn: boolean;
+  onPress?: (emoji: string) => void;
+}) {
+  const { colors: accentColors } = useAccentTheme();
+  if (reactions.length === 0) return null;
+  return (
+    <View style={[styles.reactionRow, isOwn ? styles.reactionRowOwn : styles.reactionRowOther]}>
+      {reactions.map((r) => (
+        <Pressable
+          key={r.emoji}
+          style={[
+            styles.reactionPill,
+            r.reactedByMe && { borderColor: accentColors.accent, backgroundColor: accentColors.accent900 },
+          ]}
+          onPress={() => onPress?.(r.emoji)}
+        >
+          <Text style={styles.reactionPillGlyph}>{r.emoji}</Text>
+          {r.count > 1 && <Text style={styles.reactionPillCount}>{r.count}</Text>}
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
@@ -17,6 +47,7 @@ interface MessageBubbleProps {
   isStarred?: boolean;
   replyTo?: { senderName: string; preview: string } | null;
   onLongPress?: (y: number) => void;
+  onReactionPress?: (emoji: string) => void;
   pendingMediaCount?: number;
 }
 
@@ -29,6 +60,7 @@ export function MessageBubble({
   isStarred = false,
   replyTo = null,
   onLongPress,
+  onReactionPress,
   pendingMediaCount = 0,
 }: MessageBubbleProps) {
   const isDeleted = !!message.deleted_at;
@@ -77,6 +109,10 @@ export function MessageBubble({
             </Text>
           ) : null}
         </View>
+      )}
+
+      {!isDeleted && (
+        <ReactionRow reactions={message.reactions ?? []} isOwn={isOwn} onPress={onReactionPress} />
       )}
 
       {isOwn && !isDeleted && (
@@ -164,6 +200,37 @@ const styles = StyleSheet.create({
     marginHorizontal: space[1],
   },
   starGlyph: {
+    fontSize: 11,
+  },
+  reactionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: space[1],
+    marginTop: space[1],
+    marginHorizontal: space[1],
+  },
+  reactionRowOwn: {
+    justifyContent: 'flex-end',
+  },
+  reactionRowOther: {
+    justifyContent: 'flex-start',
+  },
+  reactionPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[1],
+    borderWidth: 1,
+    borderColor: colors.divider,
+    backgroundColor: colors.surface,
+    borderRadius: radius.full,
+    paddingHorizontal: space[2],
+    paddingVertical: 2,
+  },
+  reactionPillGlyph: {
+    fontSize: 13,
+  },
+  reactionPillCount: {
+    color: colors.textMuted,
     fontSize: 11,
   },
 });
