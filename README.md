@@ -143,9 +143,23 @@ npx supabase link --project-ref your-project-ref
 npx supabase functions deploy send-push
 ```
 
-Then in the Supabase Dashboard: **Database → Webhooks → Create a new webhook**
-- Table: `messages`, Event: `INSERT`
-- Type: **Supabase Edge Function** → select `send-push`
+Then in the Supabase Dashboard: **Database → Webhooks**, create **three** separate webhooks, all
+pointing at the same `send-push` function:
+
+| Table                | Event(s)         |
+|-----------------------|-------------------|
+| `messages`            | `INSERT`          |
+| `message_media`       | `INSERT`          |
+| `message_reactions`   | `INSERT`, `UPDATE`|
+
+For each: **Create a new webhook** → Type: **Supabase Edge Function** → select `send-push`.
+
+Why three: a media message's `messages` row is created with `body = null` *before* the upload
+finishes, so the `messages` webhook skips anything with a null body (see the function's comments)
+and waits for the `message_media` insert instead — that's what lets the notification say "Photo" /
+"GIF" / "Sticker" / the actual filename rather than a generic "Sent an attachment". The
+`message_reactions` webhook is unrelated to sending messages at all — it notifies the *original
+message's sender* ("Alex reacted 👍 to your message"), skipping self-reactions and muted chats.
 
 The function looks up non-muted chat members (excluding the sender), reads their
 `push_token`, and sends via Expo's push API. Muted chats are skipped server-side.

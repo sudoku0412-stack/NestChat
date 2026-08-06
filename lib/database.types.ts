@@ -3,7 +3,7 @@
 
 export type UserRole = 'admin' | 'member';
 export type ChatType = 'dm' | 'group';
-export type MediaKind = 'photo' | 'video' | 'document' | 'gif';
+export type MediaKind = 'photo' | 'video' | 'document' | 'gif' | 'sticker';
 export type StatusType = 'text' | 'photo' | 'video';
 
 export type UsersRow = {

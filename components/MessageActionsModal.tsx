@@ -1,7 +1,7 @@
 import { Dimensions, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAccentTheme } from '../lib/accentTheme';
 import { colors, radius, space } from '../lib/theme';
-import { CopyIcon, PersonIcon, PinIcon, ReplyIcon, StarIcon, TrashIcon, type IconProps } from './icons';
+import { CopyIcon, PersonIcon, PinIcon, PlusIcon, ReplyIcon, StarIcon, TrashIcon, type IconProps } from './icons';
 
 interface MessageActionsModalProps {
   visible: boolean;
@@ -19,10 +19,16 @@ interface MessageActionsModalProps {
   onViewContact: () => void;
   onDelete: () => void;
   onReact: (emoji: string) => void;
+  onOpenFullEmojiPicker: () => void;
 }
 
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+const REACTION_CELL_SIZE = 40;
 const REACTION_BAR_HEIGHT = 56;
+// One extra cell for the "+" button, which opens the full emoji picker (EmojiPickerModal) --
+// matches WhatsApp's reaction bar, which is deliberately wider than the action-list card below it.
+const REACTION_BAR_WIDTH = (QUICK_REACTIONS.length + 1) * REACTION_CELL_SIZE + space[2] * 2;
+const SCREEN_MARGIN = space[4];
 
 interface Row {
   key: string;
@@ -54,6 +60,7 @@ export function MessageActionsModal({
   onViewContact,
   onDelete,
   onReact,
+  onOpenFullEmojiPicker,
 }: MessageActionsModalProps) {
   const { colors: accentColors } = useAccentTheme();
   function run(action: () => void) {
@@ -64,6 +71,11 @@ export function MessageActionsModal({
   function handleReact(emoji: string) {
     onClose();
     onReact(emoji);
+  }
+
+  function handleOpenFullPicker() {
+    onClose();
+    onOpenFullEmojiPicker();
   }
 
   const rows: Row[] = [
@@ -85,16 +97,29 @@ export function MessageActionsModal({
       : []),
   ];
 
-  const screenHeight = Dimensions.get('window').height;
+  const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
   const cardHeight = rows.length * ROW_HEIGHT + space[2] * 2;
   const totalHeight = REACTION_BAR_HEIGHT + space[2] + cardHeight;
   const top = Math.min(Math.max(anchorY, TOP_MARGIN), screenHeight - BOTTOM_MARGIN - totalHeight);
+
+  // Anchor both the reaction bar and the action card to the same side the message bubble itself
+  // sits on (own messages hug the right edge, others the left) -- previously both were pinned to
+  // a fixed left offset regardless of isOwn, which read as misaligned for every own-message tap.
+  const cardLeft = isOwn ? screenWidth - CARD_WIDTH - SCREEN_MARGIN : SCREEN_MARGIN;
+  const reactionLeftRaw = isOwn ? cardLeft + CARD_WIDTH - REACTION_BAR_WIDTH : cardLeft;
+  const reactionLeft = Math.min(
+    Math.max(reactionLeftRaw, space[2]),
+    screenWidth - REACTION_BAR_WIDTH - space[2]
+  );
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
         <View
-          style={[styles.reactionBar, { top, width: CARD_WIDTH, height: REACTION_BAR_HEIGHT }]}
+          style={[
+            styles.reactionBar,
+            { top, left: reactionLeft, width: REACTION_BAR_WIDTH, height: REACTION_BAR_HEIGHT },
+          ]}
         >
           {QUICK_REACTIONS.map((emoji) => (
             <Pressable
@@ -105,8 +130,11 @@ export function MessageActionsModal({
               <Text style={styles.reactionGlyph}>{emoji}</Text>
             </Pressable>
           ))}
+          <Pressable style={styles.reactionCell} onPress={handleOpenFullPicker}>
+            <PlusIcon size={18} color={colors.textMuted} />
+          </Pressable>
         </View>
-        <View style={[styles.card, { top: top + REACTION_BAR_HEIGHT + space[2], width: CARD_WIDTH }]}>
+        <View style={[styles.card, { top: top + REACTION_BAR_HEIGHT + space[2], left: cardLeft, width: CARD_WIDTH }]}>
           {rows.map((row) => (
             <Pressable key={row.key} style={styles.row} onPress={row.onPress}>
               <row.Icon
@@ -130,7 +158,6 @@ const styles = StyleSheet.create({
   },
   card: {
     position: 'absolute',
-    left: space[6],
     backgroundColor: colors.neutral900,
     borderRadius: radius.lg,
     paddingVertical: space[2],
@@ -138,7 +165,6 @@ const styles = StyleSheet.create({
   },
   reactionBar: {
     position: 'absolute',
-    left: space[6],
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
@@ -147,8 +173,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[2],
   },
   reactionCell: {
-    width: 36,
-    height: 36,
+    width: REACTION_CELL_SIZE,
+    height: REACTION_CELL_SIZE,
     borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'center',

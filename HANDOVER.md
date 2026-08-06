@@ -50,18 +50,33 @@ explicitly asked that Metro never be run for this project.** This means:
   have NOT been run against the live project yet** — run those before the emoji-reaction / GIF
   features will work end-to-end. If resuming from a git checkout on a different machine, diff
   `supabase/migrations/` against what's actually live before assuming anything is applied.
-- **Message reactions** (WhatsApp-style long-press emoji bar, 👍❤️😂😮😢🙏, one per user per
-  message) — `supabase/migrations/0014_message_reactions.sql`, `lib/chatActions.ts`'s
-  `setMessageReaction`/`clearMessageReaction`, wired through `useMessages` and
-  `MessageActionsModal`/`MessageBubble`.
-- **GIF/sticker picker** in the composer (`components/GifPickerModal.tsx`, `lib/giphy.ts`) — a
-  centered pill segmented toggle (GIF/Stickers) over a search + grid, via the **Giphy API** (Tenor
-  was the original plan but Tenor stopped onboarding new API clients as of Jan 2026 — don't re-try
-  that path). Needs `EXPO_PUBLIC_GIPHY_API_KEY` in `.env` (already set locally as of this session;
-  see README's env-var section) and migration `0015` (widens `message_media.kind` to allow `'gif'`)
-  run against Supabase before it'll actually send. Sent as a normal `message_media` row with
-  `kind: 'gif'` — reuses the existing upload pipeline in `lib/media.ts` (fetches the Giphy CDN URL,
-  re-uploads to Supabase Storage) rather than depending on Giphy's CDN staying up long-term.
+- **Message reactions** (WhatsApp-style long-press emoji bar, 👍❤️😂😮😢🙏 + a "+" opening a full
+  emoji grid via `components/EmojiPickerModal.tsx`) — `supabase/migrations/0014_message_reactions.sql`,
+  `lib/chatActions.ts`'s `setMessageReaction`/`clearMessageReaction`, wired through `useMessages`
+  and `MessageActionsModal`/`MessageBubble`. The reaction bar and action-list card now anchor to
+  whichever side the message bubble is on (own → right edge, other's → left edge) — an earlier
+  version always anchored left regardless of `isOwn`, which looked misaligned for every own-message
+  long-press.
+- **GIF/sticker picker** docks inline where the keyboard would be (`components/GifStickerPanel.tsx`,
+  `lib/giphy.ts`), not a bottom-sheet Modal — matches WhatsApp/Telegram's swap-in-place feel. Backed
+  by the **Giphy API** (Tenor was the original plan but Tenor stopped onboarding new API clients as
+  of Jan 2026 — don't re-try that path). Needs `EXPO_PUBLIC_GIPHY_API_KEY` in `.env` (already set
+  locally) and migrations `0015`/`0016` (widen `message_media.kind` to allow `'gif'` and `'sticker'`
+  as two *distinct* kinds — same upload pipeline, kept separate purely so notifications/labels can
+  say "GIF" vs "Sticker"). Sent as a normal `message_media` row — reuses `lib/media.ts`'s existing
+  upload pipeline (fetches the Giphy CDN URL, re-uploads to Supabase Storage) rather than depending
+  on Giphy's CDN staying up long-term.
+- **Push notification content/routing overhaul** — `supabase/functions/send-push/index.ts` now
+  handles three separate Database Webhooks instead of one (`messages` INSERT for text only,
+  `message_media` INSERT for photo/video/document/gif/sticker, `message_reactions` INSERT/UPDATE
+  for "X reacted 👍 to your message"). **Two new webhooks need to be added in the Supabase
+  Dashboard** (`message_media` and `message_reactions` — see README's "Push notifications"
+  section for the exact table/event pairs) and the function needs redeploying
+  (`supabase functions deploy send-push`) before any of this takes effect. Previously the
+  `messages`-only webhook fired before a media message's `message_media` row existed, so every
+  photo/video/gif/sticker notification just said "Sent an attachment." Tapping a notification also
+  now scrolls straight to the message that triggered it (`app/(app)/chat/[id].tsx`'s
+  `scrolledToTargetRef` + `messageId` route param) instead of landing at the bottom of the thread.
 - Design system is **"Hearth"** (`lib/theme.ts`) — warm terracotta/cream palette, Fraunces serif
   display font, replacing an earlier cool-blurple "Nocturne" system. **The accent color is now
   user-customizable** (Settings → App theme color) via `lib/accentTheme.tsx`'s

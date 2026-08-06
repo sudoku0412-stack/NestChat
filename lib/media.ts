@@ -107,8 +107,9 @@ export async function uploadMedia(
 ): Promise<UploadedMedia> {
   const asset = await prepareForUpload(rawAsset);
 
-  let extension = asset.kind === 'video' ? 'mp4' : asset.kind === 'gif' ? 'gif' : 'jpg';
-  let contentType = asset.kind === 'video' ? 'video/mp4' : asset.kind === 'gif' ? 'image/gif' : 'image/jpeg';
+  const isGifLike = asset.kind === 'gif' || asset.kind === 'sticker';
+  let extension = asset.kind === 'video' ? 'mp4' : isGifLike ? 'gif' : 'jpg';
+  let contentType = asset.kind === 'video' ? 'video/mp4' : isGifLike ? 'image/gif' : 'image/jpeg';
   if (asset.kind === 'document') {
     extension = asset.fileName?.split('.').pop() || 'bin';
     contentType = asset.mimeType || 'application/octet-stream';

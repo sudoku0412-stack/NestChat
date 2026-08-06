@@ -1,32 +1,63 @@
-// Supabase Edge Function: fires on new `messages` rows (via a Database Webhook)
-// and sends an Expo push notification to every non-muted chat member except the
-// sender. Deploy with `supabase functions deploy send-push`, then wire up the
-// webhook — see README.md "Push notifications" section.
+// Supabase Edge Function driven by three separate Database Webhooks (see README.md "Push
+// notifications" section for the exact dashboard steps):
+//   - messages       INSERT  -- text messages only (media messages have body = null at insert
+//                                time, since sendMediaMessage creates the placeholder row before
+//                                the upload finishes; message_media's own webhook below covers
+//                                those instead so the notification always describes real content)
+//   - message_media  INSERT  -- photo/video/document/gif/sticker messages, once the media row
+//                                (and therefore its `kind`) actually exists
+//   - message_reactions INSERT/UPDATE -- notifies the *original message's sender* that someone
+//                                reacted, never the reactor themselves
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 interface WebhookPayload {
-  type: 'INSERT';
+  type: 'INSERT' | 'UPDATE';
   table: string;
-  record: {
-    id: string;
-    chat_id: string;
-    sender_id: string;
-    body: string | null;
-  };
+  record: Record<string, unknown>;
 }
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-Deno.serve(async (req) => {
-  const payload = (await req.json()) as WebhookPayload;
-  if (payload.table !== 'messages' || payload.type !== 'INSERT') {
-    return new Response('ignored', { status: 200 });
-  }
+const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-  const { record } = payload;
+function mediaKindLabel(kind: string, fileName: string | null) {
+  switch (kind) {
+    case 'photo':
+      return '📷 Photo';
+    case 'video':
+      return '🎥 Video';
+    case 'gif':
+      return '🎞️ GIF';
+    case 'sticker':
+      return '🩹 Sticker';
+    case 'document':
+      return `📄 ${fileName || 'Document'}`;
+    default:
+      return 'Sent an attachment';
+  }
+}
+
+async function sendExpoPush(messages: Record<string, unknown>[]) {
+  if (messages.length === 0) return;
+  await fetch('https://exp.host/--/api/v2/push/send', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify(messages),
+  });
+}
+
+async function handleMessageInsert(record: {
+  id: string;
+  chat_id: string;
+  sender_id: string;
+  body: string | null;
+}) {
+  // Media messages start with body = null and get their body/kind from message_media once the
+  // upload finishes -- that insert fires its own webhook (handleMediaInsert below), so skip here
+  // rather than sending a premature "Sent an attachment" notification.
+  if (record.body === null) return new Response('skip: media pending', { status: 200 });
 
   const [{ data: sender }, { data: chat }, { data: recipients }] = await Promise.all([
     supabase.from('users').select('display_name').eq('id', record.sender_id).single(),
@@ -42,28 +73,123 @@ Deno.serve(async (req) => {
   const tokens = (recipients ?? [])
     .map((r) => (r.users as unknown as { push_token: string | null } | null)?.push_token)
     .filter((t): t is string => !!t);
-
-  if (tokens.length === 0) {
-    return new Response('no recipients', { status: 200 });
-  }
+  if (tokens.length === 0) return new Response('no recipients', { status: 200 });
 
   const senderName = sender?.display_name ?? 'Someone';
   const title = chat?.type === 'group' ? `${senderName} in ${chat?.name ?? 'group'}` : senderName;
-  const body = record.body ?? 'Sent an attachment';
 
-  const messages = tokens.map((to) => ({
-    to,
-    title,
-    body,
-    sound: 'default',
-    data: { chatId: record.chat_id, messageId: record.id },
-  }));
-
-  await fetch('https://exp.host/--/api/v2/push/send', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify(messages),
-  });
-
+  await sendExpoPush(
+    tokens.map((to) => ({
+      to,
+      title,
+      body: record.body,
+      sound: 'default',
+      data: { chatId: record.chat_id, messageId: record.id },
+    }))
+  );
   return new Response('ok', { status: 200 });
+}
+
+async function handleMediaInsert(record: {
+  message_id: string;
+  kind: string;
+  file_name: string | null;
+}) {
+  const { data: message } = await supabase
+    .from('messages')
+    .select('id, chat_id, sender_id')
+    .eq('id', record.message_id)
+    .single();
+  if (!message) return new Response('message not found', { status: 200 });
+
+  const [{ data: sender }, { data: chat }, { data: recipients }] = await Promise.all([
+    supabase.from('users').select('display_name').eq('id', message.sender_id).single(),
+    supabase.from('chats').select('type, name').eq('id', message.chat_id).single(),
+    supabase
+      .from('chat_members')
+      .select('user_id, muted, users(push_token)')
+      .eq('chat_id', message.chat_id)
+      .neq('user_id', message.sender_id)
+      .eq('muted', false),
+  ]);
+
+  const tokens = (recipients ?? [])
+    .map((r) => (r.users as unknown as { push_token: string | null } | null)?.push_token)
+    .filter((t): t is string => !!t);
+  if (tokens.length === 0) return new Response('no recipients', { status: 200 });
+
+  const senderName = sender?.display_name ?? 'Someone';
+  const title = chat?.type === 'group' ? `${senderName} in ${chat?.name ?? 'group'}` : senderName;
+
+  await sendExpoPush(
+    tokens.map((to) => ({
+      to,
+      title,
+      body: mediaKindLabel(record.kind, record.file_name),
+      sound: 'default',
+      data: { chatId: message.chat_id, messageId: message.id },
+    }))
+  );
+  return new Response('ok', { status: 200 });
+}
+
+async function handleReactionUpsert(record: { message_id: string; user_id: string; emoji: string }) {
+  const { data: message } = await supabase
+    .from('messages')
+    .select('id, chat_id, sender_id')
+    .eq('id', record.message_id)
+    .single();
+  if (!message) return new Response('message not found', { status: 200 });
+
+  // Don't notify someone for reacting to their own message.
+  if (message.sender_id === record.user_id) return new Response('self-reaction, skipped', { status: 200 });
+
+  const [{ data: reactor }, { data: recipientMember }] = await Promise.all([
+    supabase.from('users').select('display_name').eq('id', record.user_id).single(),
+    supabase
+      .from('chat_members')
+      .select('muted, users(push_token)')
+      .eq('chat_id', message.chat_id)
+      .eq('user_id', message.sender_id)
+      .single(),
+  ]);
+
+  if (recipientMember?.muted) return new Response('chat muted, skipped', { status: 200 });
+  const token = (recipientMember?.users as unknown as { push_token: string | null } | null)?.push_token;
+  if (!token) return new Response('no push token', { status: 200 });
+
+  const reactorName = reactor?.display_name ?? 'Someone';
+
+  await sendExpoPush([
+    {
+      to: token,
+      title: reactorName,
+      body: `${reactorName} reacted ${record.emoji} to your message`,
+      sound: 'default',
+      data: { chatId: message.chat_id, messageId: message.id },
+    },
+  ]);
+  return new Response('ok', { status: 200 });
+}
+
+Deno.serve(async (req) => {
+  const payload = (await req.json()) as WebhookPayload;
+
+  if (payload.table === 'messages' && payload.type === 'INSERT') {
+    return handleMessageInsert(
+      payload.record as { id: string; chat_id: string; sender_id: string; body: string | null }
+    );
+  }
+
+  if (payload.table === 'message_media' && payload.type === 'INSERT') {
+    return handleMediaInsert(
+      payload.record as { message_id: string; kind: string; file_name: string | null }
+    );
+  }
+
+  if (payload.table === 'message_reactions' && (payload.type === 'INSERT' || payload.type === 'UPDATE')) {
+    return handleReactionUpsert(payload.record as { message_id: string; user_id: string; emoji: string });
+  }
+
+  return new Response('ignored', { status: 200 });
 });

@@ -40,6 +40,7 @@ import { Composer } from '../../../components/Composer';
 import { ContactPickerModal } from '../../../components/ContactPickerModal';
 import { LocationDurationModal } from '../../../components/LocationDurationModal';
 import { MessageActionsModal } from '../../../components/MessageActionsModal';
+import { EmojiPickerModal } from '../../../components/EmojiPickerModal';
 import type { GiphyItem } from '../../../lib/giphy';
 import { colors, fontWeight, space } from '../../../lib/theme';
 import { useThemeMode } from '../../../lib/themeMode';
@@ -79,6 +80,7 @@ export default function ThreadScreen() {
   const [contactPickerVisible, setContactPickerVisible] = useState(false);
   const [locationModalVisible, setLocationModalVisible] = useState(false);
   const [actionMessage, setActionMessage] = useState<MessageWithMedia | null>(null);
+  const [emojiPickerMessageId, setEmojiPickerMessageId] = useState<string | null>(null);
   const [actionMenuY, setActionMenuY] = useState(0);
   const [replyingTo, setReplyingTo] = useState<MessageWithMedia | null>(null);
   const listRef = useRef<FlatList>(null);
@@ -237,13 +239,13 @@ export default function ThreadScreen() {
     }
   }
 
-  async function handleSelectGif(item: GiphyItem, _kind: 'gif' | 'sticker') {
+  async function handleSelectGif(item: GiphyItem, kind: 'gif' | 'sticker') {
     if (!profile) return;
     setPendingCount((c) => c + 1);
     try {
       await sendMediaMessage(id, profile.id, {
         uri: item.url,
-        kind: 'gif',
+        kind,
         width: item.width,
         height: item.height,
       });
@@ -306,6 +308,11 @@ export default function ThreadScreen() {
   function handleReact(emoji: string) {
     if (!actionMessage) return;
     reactToMessage(actionMessage.id, emoji);
+  }
+
+  function handleOpenFullEmojiPicker() {
+    if (!actionMessage) return;
+    setEmojiPickerMessageId(actionMessage.id);
   }
 
   async function handleTogglePin() {
@@ -506,6 +513,14 @@ export default function ThreadScreen() {
         onViewContact={handleViewContact}
         onDelete={handleDeleteMessage}
         onReact={handleReact}
+        onOpenFullEmojiPicker={handleOpenFullEmojiPicker}
+      />
+      <EmojiPickerModal
+        visible={!!emojiPickerMessageId}
+        onClose={() => setEmojiPickerMessageId(null)}
+        onSelect={(emoji) => {
+          if (emojiPickerMessageId) reactToMessage(emojiPickerMessageId, emoji);
+        }}
       />
     </KeyboardAvoidingView>
   );
