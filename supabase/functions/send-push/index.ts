@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
     title,
     body,
     sound: 'default',
-    data: { chatId: record.chat_id },
+    data: { chatId: record.chat_id, messageId: record.id },
   }));
 
   await fetch('https://exp.host/--/api/v2/push/send', {

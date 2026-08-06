@@ -58,10 +58,14 @@ function openChatFromResponse(
   router: ReturnType<typeof useRouter>,
   response: Notifications.NotificationResponse | null
 ) {
-  const chatId = response?.notification.request.content.data?.chatId;
-  if (typeof chatId === 'string') {
-    router.push(`/(app)/chat/${chatId}`);
-  }
+  const data = response?.notification.request.content.data;
+  const chatId = data?.chatId;
+  const messageId = data?.messageId;
+  if (typeof chatId !== 'string') return;
+  router.push({
+    pathname: '/(app)/chat/[id]',
+    params: typeof messageId === 'string' ? { id: chatId, messageId } : { id: chatId },
+  });
 }
 
 // Handles both cold-start (app launched by tapping a notification) and

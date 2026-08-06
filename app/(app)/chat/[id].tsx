@@ -58,7 +58,7 @@ function previewFor(message: MessageWithMedia) {
 }
 
 export default function ThreadScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, messageId: targetMessageId } = useLocalSearchParams<{ id: string; messageId?: string }>();
   const insets = useSafeAreaInsets();
   const { profile } = useAuth();
   const { messages, members, membersById, isReadByOthers, refresh, ownMembership, starredMessageIds } = useMessages(
@@ -82,6 +82,7 @@ export default function ThreadScreen() {
   const [actionMenuY, setActionMenuY] = useState(0);
   const [replyingTo, setReplyingTo] = useState<MessageWithMedia | null>(null);
   const listRef = useRef<FlatList>(null);
+  const scrolledToTargetRef = useRef(false);
   const typingChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const typingClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTypingSentRef = useRef(0);
@@ -138,6 +139,20 @@ export default function ThreadScreen() {
     () => [...messages, ...pendingMessages.filter((p) => !messages.some((m) => m.id === p.id))],
     [messages, pendingMessages]
   );
+
+  // Opened from a push notification tap -- jump to the message that triggered it instead of
+  // defaulting to the bottom of the thread. Runs once per screen instance; the default
+  // scroll-to-bottom-on-new-content behavior below is suppressed until this either succeeds or
+  // there's no target to look for.
+  useEffect(() => {
+    if (!targetMessageId || scrolledToTargetRef.current) return;
+    const index = displayMessages.findIndex((m) => m.id === targetMessageId);
+    if (index === -1) return;
+    scrolledToTargetRef.current = true;
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.4 });
+    });
+  }, [displayMessages, targetMessageId]);
 
   const otherMember = members.find((m) => m.id !== profile?.id);
   const isGroup = chatInfo?.type === 'group';
@@ -392,7 +407,15 @@ export default function ThreadScreen() {
           data={displayMessages}
           keyExtractor={(m) => m.id}
           contentContainerStyle={{ paddingVertical: space[4] }}
-          onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
+          onContentSizeChange={() => {
+            if (targetMessageId && !scrolledToTargetRef.current) return;
+            listRef.current?.scrollToEnd({ animated: false });
+          }}
+          onScrollToIndexFailed={(info) => {
+            setTimeout(() => {
+              listRef.current?.scrollToIndex({ index: info.index, animated: true, viewPosition: 0.4 });
+            }, 100);
+          }}
           ListFooterComponent={otherTyping ? <TypingIndicator /> : null}
           renderItem={({ item, index }) => {
             const isOwn = item.sender_id === profile?.id;
