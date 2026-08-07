@@ -98,7 +98,13 @@ export function MessageBubble({
             </View>
           )}
           {message.media.map((m) => (
-            <MediaTile key={m.id} media={m} messageId={message.id} ownMessage={isOwn} />
+            <MediaTile
+              key={m.id}
+              media={m}
+              messageId={message.id}
+              ownMessage={isOwn}
+              onLongPress={onLongPress}
+            />
           ))}
           {Array.from({ length: pendingMediaCount }).map((_, i) => (
             <PendingMediaTile key={`pending-${i}`} />

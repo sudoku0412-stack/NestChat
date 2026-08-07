@@ -1,4 +1,12 @@
-import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Linking,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type GestureResponderEvent,
+} from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useSignedUrl } from '../lib/hooks/useSignedUrl';
@@ -10,6 +18,12 @@ interface MediaTileProps {
   media: MessageMediaRow;
   messageId: string;
   ownMessage: boolean;
+  // MediaTile is itself a Pressable (tap opens the media viewer / document), nested inside
+  // MessageBubble's own Pressable (tap-and-hold to react/reply/etc). RN's gesture responder
+  // system hands long-press to whichever Pressable is deepest under the finger, so without this
+  // forwarded here, long-pressing directly on a photo/gif/sticker/document silently did nothing
+  // -- the outer bubble's onLongPress never fired.
+  onLongPress?: (y: number) => void;
 }
 
 function formatFileSize(bytes: number | null) {
@@ -18,15 +32,20 @@ function formatFileSize(bytes: number | null) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function MediaTile({ media, messageId, ownMessage }: MediaTileProps) {
+export function MediaTile({ media, messageId, ownMessage, onLongPress }: MediaTileProps) {
   const url = useSignedUrl(media.storage_path);
   const { colors: accentColors } = useAccentTheme();
+
+  function handleLongPress(e: GestureResponderEvent) {
+    onLongPress?.(e.nativeEvent.pageY);
+  }
 
   if (media.kind === 'document') {
     return (
       <Pressable
         style={styles.documentTile}
         onPress={() => url && Linking.openURL(url)}
+        onLongPress={handleLongPress}
         disabled={!url}
       >
         <Text style={styles.documentGlyph}>📄</Text>
@@ -49,6 +68,7 @@ export function MediaTile({ media, messageId, ownMessage }: MediaTileProps) {
           params: { messageId, mediaId: media.id, ownMessage: ownMessage ? '1' : '0' },
         })
       }
+      onLongPress={handleLongPress}
     >
       {url ? (
         <Image source={{ uri: url }} style={styles.image} contentFit="cover" />
