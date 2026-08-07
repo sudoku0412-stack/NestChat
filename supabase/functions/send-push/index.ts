@@ -22,20 +22,20 @@ const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-function mediaKindLabel(kind: string, fileName: string | null) {
+function mediaKindLabel(senderName: string, kind: string, fileName: string | null) {
   switch (kind) {
     case 'photo':
-      return '📷 Photo';
+      return `${senderName} sent you a photo`;
     case 'video':
-      return '🎥 Video';
+      return `${senderName} sent you a video`;
     case 'gif':
-      return '🎞️ GIF';
+      return `${senderName} sent you a GIF`;
     case 'sticker':
-      return '🩹 Sticker';
+      return `${senderName} sent you a sticker`;
     case 'document':
-      return `📄 ${fileName || 'Document'}`;
+      return `${senderName} sent you a document: ${fileName || 'Document'}`;
     default:
-      return 'Sent an attachment';
+      return `${senderName} sent you an attachment`;
   }
 }
 
@@ -125,7 +125,7 @@ async function handleMediaInsert(record: {
     tokens.map((to) => ({
       to,
       title,
-      body: mediaKindLabel(record.kind, record.file_name),
+      body: mediaKindLabel(senderName, record.kind, record.file_name),
       sound: 'default',
       data: { chatId: message.chat_id, messageId: message.id },
     }))

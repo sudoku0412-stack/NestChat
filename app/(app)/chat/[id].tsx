@@ -42,6 +42,7 @@ import { LocationDurationModal } from '../../../components/LocationDurationModal
 import { MessageActionsModal } from '../../../components/MessageActionsModal';
 import { EmojiPickerModal } from '../../../components/EmojiPickerModal';
 import type { GiphyItem } from '../../../lib/giphy';
+import { addRecentEmoji } from '../../../lib/recentEmojis';
 import { colors, fontWeight, space } from '../../../lib/theme';
 import { useThemeMode } from '../../../lib/themeMode';
 
@@ -300,8 +301,12 @@ export default function ThreadScreen() {
     if (!profile) return;
     const message = messages.find((m) => m.id === messageId) ?? pendingMessages.find((m) => m.id === messageId);
     const current = message?.reactions?.find((r) => r.reactedByMe);
-    if (current?.emoji === emoji) await clearMessageReaction(messageId, profile.id);
-    else await setMessageReaction(messageId, profile.id, emoji);
+    if (current?.emoji === emoji) {
+      await clearMessageReaction(messageId, profile.id);
+    } else {
+      await setMessageReaction(messageId, profile.id, emoji);
+      addRecentEmoji(emoji);
+    }
     refresh();
   }
 

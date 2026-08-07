@@ -1,6 +1,8 @@
-import { Dimensions, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Dimensions, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useAccentTheme } from '../lib/accentTheme';
 import { colors, radius, space } from '../lib/theme';
+import { getRecentEmojis } from '../lib/recentEmojis';
 import { CopyIcon, PersonIcon, PinIcon, PlusIcon, ReplyIcon, StarIcon, TrashIcon, type IconProps } from './icons';
 
 interface MessageActionsModalProps {
@@ -22,12 +24,15 @@ interface MessageActionsModalProps {
   onOpenFullEmojiPicker: () => void;
 }
 
-const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 const REACTION_CELL_SIZE = 40;
 const REACTION_BAR_HEIGHT = 56;
-// One extra cell for the "+" button, which opens the full emoji picker (EmojiPickerModal) --
-// matches WhatsApp's reaction bar, which is deliberately wider than the action-list card below it.
-const REACTION_BAR_WIDTH = (QUICK_REACTIONS.length + 1) * REACTION_CELL_SIZE + space[2] * 2;
+// The bar shows at most this many recent emojis before scrolling -- WhatsApp-style "recently
+// used" rather than a fixed hardcoded set. Actual stored history can hold more (see
+// lib/recentEmojis.ts); this only caps how many cells the bar's own width is sized for.
+const VISIBLE_REACTION_COUNT = 8;
+// +1 for the trailing "+" cell, which opens the full emoji picker (EmojiPickerModal) and is
+// always reachable by scrolling even if recents fill the visible width.
+const REACTION_BAR_WIDTH = (VISIBLE_REACTION_COUNT + 1) * REACTION_CELL_SIZE + space[2] * 2;
 const SCREEN_MARGIN = space[4];
 
 interface Row {
@@ -63,6 +68,13 @@ export function MessageActionsModal({
   onOpenFullEmojiPicker,
 }: MessageActionsModalProps) {
   const { colors: accentColors } = useAccentTheme();
+  const [recentEmojis, setRecentEmojis] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!visible) return;
+    getRecentEmojis().then(setRecentEmojis);
+  }, [visible]);
+
   function run(action: () => void) {
     onClose();
     action();
@@ -121,18 +133,25 @@ export function MessageActionsModal({
             { top, left: reactionLeft, width: REACTION_BAR_WIDTH, height: REACTION_BAR_HEIGHT },
           ]}
         >
-          {QUICK_REACTIONS.map((emoji) => (
-            <Pressable
-              key={emoji}
-              style={[styles.reactionCell, currentReaction === emoji && styles.reactionCellActive]}
-              onPress={() => handleReact(emoji)}
-            >
-              <Text style={styles.reactionGlyph}>{emoji}</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.reactionScroll}
+            contentContainerStyle={styles.reactionScrollContent}
+          >
+            {recentEmojis.map((emoji) => (
+              <Pressable
+                key={emoji}
+                style={[styles.reactionCell, currentReaction === emoji && styles.reactionCellActive]}
+                onPress={() => handleReact(emoji)}
+              >
+                <Text style={styles.reactionGlyph}>{emoji}</Text>
+              </Pressable>
+            ))}
+            <Pressable style={styles.reactionCell} onPress={handleOpenFullPicker}>
+              <PlusIcon size={18} color={colors.textMuted} />
             </Pressable>
-          ))}
-          <Pressable style={styles.reactionCell} onPress={handleOpenFullPicker}>
-            <PlusIcon size={18} color={colors.textMuted} />
-          </Pressable>
+          </ScrollView>
         </View>
         <View style={[styles.card, { top: top + REACTION_BAR_HEIGHT + space[2], left: cardLeft, width: CARD_WIDTH }]}>
           {rows.map((row) => (
@@ -165,11 +184,16 @@ const styles = StyleSheet.create({
   },
   reactionBar: {
     position: 'absolute',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
     backgroundColor: colors.neutral900,
     borderRadius: radius.full,
+  },
+  reactionScroll: {
+    flex: 1,
+    borderRadius: radius.full,
+  },
+  reactionScrollContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: space[2],
   },
   reactionCell: {
