@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import { supabase } from '../supabase';
+import { decryptTextField, isEncryptedRow } from '../crypto';
 import type {
   ChatMembersRow,
   LiveLocationsRow,
@@ -9,6 +10,25 @@ import type {
   MessagesRow,
 } from '../database.types';
 import type { Member, MessageReactionSummary, MessageWithMedia } from '../types';
+
+async function decryptRowsIfNeeded(rows: MessagesRow[], userId: string | null): Promise<MessagesRow[]> {
+  if (!rows.some((r) => isEncryptedRow(r))) return rows;
+
+  return Promise.all(
+    rows.map(async (row) => {
+      if (!isEncryptedRow(row)) return row;
+      const body = await decryptTextField({
+        chatId: row.chat_id,
+        messageId: row.id,
+        senderId: row.sender_id,
+        plaintextBody: row.body,
+        encrypted: { enc_v: row.enc_v, key_id: row.key_id, ciphertext: row.ciphertext },
+        myUserId: userId,
+      });
+      return { ...row, body };
+    })
+  );
+}
 
 let channelSeq = 0;
 
@@ -92,9 +112,13 @@ export function useMessages(chatId: string, userId: string | null) {
     const ownState = states.find((s) => s.user_id === userId) ?? null;
     const clearedAt = ownState?.cleared_at ? new Date(ownState.cleared_at).getTime() : null;
 
-    const rows = ((msgRows as MessagesRow[]) ?? []).filter(
+    const filteredRows = ((msgRows as MessagesRow[]) ?? []).filter(
       (m) => clearedAt === null || new Date(m.created_at).getTime() > clearedAt
     );
+    // Decrypting here (before the reply/pinned-banner resolution below reads `.body`) means
+    // reply quotes, the pinned banner, and previewFor() all see plaintext for free — they all
+    // read off this same decrypted row list, not a separate query.
+    const rows = await decryptRowsIfNeeded(filteredRows, userId);
 
     // Reply quotes are resolved client-side from the same message list already fetched above —
     // matches this hook's existing convention of joining in JS rather than via a nested select.

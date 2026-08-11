@@ -159,11 +159,15 @@ export type ChatListRow = {
   type: ChatType;
   name: string | null;
   avatar_url: string | null;
+  last_message_id: string | null;
   last_message_body: string | null;
   last_message_at: string | null;
   last_message_sender_id: string | null;
   last_message_has_media: boolean;
   last_message_deleted: boolean;
+  last_message_enc_v: number | null;
+  last_message_key_id: string | null;
+  last_message_ciphertext: string | null;
   unread_count: number;
   muted: boolean;
   archived: boolean;

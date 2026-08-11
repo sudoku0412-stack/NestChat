@@ -7,6 +7,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { getSignedMediaUrl } from '../../lib/media';
 import { softDeleteMessage } from '../../lib/chatActions';
+import { decryptTextField, isEncryptedRow } from '../../lib/crypto';
+import { useAuth } from '../../lib/auth';
 import { colors, fontWeight, space } from '../../lib/theme';
 import { useAccentTheme } from '../../lib/accentTheme';
 import type { MediaKind } from '../../lib/database.types';
@@ -29,6 +31,7 @@ export default function MediaViewerScreen() {
     ownMessage?: string;
   }>();
   const insets = useSafeAreaInsets();
+  const { profile } = useAuth();
   const [url, setUrl] = useState<string | null>(null);
   const [kind, setKind] = useState<MediaKind>('photo');
   const [caption, setCaption] = useState<string | null>(null);
@@ -40,7 +43,7 @@ export default function MediaViewerScreen() {
       const { data: media } = await supabase.from('message_media').select('*').eq('id', mediaId).single();
       const { data: message } = await supabase
         .from('messages')
-        .select('body, created_at, sender_id, users(display_name)')
+        .select('chat_id, body, created_at, sender_id, enc_v, key_id, ciphertext, users(display_name)')
         .eq('id', messageId)
         .single();
 
@@ -50,7 +53,17 @@ export default function MediaViewerScreen() {
         setUrl(signed);
       }
       if (message) {
-        setCaption(message.body);
+        const caption = isEncryptedRow(message)
+          ? await decryptTextField({
+              chatId: message.chat_id,
+              messageId,
+              senderId: message.sender_id,
+              plaintextBody: message.body,
+              encrypted: { enc_v: message.enc_v, key_id: message.key_id, ciphertext: message.ciphertext },
+              myUserId: profile?.id ?? null,
+            })
+          : message.body;
+        setCaption(caption);
         setCreatedAt(message.created_at);
         setSenderName((message.users as unknown as { display_name: string } | null)?.display_name ?? '');
       }

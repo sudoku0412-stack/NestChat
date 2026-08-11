@@ -7,6 +7,7 @@ export { ensureIdentityKeyPair, getIdentityKeyPair, wipeIdentityKeyPair } from '
 export type { IdentityKeyPair } from './keys';
 export { getOrCreateChatKey, rewrapChatKeyForMembers, rotateChatKeyOnRemoval } from './chatKeys';
 export { encryptMessageText, decryptMessageText } from './message';
+export { decryptTextField } from './decryptRow';
 
 // Call once per app session after the user is known (onboarding completion, sign-in, recovery)
 // -- generates a device identity keypair if one doesn't exist yet and publishes the public half.

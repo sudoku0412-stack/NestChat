@@ -5,6 +5,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '../../../lib/auth';
 import { supabase } from '../../../lib/supabase';
 import { unstarMessage } from '../../../lib/chatActions';
+import { decryptTextField, isEncryptedRow } from '../../../lib/crypto';
 import { useAccentTheme } from '../../../lib/accentTheme';
 import { colors, fontWeight, space } from '../../../lib/theme';
 
@@ -38,18 +39,35 @@ export default function StarredMessagesScreen() {
     if (!profile) return;
     supabase
       .from('message_stars')
-      .select('message_id, messages!inner(chat_id, sender_id, body, created_at, deleted_at)')
+      .select(
+        'message_id, messages!inner(chat_id, sender_id, body, created_at, deleted_at, enc_v, key_id, ciphertext)'
+      )
       .eq('messages.chat_id', chatId)
       .eq('user_id', profile.id)
       .order('starred_at', { ascending: false })
-      .then(({ data }) => {
-        const rows = (data ?? []).map((row: any) => ({
-          message_id: row.message_id,
-          sender_id: row.messages.sender_id,
-          body: row.messages.body,
-          created_at: row.messages.created_at,
-          deleted_at: row.messages.deleted_at,
-        }));
+      .then(async ({ data }) => {
+        const rows = await Promise.all(
+          (data ?? []).map(async (row: any) => {
+            const m = row.messages;
+            const body = isEncryptedRow(m)
+              ? await decryptTextField({
+                  chatId: m.chat_id,
+                  messageId: row.message_id,
+                  senderId: m.sender_id,
+                  plaintextBody: m.body,
+                  encrypted: { enc_v: m.enc_v, key_id: m.key_id, ciphertext: m.ciphertext },
+                  myUserId: profile.id,
+                })
+              : m.body;
+            return {
+              message_id: row.message_id,
+              sender_id: m.sender_id,
+              body,
+              created_at: m.created_at,
+              deleted_at: m.deleted_at,
+            };
+          })
+        );
         setItems(rows);
         setLoading(false);
       });
