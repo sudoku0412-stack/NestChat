@@ -21,6 +21,8 @@ export type UsersRow = {
   created_at: string;
   pin_hash: string | null;
   theme_accent: string | null;
+  public_key: string | null;
+  key_updated_at: string | null;
 }
 
 export type ChatsRow = {
@@ -54,6 +56,9 @@ export type MessagesRow = {
   deleted_at: string | null;
   location_share_id: string | null;
   reply_to_message_id: string | null;
+  enc_v: number | null;
+  key_id: string | null;
+  ciphertext: string | null;
 }
 
 export type MessageMediaRow = {
@@ -67,6 +72,34 @@ export type MessageMediaRow = {
   duration_seconds: number | null;
   file_name: string | null;
   file_size: number | null;
+  created_at: string;
+  wrapped_key: string | null;
+}
+
+export type ChatKeysRow = {
+  id: string;
+  chat_id: string;
+  created_at: string;
+  retired_at: string | null;
+}
+
+export type ChatKeyMembersRow = {
+  key_id: string;
+  user_id: string;
+  wrapped_key: string;
+  created_at: string;
+}
+
+export type HouseholdKeysRow = {
+  id: string;
+  created_at: string;
+  retired_at: string | null;
+}
+
+export type HouseholdKeyMembersRow = {
+  key_id: string;
+  user_id: string;
+  wrapped_key: string;
   created_at: string;
 }
 
@@ -184,6 +217,26 @@ export interface Database {
         Row: MessageReactionsRow;
         Insert: Partial<MessageReactionsRow>;
         Update: Partial<MessageReactionsRow>;
+      } & Relationships;
+      chat_keys: {
+        Row: ChatKeysRow;
+        Insert: Partial<ChatKeysRow>;
+        Update: Partial<ChatKeysRow>;
+      } & Relationships;
+      chat_key_members: {
+        Row: ChatKeyMembersRow;
+        Insert: Partial<ChatKeyMembersRow>;
+        Update: Partial<ChatKeyMembersRow>;
+      } & Relationships;
+      household_keys: {
+        Row: HouseholdKeysRow;
+        Insert: Partial<HouseholdKeysRow>;
+        Update: Partial<HouseholdKeysRow>;
+      } & Relationships;
+      household_key_members: {
+        Row: HouseholdKeyMembersRow;
+        Insert: Partial<HouseholdKeyMembersRow>;
+        Update: Partial<HouseholdKeyMembersRow>;
       } & Relationships;
       statuses: {
         Row: StatusesRow;

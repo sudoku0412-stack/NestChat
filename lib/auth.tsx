@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
+import { clearCryptoState, initializeCrypto } from './crypto';
 import type { UsersRow } from './database.types';
 
 export type PhoneStatus = { exists: boolean; hasPin: boolean };
@@ -47,6 +48,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     setProfile(data as UsersRow);
+
+    // Idempotent -- ensures a device identity key exists and is published on every profile load
+    // (initial launch, claim, recovery, manual refresh), not just once at onboarding. This is
+    // also what re-publishes a *new* public key after a reinstall (recoverAccount restores the
+    // account's rows via its own RPC, but the local Keychain is gone, so ensureIdentityKeyPair
+    // generates a fresh one here) -- co-members' apps detect the changed key and rewrap chat keys
+    // for it, which is this app's "social recovery" mechanism instead of a server-held backup.
+    initializeCrypto(data.id).catch((err) => console.warn('initializeCrypto failed', err));
   }
 
   // Only called right before actually claiming/recovering a phone — never just to look one up —
@@ -65,6 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // network drop, or a phone-number race with another device) — leaves zero trace either way.
   async function cleanupFailedAttempt() {
     await supabase.rpc('delete_self');
+    await clearCryptoState();
     await supabase.auth.signOut();
   }
 
@@ -149,6 +159,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return null;
       },
       async signOut() {
+        await clearCryptoState();
         await supabase.auth.signOut();
       },
       async refreshProfile() {

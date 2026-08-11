@@ -12,6 +12,7 @@ import {
 import { Redirect, router } from 'expo-router';
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
+import { initializeCrypto } from '../lib/crypto';
 import { pickImageFromLibrary, uploadAvatar, type PickedAsset } from '../lib/media';
 import { Avatar } from '../components/Avatar';
 import { OutlineButton } from '../components/OutlineButton';
@@ -45,6 +46,11 @@ export default function OnboardingScreen() {
       if (pickedAvatar) {
         avatarUrl = await uploadAvatar(profile.id, pickedAvatar);
       }
+
+      // Generates (or loads) this device's identity keypair and publishes the public half --
+      // must happen before onboarding_completed is set so co-members can wrap chat keys for this
+      // user as soon as they're visible as a member anywhere.
+      await initializeCrypto(profile.id);
 
       const { error: updateError } = await supabase
         .from('users')

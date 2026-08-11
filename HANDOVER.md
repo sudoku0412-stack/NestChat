@@ -1,6 +1,6 @@
 # NestChat — Handover
 
-Last updated: 2026-08-04 (end of session)
+Last updated: 2026-08-11 (end of session)
 
 ## What this is
 
@@ -30,6 +30,65 @@ explicitly asked that Metro never be run for this project.** This means:
   run to publish anything. If picking this up, either commit to finishing that setup (so future
   JS-only fixes ship in seconds via `eas update`) or explicitly tell the user it's still
   archive-every-time and drop the half-finished OTA config to avoid confusion.
+
+## End-to-end encryption (E2EE) — multi-phase project, in progress
+
+User explicitly asked for WhatsApp-style E2EE, "let it be multi-day, let's do it properly." Full
+architecture + phased plan is at `~/.claude/plans/dazzling-conjuring-phoenix.md` (also mirrored in
+this repo's session transcript) — read that before continuing this work, it has the full
+rationale. Key decisions locked in with the user:
+
+- **Strict E2EE, no server key escrow.** Private keys never leave the device. Losing a device (or
+  reinstalling) means old messages are unreadable *unless* a co-member's app is online and rewraps
+  history for the new device's key ("social recovery") — if every household member reinstalls at
+  once, that chat's history is gone for good. This is a deliberate, user-approved tradeoff.
+- **Everything gets encrypted eventually**: messages, media, live-location coordinates, statuses.
+  Reaction emojis stay plaintext (user-approved — keeps reaction push notifications working, and
+  an emoji on unreadable content leaks ~nothing).
+- **Protocol**: static per-chat symmetric key (XChaCha20-Poly1305, or AES-256-GCM in tests — see
+  below), wrapped per-member via X25519 `crypto_box_seal`. NOT Signal/Double-Ratchet — no forward
+  secrecy, deliberately, because PIN-era product expectations + one-device-per-user + household
+  trust model make session-state protocols pure downside (see plan doc for the full rationale).
+
+**Progress so far:**
+
+- **Phase 0 (spike) — done.** `react-native-libsodium` + `react-native-keychain` installed,
+  `expo prebuild -p ios` + `pod install` succeeded, a full Debug simulator compile
+  (`xcodebuild ... build`) succeeded. The top risk (native module doesn't compile on this RN/Expo
+  version) is cleared. Runtime perf on real 10MB+ files hasn't been benchmarked yet — that'll
+  happen naturally on the first TestFlight build that touches media (Phase 3), not forced locally
+  (this project's Metro/TestFlight-only testing convention applies here too).
+- **Phase 1 (crypto lib + keys) — done, zero behavior change.** New `lib/crypto/` module:
+  `keys.ts` (Keychain-backed X25519 identity keypair, `ensureIdentityKeyPair`/`wipeIdentityKeyPair`),
+  `registry.ts` (publishes public key to `users.public_key`), `chatKeys.ts` (`getOrCreateChatKey`,
+  `getChatKeyById`, `rewrapChatKeyForMembers`, `rotateChatKeyOnRemoval` — all against new
+  `chat_keys`/`chat_key_members` tables), `message.ts` (`encryptMessageText`/`decryptMessageText`,
+  AEAD additional-data = `chatId:messageId:senderId:keyId` so ciphertext can't be spliced across
+  chats/messages/senders by the server), `envelope.ts` (base64 nonce+ciphertext packing,
+  `isEncryptedRow`), `config.ts` (`SEND_ENCRYPTED = false` until Phase 2b). Hooked into
+  `app/onboarding.tsx` (key generation blocks `onboarding_completed`) and `lib/auth.tsx`
+  (`initializeCrypto` in `loadProfile` — runs on every session load, which is also what
+  re-publishes a new public key after a reinstall; `clearCryptoState` on sign-out/cleanup).
+  **Migration `0018_e2ee_keys.sql` has NOT been run against the live Supabase project yet** — run
+  it before any of this can actually create/wrap a chat key.
+- **Not started yet**: Phase 2 (actually encrypting message text — currently `SEND_ENCRYPTED` is
+  false so nothing behaves differently), Phase 3 (media), Phase 4 (live location + statuses),
+  Phase 5 (iOS Notification Service Extension so push notifications can still say "sent you a
+  GIF" without the server ever reading plaintext), Phase 6 (polish/hardening).
+
+**Gotcha specific to this feature**: `react-native-libsodium`'s exposed API (this version) does
+NOT include `crypto_secretstream`/`crypto_pwhash` on native (only "with loadSumoVersion" on web).
+No `crypto_pwhash` needed given the no-server-escrow decision. No `crypto_secretstream` means
+Phase 3's media encryption should do single-shot AEAD over the whole file buffer (matches the
+existing plaintext upload pipeline, which already loads whole files into memory) rather than
+true streaming — revise the plan doc's Phase 3 section if picking this up, it still assumes
+secretstream.
+
+**Testing note**: `react-native-libsodium`/`react-native-keychain` can't run under Jest (no native
+bindings under Node) — `lib/testUtils/libsodiumMock.js` substitutes real-but-different cryptography
+(X25519 + AES-256-GCM via Node's builtin `crypto`, instead of X25519 + XChaCha20-Poly1305) so the
+*logic* around the primitives (wrap/unwrap, AEAD tamper-detection, envelope packing) gets real
+test coverage; it does not validate the actual native library, which Phase 0's device compile did.
 
 ## Current state
 

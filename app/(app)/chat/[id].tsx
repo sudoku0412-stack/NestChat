@@ -213,6 +213,9 @@ export default function ThreadScreen() {
       deleted_at: null,
       location_share_id: null,
       reply_to_message_id: replyToId,
+      enc_v: null,
+      key_id: null,
+      ciphertext: null,
       media: [],
       replyTo: replyingTo,
     };
