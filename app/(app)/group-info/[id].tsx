@@ -5,6 +5,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '../../../lib/auth';
 import { useMembers } from '../../../lib/hooks/useMembers';
 import { supabase } from '../../../lib/supabase';
+import { getIdentityKeyPair, rewrapChatKeyForMembers, rotateChatKeyOnRemoval } from '../../../lib/crypto';
 import { GroupAvatarStack } from '../../../components/Avatar';
 import { MemberRow } from '../../../components/MemberRow';
 import { useAccentTheme } from '../../../lib/accentTheme';
@@ -41,12 +42,30 @@ export default function GroupInfoScreen() {
 
   async function removeMember(userId: string) {
     await supabase.from('chat_members').delete().eq('chat_id', id).eq('user_id', userId);
+    // Rotates the chat key forward so the removed member can't read anything encrypted from now
+    // on -- remaining members keep their existing wrap of the old key, so history stays readable.
+    const remainingIds = groupMembers.map((m) => m.id).filter((memberId) => memberId !== userId);
+    try {
+      await rotateChatKeyOnRemoval(id, remainingIds);
+    } catch (err) {
+      console.warn('rotateChatKeyOnRemoval failed', err);
+    }
     load();
   }
 
   async function addMember(userId: string) {
     await supabase.from('chat_members').insert({ chat_id: id, user_id: userId });
     setAdding(false);
+    if (profile) {
+      const identity = await getIdentityKeyPair();
+      if (identity) {
+        try {
+          await rewrapChatKeyForMembers(id, [userId], identity, profile.id);
+        } catch (err) {
+          console.warn('rewrapChatKeyForMembers failed', err);
+        }
+      }
+    }
     load();
   }
 

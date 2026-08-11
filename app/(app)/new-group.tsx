@@ -13,6 +13,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '../../lib/auth';
 import { useMembers } from '../../lib/hooks/useMembers';
 import { supabase } from '../../lib/supabase';
+import { sendTextMessage } from '../../lib/chatActions';
 import { MemberRow } from '../../components/MemberRow';
 import { useAccentTheme } from '../../lib/accentTheme';
 import { colors, fontWeight, space } from '../../lib/theme';
@@ -61,11 +62,10 @@ export default function NewGroupScreen() {
     }));
     await supabase.from('chat_members').insert(memberRows);
 
-    await supabase.from('messages').insert({
-      chat_id: chat.id,
-      sender_id: profile.id,
-      body: `${profile.display_name} created “${name.trim()}”`,
-    });
+    // Routed through sendTextMessage (not a raw insert) so this system message goes through the
+    // same encryption path as everything else -- a stray plaintext write here would otherwise be
+    // a silent leak once encrypted sending is on for this chat.
+    await sendTextMessage(chat.id, profile.id, `${profile.display_name} created “${name.trim()}”`);
 
     setCreating(false);
     router.replace('/(app)/(tabs)');

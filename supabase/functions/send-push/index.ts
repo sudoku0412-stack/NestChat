@@ -53,11 +53,18 @@ async function handleMessageInsert(record: {
   chat_id: string;
   sender_id: string;
   body: string | null;
+  enc_v: number | null;
 }) {
-  // Media messages start with body = null and get their body/kind from message_media once the
-  // upload finishes -- that insert fires its own webhook (handleMediaInsert below), so skip here
-  // rather than sending a premature "Sent an attachment" notification.
-  if (record.body === null) return new Response('skip: media pending', { status: 200 });
+  // body = null happens for two different reasons that need different handling:
+  //  - a media placeholder row (enc_v also null) -- message_media's own insert fires its own
+  //    webhook (handleMediaInsert below) once the real kind/body exists, so skip here rather than
+  //    sending a premature "Sent an attachment" notification.
+  //  - an encrypted text message (enc_v set, body intentionally never written in plaintext) --
+  //    the server can't decrypt it to build real notification text, so send a generic body
+  //    instead of skipping outright (skipping would mean encrypted chats never notify at all).
+  if (record.body === null && record.enc_v === null) {
+    return new Response('skip: media pending', { status: 200 });
+  }
 
   const [{ data: sender }, { data: chat }, { data: recipients }] = await Promise.all([
     supabase.from('users').select('display_name').eq('id', record.sender_id).single(),
@@ -82,7 +89,7 @@ async function handleMessageInsert(record: {
     tokens.map((to) => ({
       to,
       title,
-      body: record.body,
+      body: record.body ?? 'New message',
       sound: 'default',
       data: { chatId: record.chat_id, messageId: record.id },
     }))
@@ -177,7 +184,13 @@ Deno.serve(async (req) => {
 
   if (payload.table === 'messages' && payload.type === 'INSERT') {
     return handleMessageInsert(
-      payload.record as { id: string; chat_id: string; sender_id: string; body: string | null }
+      payload.record as {
+        id: string;
+        chat_id: string;
+        sender_id: string;
+        body: string | null;
+        enc_v: number | null;
+      }
     );
   }
 

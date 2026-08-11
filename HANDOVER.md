@@ -71,10 +71,30 @@ rationale. Key decisions locked in with the user:
   re-publishes a new public key after a reinstall; `clearCryptoState` on sign-out/cleanup).
   **Migration `0018_e2ee_keys.sql` has NOT been run against the live Supabase project yet** — run
   it before any of this can actually create/wrap a chat key.
-- **Not started yet**: Phase 2 (actually encrypting message text — currently `SEND_ENCRYPTED` is
-  false so nothing behaves differently), Phase 3 (media), Phase 4 (live location + statuses),
-  Phase 5 (iOS Notification Service Extension so push notifications can still say "sent you a
-  GIF" without the server ever reading plaintext), Phase 6 (polish/hardening).
+- **Phase 2 (text message encryption) — done, `SEND_ENCRYPTED = true`.** `chatActions.ts`'s
+  `sendTextMessage` now encrypts (falls back to plaintext only if this device has no identity key
+  yet, which shouldn't happen post-onboarding). Reads: `useMessages`/`useChatList`/starred-messages/
+  media-viewer all decrypt via a shared cache+helper (`lib/crypto/decryptRow.ts`) so a message
+  decrypted once anywhere isn't re-decrypted elsewhere. `get_chat_list()` RPC (migration `0019`)
+  now returns the enc columns for the client to decrypt the chat-list preview itself. Membership
+  changes rewrap/rotate the chat key: `group-info/[id].tsx` add/remove, `settings.tsx`'s
+  `remove_household_member` (snapshots affected chats *before* the RPC deletes the rows, since
+  that's the only chance to know which chats need rotating). `new-group.tsx`'s system message now
+  goes through `sendTextMessage` instead of a raw insert (was a silent plaintext-leak bypass).
+  **⚠️ Rollout risk, read before shipping this build**: every household member must be on this
+  build (or newer) before anyone sends a message — an older build renders an encrypted message as
+  a **blank bubble** (its `body` is null and it has no idea what `enc_v`/`ciphertext` mean).
+  **Two more migrations need running** beyond `0018`: `0019_chat_list_encrypted_preview.sql`
+  (drops/recreates `get_chat_list()` — same return-type-change gotcha as `0010`) and
+  `0020_notify_send_push_enc_v.sql` (the `messages`-insert trigger function `notify_send_push`
+  didn't forward `enc_v` in its payload at all — without this fix the edge function can't tell an
+  encrypted text message apart from a media-placeholder row and would silently never notify for
+  encrypted messages). `0020` needs the same "paste in the real service-role JWT before running"
+  step as `0017` did.
+- **Not started yet**: Phase 3 (media), Phase 4 (live location + statuses), Phase 5 (iOS
+  Notification Service Extension so push notifications can still say "sent you a GIF" without the
+  server ever reading plaintext — until then, encrypted-message push notifications just say
+  generic "New message"), Phase 6 (polish/hardening).
 
 **Gotcha specific to this feature**: `react-native-libsodium`'s exposed API (this version) does
 NOT include `crypto_secretstream`/`crypto_pwhash` on native (only "with loadSumoVersion" on web).

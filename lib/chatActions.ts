@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { uploadMedia, type PickedAsset } from './media';
+import { SEND_ENCRYPTED, encryptMessageText, getIdentityKeyPair } from './crypto';
 import type { MessagesRow } from './database.types';
 
 // Math.random-based v4 UUID — good enough for a client-generated primary key
@@ -12,6 +13,15 @@ export function generateId() {
   });
 }
 
+// Falls back to plaintext (returns null) if SEND_ENCRYPTED is off or this device has no identity
+// key yet (shouldn't happen post-onboarding, but sending must never hard-fail because of it).
+async function maybeEncryptText(chatId: string, senderId: string, messageId: string, text: string) {
+  if (!SEND_ENCRYPTED) return null;
+  const identity = await getIdentityKeyPair();
+  if (!identity) return null;
+  return encryptMessageText({ chatId, messageId, senderId, text, identity });
+}
+
 export async function sendTextMessage(
   chatId: string,
   senderId: string,
@@ -19,9 +29,17 @@ export async function sendTextMessage(
   id: string = generateId(),
   replyToMessageId: string | null = null
 ): Promise<MessagesRow> {
+  const encrypted = await maybeEncryptText(chatId, senderId, id, body);
   const { data, error } = await supabase
     .from('messages')
-    .insert({ id, chat_id: chatId, sender_id: senderId, body, reply_to_message_id: replyToMessageId })
+    .insert({
+      id,
+      chat_id: chatId,
+      sender_id: senderId,
+      body: encrypted ? null : body,
+      reply_to_message_id: replyToMessageId,
+      ...(encrypted ?? {}),
+    })
     .select()
     .single();
   if (error || !data) throw error ?? new Error('Failed to send message');

@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { useAuth } from '../../../lib/auth';
 import { useMembers } from '../../../lib/hooks/useMembers';
 import { supabase } from '../../../lib/supabase';
+import { rotateChatKeyOnRemoval } from '../../../lib/crypto';
 import { useThemeMode } from '../../../lib/themeMode';
 import { Avatar } from '../../../components/Avatar';
 import { MemberRow } from '../../../components/MemberRow';
@@ -44,7 +45,36 @@ export default function SettingsScreen() {
         text: 'Remove',
         style: 'destructive',
         onPress: async () => {
+          // Snapshot which chats they're in (and who else is) before removal deletes those rows
+          // -- that's the only chance to know which chat keys need rotating forward.
+          const { data: memberships } = await supabase
+            .from('chat_members')
+            .select('chat_id')
+            .eq('user_id', userId);
+          const chatIds = (memberships ?? []).map((m) => m.chat_id);
+          const remainingByChat = new Map<string, string[]>();
+          if (chatIds.length > 0) {
+            const { data: coMembers } = await supabase
+              .from('chat_members')
+              .select('chat_id, user_id')
+              .in('chat_id', chatIds);
+            for (const row of coMembers ?? []) {
+              if (row.user_id === userId) continue;
+              const list = remainingByChat.get(row.chat_id) ?? [];
+              list.push(row.user_id);
+              remainingByChat.set(row.chat_id, list);
+            }
+          }
+
           await supabase.rpc('remove_household_member', { target_user_id: userId });
+
+          for (const [chatId, remainingIds] of remainingByChat) {
+            try {
+              await rotateChatKeyOnRemoval(chatId, remainingIds);
+            } catch (err) {
+              console.warn('rotateChatKeyOnRemoval failed', chatId, err);
+            }
+          }
         },
       },
     ]);
