@@ -1,8 +1,9 @@
 # NestChat — Handover
 
-Last updated: 2026-08-12 (end of session — E2EE media fix verified on device; WhatsApp-style
-features batch landed + code-reviewed; **all of it is uncommitted**; next project is the
-"Hearth 2.0" UI revamp, plan already approved at `~/.claude/plans/vivid-puzzling-giraffe.md`)
+Last updated: 2026-08-12 (end of session — E2EE media fix, WhatsApp-style features batch, and
+the Hearth 2.0 UI revamp's Phases A–D (+ part of E) all landed and **committed** to `master`
+(commits `553571b`..`0b9cc0e`), NOT pushed yet. Build bumped to **7**. Nothing archived to
+TestFlight since build 5 — this is the very next thing to do.)
 
 ## What this is
 
@@ -153,22 +154,23 @@ test coverage; it does not validate the actual native library, which Phase 0's d
 
 - Repo: https://github.com/sudoku0412-stack/NestChat (private)
 - Supabase project: `sudoku0412-stack's Org / NestChat` (project ref `hfmjigdtmjbgyqcnneqt`)
-- **⚠️ NOTHING from the 2026-08-12 session is committed.** Last commit is still `6eb1d0a`
-  ("E2EE Phase 3"). The working tree holds ~14 modified files + ~16 new files (all of the
-  WhatsApp-features batch, the media-encryption fix, the code-review fixes, and migrations
-  `0021`–`0025`). **Committing and pushing this is step one of the next session** — a crash or
-  checkout would lose a full day of work. Tests (107/107) and `tsc --noEmit` were clean at
-  session end.
-- **App version 2.0.0, build 6** in `app.json`, synced into `ios/NestChat.xcodeproj`
-  (`CURRENT_PROJECT_VERSION = 6`) and `ios/NestChat/Info.plist` (`CFBundleVersion = 6`).
-  Build 5 was archived and TestFlight-tested this session (E2EE text + media verified end-to-end
-  on device, including the media AEAD fix). The user also installed a build containing the
-  features batch (they exercised Help→email and the settings menu on device), but the **final
-  changes came after that install**: settings menu moved from the Settings tab into
-  Edit profile, support email → `support@craftloop.ca`, and all 7 code-review fixes. Those need
-  a fresh archive. **No `expo prebuild` needed** — everything since build 5's prebuild is
-  JS/SQL-only, and the Push Notifications capability the user re-added in Xcode for build 5
-  survives as long as prebuild isn't re-run.
+- **Everything from the 2026-08-12 session is committed and pushed to `origin/master`**
+  (`553571b`..`0b9cc0e`) — the media-encryption fix, the WhatsApp features batch + migrations
+  `0021`–`0025`, and Hearth 2.0 Phases A–D + part of E, each as its own commit. Tests (107/107)
+  and `tsc --noEmit` are clean as of the last commit.
+- **App version 2.0.0, build 7** in `app.json`, synced into `ios/NestChat.xcodeproj`
+  (`CURRENT_PROJECT_VERSION = 7`) and `ios/NestChat/Info.plist` (`CFBundleVersion = 7`).
+  **⚠️ `ios/` is gitignored and untracked** (`git ls-files ios/` returns nothing — checked this
+  session, wasn't previously documented here). That means the build-number bump and the
+  `UIUserInterfaceStyle` fix (see Hearth 2.0 section below) only exist on *this* machine's local
+  checkout; they are not in git and won't survive a re-clone or a different machine. If that's
+  ever a problem, either start tracking `ios/` for real or re-apply these edits by hand elsewhere.
+  Build 5 was the last one archived and TestFlight-tested (E2EE text + media verified end-to-end
+  on device). **Nothing since build 5 has been archived** — the features batch, build 6, and now
+  build 7's entire Hearth 2.0 redesign are all still only sitting in a local checkout, never seen
+  on a device. **No `expo prebuild` needed** for any of it — everything since build 5's prebuild
+  is JS/SQL/plist-only, and the Push Notifications capability the user re-added in Xcode for
+  build 5 survives as long as prebuild isn't re-run.
 - Auth: **anonymous auth + typed-in phone number**, not real OTP, with **PIN-based account
   recovery** (migrations `0006`–`0008`), and now also **self-service account deletion**
   (tombstone pattern, migrations `0021`/`0025` — see the features-batch section below).
@@ -215,11 +217,19 @@ test coverage; it does not validate the actual native library, which Phase 0's d
   photo/video/gif/sticker notification just said "Sent an attachment." Tapping a notification also
   now scrolls straight to the message that triggered it (`app/(app)/chat/[id].tsx`'s
   `scrolledToTargetRef` + `messageId` route param) instead of landing at the bottom of the thread.
-- Design system is **"Hearth"** (`lib/theme.ts`) — warm terracotta/cream palette, Fraunces serif
-  display font, replacing an earlier cool-blurple "Nocturne" system. **The accent color is now
-  user-customizable** (Settings → App theme color) via `lib/accentTheme.tsx`'s
+- Design system is **"Hearth 2.0"** (`lib/theme.ts`) — warm terracotta/cream palette, Fraunces
+  serif display font (now used sparingly — just the three tab-root screen titles + a couple
+  identity moments — everything else is system font, per the redesign plan). As of this session
+  there are **two ground palettes**, `darkPalette`/`lightPalette`, plus a `mode: 'system'|'light'|
+  'dark'` selector (`lib/themeMode.tsx`'s `ThemeModeProvider`) — `useTheme()` is the composed
+  result (active ground + the user's accent ramp) and is what any *migrated* screen should read
+  from. The legacy `colors` export is a dark-only, frozen-at-import alias kept around so the
+  ~48 screens not yet migrated to `useTheme()` keep compiling and rendering (dark-only) — see the
+  Hearth 2.0 session bullet and Immediate next step for the migration that's still pending.
+  **The accent color is user-customizable** (Settings → App theme color) via `lib/accentTheme.tsx`'s
   `AccentThemeProvider`/`useAccentTheme()` — see the important pattern note below before touching
-  any color-related style.
+  any color-related style; the same frozen-alias trap applies to `colors.accentXXX`, not just the
+  ground tokens (see the Hearth 2.0 bullet above for a real instance of this bug this session).
 - Navigation: three tabs (Status / Chats / Settings) with a custom animated pill indicator and SVG
   line icons (`components/icons/`). Chats tab now has search, filter chips (All/Unread/Groups/
   Favorites), a real Archived view (`app/(app)/archived-chats.tsx`), and long-press multi-select
@@ -243,30 +253,37 @@ test coverage; it does not validate the actual native library, which Phase 0's d
 
 ## Immediate next step for whoever picks this up
 
-1. **Commit and push everything.** The whole 2026-08-12 session is sitting uncommitted (see
-   Current state). Sensible split: (a) media-encryption AEAD fix + send-error alerts,
-   (b) WhatsApp features batch + migrations 0021–0024, (c) code-review fixes + migration 0025.
-   One commit is also fine — just get it onto `origin/master`. The husky pre-push hook runs
-   tests + tsc automatically.
-2. **Run migrations `0021`–`0025`** in the Supabase SQL Editor, in order. No JWT pasting needed.
-3. **Redeploy the edge function**: `supabase functions deploy send-push` (after `0022`).
-4. **Archive build 6** (no prebuild — see Current state) and install on every household device.
-   Verify: the settings menu now lives under Edit profile (tap your own profile row), account
-   deletion end-to-end with a throwaway member (chat history should show "Deleted account",
-   remaining members can still send), notification toggles actually gate pushes, storage screen
-   totals, media tap-to-download when auto-download is off, Lists CRUD, and a broadcast send to
-   2+ members (recipients see a normal 1:1 message).
-5. **Then start the next project: the "Hearth 2.0" UI revamp.** The user asked for a
-   WhatsApp-quality visual overhaul ("currently it's looking like a robotic chat app"). A full
-   plan is **already researched and user-approved** — canonical copy in this repo at
-   `docs/hearth-2-redesign-plan.md` (also at `~/.claude/plans/vivid-puzzling-giraffe.md` on the
-   original machine) — read it before touching any UI code. Locked
-   decisions: refine the warm Hearth identity (do NOT clone WhatsApp's green), and add a true
-   light + dark theme system. Phases: A theme foundation → B shared ScreenHeader/SettingsRow +
-   icon completion → C chat thread (bubbles/ticks/grouping/date chips/composer) → D chat list +
-   tab bar → E propagation. The plan file has the full findings inventory (why it feels
-   "robotic") and per-phase file lists.
-6. Still parked behind all of the above: **E2EE Phase 4 (live location + statuses encryption)**
+1. **Archive build 7 and get it on TestFlight.** No prebuild needed (see Current state). This is
+   the single biggest gap right now: builds 6 and 7 — the entire WhatsApp features batch AND the
+   entire Hearth 2.0 redesign — have never been seen running on a device. Verify on-device:
+   - Both themes: Settings → Appearance → System/Light/Dark, in both directions, plus toggling
+     the OS appearance while on "System" mode. Watch the keyboard and any native alert/action
+     sheet — `UIUserInterfaceStyle` was just changed from hardcoded "Dark" to "Automatic" in
+     `Info.plist`, unverified.
+   - Chat thread: send/receive, read ticks (single vs double, accent tint on read), message
+     grouping (send several fast messages, then wait >2min and send another — spacing/tail radius
+     should visibly change), date chips crossing a real day boundary, Composer's send button
+     animating in/out as you type/clear.
+   - Chat list: pill unread badges, FAB new-chat button, swipe actions (icon+label), search icon,
+     filter chip active state.
+   - Accent-color picker in **both** themes now that the ramp feeds both grounds (Settings → App
+     theme color) — this is the thing the user specifically asked to confirm still works before
+     approving the redesign.
+   - Everything from the WhatsApp features batch that was never verified after build 5's install:
+     settings menu under Edit profile, account deletion end-to-end, notification toggles actually
+     gating pushes, storage totals, media tap-to-download when auto-download is off, Lists CRUD,
+     broadcast to 2+ members.
+2. **Finish Hearth 2.0 Phase E** if the above looks good. What's done: `OutlineButton`'s `filled`
+   variant, `GroupAvatarStack`'s ring, the two native-chrome fixes above. What's NOT done and is
+   genuinely the bulk of the remaining work — the plan itself flags this as "mechanical once B
+   exists," not small: migrating the ~48 screens still reading the frozen dark-only `colors`
+   alias over to `useTheme()` (pattern: structural props stay in `StyleSheet.create`, colors
+   applied inline — see any already-migrated screen, e.g. `appearance.tsx`, as the reference), then
+   deleting the `colors` alias from `lib/theme.ts` once nothing imports it (`tsc` will flag every
+   remaining holdout). Also unfinished: `PinModal`/`MessageActionsModal`/`EmojiPickerModal` weren't
+   touched this session (checked — they're already reasonably consistent on radius/elevation, but
+   they're also 3 of the ~48 screens still on the frozen `colors` alias).
+3. Still parked behind all of the above: **E2EE Phase 4 (live location + statuses encryption)**
    and Phase 5 (notification service extension) — see the E2EE section.
 
 ### Why TestFlight, not public App Store
@@ -332,7 +349,48 @@ In rough order:
   queries to 3 `.in()` queries.
 - Support email in `help.tsx` → `support@craftloop.ca`. Build bumped 5 → 6 (all three places).
   Tests grew 102 → 107 (broadcast fan-out suite + tombstone sign-out regression test).
-- **"Hearth 2.0" UI revamp planned and approved** — see Immediate next step #5.
+- **"Hearth 2.0" UI revamp planned and approved**, then **Phases A–D + part of E implemented**
+  same session (build 6 → 7). User asked to see a working prototype before any real code changed
+  — built as an Artifact (interactive phone mockup, both themes, chat list + thread screens)
+  using the actual dark palette from `lib/theme.ts` plus the plan's proposed light palette;
+  approved, then implementation started. Five commits, one per phase, `553571b`..`0b9cc0e`:
+  - **Phase A**: `lib/theme.ts` split into `darkPalette`/`lightPalette` (same shape); new
+    `useTheme()` in `lib/themeMode.tsx` composes the active ground with the user's accent ramp;
+    `ThemeModeProvider` replaced the old `deepGround` boolean with `mode: 'system'|'light'|'dark'`
+    (persisted, migrates the old storage key); `appearance.tsx` got a 3-way selector.
+  - **Phase B**: new `components/ScreenHeader.tsx` (back-chevron + title/subtitle + right slot,
+    with a `centerContent` override for the chat thread's avatar row) replaced the hand-rolled
+    header in 20 screens; new `components/SettingsRow.tsx` adopted in edit-profile's menu; 11 new
+    icons (chevron, search, send, check/double-check, close, bell/bell-off, archive) purged every
+    stray Unicode glyph outside the chat thread/list (those were Phase C/D's own work).
+  - **Phase C**: `MessageBubble.tsx` — filled own-bubble (no border), read receipts as
+    accent-tinted check/double-check ticks *inside* the bubble, 2-minute-window message grouping
+    (tight spacing + squared tail corner within a group, normal spacing + tail radius on the
+    group's last bubble), "Today/Yesterday" date chips. `chat/[id].tsx`'s header now uses
+    `ScreenHeader`'s `centerContent`. `Composer.tsx`'s send button is a Reanimated-driven filled
+    circle that spring-scales in once there's text. `TypingIndicator.tsx` moved off RN's
+    `Animated` onto Reanimated.
+  - **Phase D**: `ChatRow.tsx`'s unread badge is a true pill (was `radius.sm`), bold title when
+    unread, hairline dividers replaced by spacing; `SwipeableRow.tsx`'s four swipe actions get an
+    icon above the label; chat list gained a leading `SearchIcon` and an accent-filled FAB
+    (replacing the old header "+" glyph); tab bar icons get filled variants when active.
+  - **Phase E (partial)**: `OutlineButton` gained a `filled` prop + Reanimated press-scale;
+    `GroupAvatarStack` avatars get a ground-color ring. **Caught and fixed two real native-chrome
+    bugs** that would have made light mode look broken device-wide regardless of any JS
+    correctness: `app.json`'s `userInterfaceStyle` was hardcoded `"dark"` (→ `"automatic"`), and
+    `_layout.tsx`'s `<StatusBar>` was hardcoded `style="light"` (→ follows `resolvedGround`). Also
+    discovered `ios/` is gitignored/untracked (see Current state) while fixing the matching
+    `Info.plist` key by hand. **NOT done**: the full `useTheme()` migration of the remaining ~48
+    screens and deleting the legacy `colors` alias — see Immediate next step.
+  - Caught one real bug mid-implementation: an early draft of `MessageBubble`'s own-bubble text
+    color used `colors.accent100` (the frozen default-terracotta alias) directly in
+    `StyleSheet.create` — exactly the documented gotcha below, and exactly the thing the user had
+    just asked to confirm still worked. Fixed to read `accentColors.accent100` inline before it
+    ever got tested, so the accent-color picker still recolors every bubble/icon/badge in the
+    redesign as intended.
+  - Build bumped 6 → 7 (all three places — see the `ios/` gitignore note above for why the two
+    native-side edits are local-only). **Not yet archived to TestFlight** — see Immediate next
+    step #1. `npx tsc --noEmit` clean and 107/107 tests passing after every phase.
 
 ## Previous session's work (2026-08-03/04) — large session, quick summary
 
@@ -389,7 +447,12 @@ reactive, then splitting each frozen one into static-structure + inline-color-ov
   `useAccentTheme()`: keep structural properties (padding, radius, border widths) in the static
   `StyleSheet.create`, and apply any accent-dependent color as `style={[styles.x, { color:
   accentColors.accent }]}` from inside the component. Forgetting this for a new accent-colored
-  element anywhere in the app is the most likely regression path going forward.
+  element anywhere in the app is the most likely regression path going forward. **Same trap
+  applies to the Hearth 2.0 light/dark ground palette** (`useTheme()`), not just the accent
+  ramp — caught a real instance mid-session where `MessageBubble`'s own-bubble text color was
+  written as static `colors.accent100` (frozen dark-default) instead of inline
+  `accentColors.accent100`; fixed before it shipped, but assume more exist in the ~48 screens
+  not yet migrated off the legacy `colors` alias.
 - **Postgres `create or replace function` cannot change a function's return-table column list** —
   had to `drop function if exists` before `create function` when adding a `favorite` column to
   `get_chat_list()`'s return type (migration `0010`). Same applies to any future RPC signature
