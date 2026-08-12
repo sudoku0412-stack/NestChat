@@ -20,6 +20,7 @@ import { getSignedStatusMediaUrl } from '../../../lib/media';
 import { deleteStatus, getStatusViewers, markStatusViewed, type StatusViewer } from '../../../lib/statusActions';
 import { Avatar } from '../../../components/Avatar';
 import { colors, fontWeight, space } from '../../../lib/theme';
+import { CloseIcon } from '../../../components/icons';
 import { useAccentTheme } from '../../../lib/accentTheme';
 import type { StatusesRow } from '../../../lib/database.types';
 
@@ -173,7 +174,7 @@ export default function StatusViewerScreen() {
           </Pressable>
         )}
         <Pressable onPress={() => router.back()} hitSlop={8}>
-          <Text style={styles.close}>✕</Text>
+          <CloseIcon size={20} color={colors.text} />
         </Pressable>
       </View>
 
@@ -285,10 +286,6 @@ const styles = StyleSheet.create({
   },
   trash: {
     fontSize: 18,
-  },
-  close: {
-    color: colors.text,
-    fontSize: 20,
   },
   content: {
     flex: 1,

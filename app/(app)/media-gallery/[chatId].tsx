@@ -16,7 +16,8 @@ import * as Sharing from 'expo-sharing';
 import { useAuth } from '../../../lib/auth';
 import { supabase } from '../../../lib/supabase';
 import { useDecryptedMediaUri } from '../../../lib/hooks/useDecryptedMediaUri';
-import { colors, fontWeight, space } from '../../../lib/theme';
+import { colors, space } from '../../../lib/theme';
+import { ScreenHeader } from '../../../components/ScreenHeader';
 import { useAccentTheme } from '../../../lib/accentTheme';
 import type { MessageMediaRow } from '../../../lib/database.types';
 
@@ -107,14 +108,7 @@ export default function MediaGalleryScreen() {
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <Text style={styles.back}>‹</Text>
-        </Pressable>
-        <Text style={styles.title}>Media, links and docs</Text>
-        <View style={{ width: 24 }} />
-      </View>
-      <View style={styles.headerRule} />
+      <ScreenHeader title="Media, links and docs" />
 
       {loading ? (
         <View style={styles.centered}>
@@ -163,27 +157,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space[6],
-    paddingVertical: space[4],
-  },
-  back: {
-    color: colors.text,
-    fontSize: 28,
-    width: 24,
-  },
-  title: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: fontWeight.medium,
-  },
-  headerRule: {
-    height: 2,
-    backgroundColor: colors.divider,
   },
   emptyText: {
     color: colors.textMuted,

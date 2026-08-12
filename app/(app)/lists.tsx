@@ -4,6 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
+import { ScreenHeader } from '../../components/ScreenHeader';
+import { ChevronRightIcon } from '../../components/icons';
 import { useAccentTheme } from '../../lib/accentTheme';
 import { colors, fontWeight, space } from '../../lib/theme';
 import type { BroadcastListsRow } from '../../lib/database.types';
@@ -43,17 +45,15 @@ export default function ListsScreen() {
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <Text style={styles.back}>‹</Text>
-        </Pressable>
-        <Text style={styles.title}>Lists</Text>
-        {/* stale .expo/types/router.d.ts predates this route -- see settings.tsx's MENU_ROWS comment */}
-        <Pressable onPress={() => router.push('/(app)/list-edit/new' as any)} hitSlop={8}>
-          <Text style={[styles.action, { color: accentColors.accent }]}>New</Text>
-        </Pressable>
-      </View>
-      <View style={styles.headerRule} />
+      <ScreenHeader
+        title="Lists"
+        right={
+          // stale .expo/types/router.d.ts predates this route -- see settings.tsx's MENU_ROWS comment
+          <Pressable onPress={() => router.push('/(app)/list-edit/new' as any)} hitSlop={8}>
+            <Text style={[styles.action, { color: accentColors.accent }]}>New</Text>
+          </Pressable>
+        }
+      />
 
       {loading ? (
         <ActivityIndicator color={accentColors.accent} style={{ marginTop: space[8] }} />
@@ -74,7 +74,7 @@ export default function ListsScreen() {
                 <Text style={styles.rowLabel}>{item.name}</Text>
                 <Text style={styles.rowSub}>{item.memberCount} member{item.memberCount === 1 ? '' : 's'}</Text>
               </View>
-              <Text style={styles.chevron}>›</Text>
+              <ChevronRightIcon size={18} color={colors.textMuted} />
             </Pressable>
           )}
         />
@@ -88,30 +88,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space[6],
-    paddingVertical: space[4],
-  },
-  back: {
-    color: colors.text,
-    fontSize: 28,
-    width: 24,
-  },
-  title: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: fontWeight.medium,
-  },
   action: {
     fontSize: 15,
     fontWeight: fontWeight.semibold,
-  },
-  headerRule: {
-    height: 2,
-    backgroundColor: colors.divider,
   },
   centered: {
     padding: space[8],
@@ -139,9 +118,5 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 13,
     marginTop: 2,
-  },
-  chevron: {
-    color: colors.textMuted,
-    fontSize: 20,
   },
 });

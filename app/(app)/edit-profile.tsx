@@ -17,6 +17,8 @@ import { supabase } from '../../lib/supabase';
 import { pickImageFromLibrary, uploadAvatar, type PickedAsset } from '../../lib/media';
 import { Avatar } from '../../components/Avatar';
 import { OutlineButton } from '../../components/OutlineButton';
+import { ScreenHeader } from '../../components/ScreenHeader';
+import { SettingsRow } from '../../components/SettingsRow';
 import { useAccentTheme } from '../../lib/accentTheme';
 import { colors, fontWeight, radius, space } from '../../lib/theme';
 
@@ -88,14 +90,7 @@ export default function EditProfileScreen() {
       style={[styles.screen, { paddingTop: insets.top }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <Text style={styles.back}>‹</Text>
-        </Pressable>
-        <Text style={styles.title}>Edit profile</Text>
-        <View style={{ width: 24 }} />
-      </View>
-      <View style={styles.headerRule} />
+      <ScreenHeader title="Edit profile" />
 
       <ScrollView style={styles.content} keyboardShouldPersistTaps="handled">
         <Pressable style={styles.avatarPicker} onPress={handlePickAvatar}>
@@ -140,10 +135,7 @@ export default function EditProfileScreen() {
 
         <View style={styles.menu}>
           {MENU_ROWS.map((row) => (
-            <Pressable key={row.label} style={styles.menuRow} onPress={() => router.push(row.href)}>
-              <Text style={styles.menuLabel}>{row.label}</Text>
-              <Text style={styles.chevron}>›</Text>
-            </Pressable>
+            <SettingsRow key={row.label} label={row.label} onPress={() => router.push(row.href)} />
           ))}
         </View>
       </ScrollView>
@@ -156,52 +148,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space[6],
-    paddingVertical: space[4],
-  },
-  back: {
-    color: colors.text,
-    fontSize: 28,
-    width: 24,
-  },
-  title: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: fontWeight.medium,
-  },
-  headerRule: {
-    height: 2,
-    backgroundColor: colors.divider,
-  },
   content: {
     padding: space[8],
   },
   menu: {
     marginTop: space[8],
-    marginHorizontal: -space[8],
+    // SettingsRow pads itself space[6] internally; offset only the difference from this
+    // screen's own space[8] content padding so row labels stay aligned with the rest of the
+    // screen instead of sitting 2pt closer to the edge.
+    marginHorizontal: -(space[8] - space[6]),
     borderTopWidth: 1,
     borderTopColor: colors.divider,
-  },
-  menuRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space[8],
-    paddingVertical: space[4],
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
-  },
-  menuLabel: {
-    color: colors.text,
-    fontSize: 15,
-  },
-  chevron: {
-    color: colors.textMuted,
-    fontSize: 20,
   },
   avatarPicker: {
     alignItems: 'center',

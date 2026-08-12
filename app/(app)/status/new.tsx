@@ -16,6 +16,7 @@ import { router } from 'expo-router';
 import { useAuth } from '../../../lib/auth';
 import { pickFromCamera, pickFromLibrary, type PickedAsset } from '../../../lib/media';
 import { postMediaStatus, postTextStatus } from '../../../lib/statusActions';
+import { CloseIcon } from '../../../components/icons';
 import { useAccentTheme } from '../../../lib/accentTheme';
 import { colors, fontWeight, space } from '../../../lib/theme';
 
@@ -69,8 +70,8 @@ export default function NewStatusScreen() {
     return (
       <View style={[styles.screen, { paddingTop: insets.top }]}>
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} hitSlop={8}>
-            <Text style={styles.close}>✕</Text>
+          <Pressable onPress={() => router.back()} hitSlop={8} style={styles.close}>
+            <CloseIcon size={20} color={colors.text} />
           </Pressable>
           <Text style={styles.title}>New status</Text>
           <View style={{ width: 24 }} />
@@ -108,8 +109,8 @@ export default function NewStatusScreen() {
     return (
       <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: BACKGROUND_COLORS[bgIndex] }]}>
         <View style={styles.header}>
-          <Pressable onPress={() => setMode('choose')} hitSlop={8}>
-            <Text style={styles.close}>✕</Text>
+          <Pressable onPress={() => setMode('choose')} hitSlop={8} style={styles.close}>
+            <CloseIcon size={20} color={colors.text} />
           </Pressable>
           {posting ? (
             <ActivityIndicator color={colors.text} />
@@ -149,8 +150,8 @@ export default function NewStatusScreen() {
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <Pressable onPress={() => setMode('choose')} hitSlop={8}>
-          <Text style={styles.close}>✕</Text>
+        <Pressable onPress={() => setMode('choose')} hitSlop={8} style={styles.close}>
+          <CloseIcon size={20} color={colors.text} />
         </Pressable>
         {posting ? (
           <ActivityIndicator color={colors.text} />
@@ -192,8 +193,6 @@ const styles = StyleSheet.create({
     paddingVertical: space[4],
   },
   close: {
-    color: colors.text,
-    fontSize: 20,
     width: 24,
   },
   title: {

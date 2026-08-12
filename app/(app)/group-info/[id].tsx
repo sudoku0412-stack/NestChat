@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useAuth } from '../../../lib/auth';
 import { useMembers } from '../../../lib/hooks/useMembers';
 import { supabase } from '../../../lib/supabase';
 import { getIdentityKeyPair, rewrapChatKeyForMembers, rotateChatKeyOnRemoval } from '../../../lib/crypto';
 import { GroupAvatarStack } from '../../../components/Avatar';
 import { MemberRow } from '../../../components/MemberRow';
+import { ScreenHeader } from '../../../components/ScreenHeader';
+import { CloseIcon } from '../../../components/icons';
 import { useAccentTheme } from '../../../lib/accentTheme';
 import { colors, fontWeight, space } from '../../../lib/theme';
 import type { Member } from '../../../lib/types';
@@ -79,14 +81,7 @@ export default function GroupInfoScreen() {
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <Text style={styles.back}>‹</Text>
-        </Pressable>
-        <Text style={styles.title}>Group info</Text>
-        <View style={{ width: 24 }} />
-      </View>
-      <View style={styles.headerRule} />
+      <ScreenHeader title="Group info" />
 
       <View style={styles.summary}>
         <GroupAvatarStack members={groupMembers} size={64} />
@@ -119,7 +114,7 @@ export default function GroupInfoScreen() {
                 trailing={
                   item.id !== profile?.id ? (
                     <Pressable onPress={() => removeMember(item.id)} hitSlop={8}>
-                      <Text style={styles.removeGlyph}>✕</Text>
+                      <CloseIcon size={16} color={colors.danger} />
                     </Pressable>
                   ) : null
                 }
@@ -144,27 +139,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space[6],
-    paddingVertical: space[4],
-  },
-  back: {
-    color: colors.text,
-    fontSize: 28,
-    width: 24,
-  },
-  title: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: fontWeight.medium,
-  },
-  headerRule: {
-    height: 2,
-    backgroundColor: colors.divider,
-  },
   summary: {
     alignItems: 'center',
     paddingVertical: space[8],
@@ -185,10 +159,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     paddingHorizontal: space[6],
     paddingBottom: space[2],
-  },
-  removeGlyph: {
-    color: colors.danger,
-    fontSize: 16,
   },
   addRow: {
     paddingHorizontal: space[6],

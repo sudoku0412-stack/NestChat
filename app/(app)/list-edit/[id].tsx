@@ -6,6 +6,7 @@ import { useAuth } from '../../../lib/auth';
 import { useMembers } from '../../../lib/hooks/useMembers';
 import { supabase } from '../../../lib/supabase';
 import { MemberRow } from '../../../components/MemberRow';
+import { ScreenHeader } from '../../../components/ScreenHeader';
 import { useAccentTheme } from '../../../lib/accentTheme';
 import { colors, fontWeight, space } from '../../../lib/theme';
 
@@ -127,20 +128,18 @@ export default function ListEditScreen() {
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <Text style={styles.back}>‹</Text>
-        </Pressable>
-        <Text style={styles.title}>{isNew ? 'New list' : 'Edit list'}</Text>
-        <Pressable onPress={handleSave} disabled={!canSave} hitSlop={8}>
-          {saving ? (
-            <ActivityIndicator color={accentColors.accent} />
-          ) : (
-            <Text style={[styles.action, { color: accentColors.accent }, !canSave && styles.actionDisabled]}>Save</Text>
-          )}
-        </Pressable>
-      </View>
-      <View style={styles.headerRule} />
+      <ScreenHeader
+        title={isNew ? 'New list' : 'Edit list'}
+        right={
+          <Pressable onPress={handleSave} disabled={!canSave} hitSlop={8}>
+            {saving ? (
+              <ActivityIndicator color={accentColors.accent} />
+            ) : (
+              <Text style={[styles.action, { color: accentColors.accent }, !canSave && styles.actionDisabled]}>Save</Text>
+            )}
+          </Pressable>
+        }
+      />
 
       <View style={styles.nameField}>
         <TextInput
@@ -188,33 +187,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space[6],
-    paddingVertical: space[4],
-  },
-  back: {
-    color: colors.text,
-    fontSize: 28,
-    width: 28,
-  },
-  title: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: fontWeight.medium,
-  },
   action: {
     fontSize: 15,
     fontWeight: fontWeight.semibold,
   },
   actionDisabled: {
     color: colors.textMuted,
-  },
-  headerRule: {
-    height: 2,
-    backgroundColor: colors.divider,
   },
   nameField: {
     paddingHorizontal: space[6],

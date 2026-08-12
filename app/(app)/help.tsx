@@ -1,8 +1,8 @@
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { ScreenHeader } from '../../components/ScreenHeader';
 import { useAccentTheme } from '../../lib/accentTheme';
-import { colors, fontWeight, space } from '../../lib/theme';
+import { colors, space } from '../../lib/theme';
 
 const SUPPORT_EMAIL = 'support@craftloop.ca';
 
@@ -12,14 +12,7 @@ export default function HelpScreen() {
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <Text style={styles.back}>‹</Text>
-        </Pressable>
-        <Text style={styles.title}>Help and feedback</Text>
-        <View style={{ width: 24 }} />
-      </View>
-      <View style={styles.headerRule} />
+      <ScreenHeader title="Help and feedback" />
 
       <Pressable style={styles.row} onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}`)}>
         <Text style={[styles.rowLabel, { color: accentColors.accent }]}>Email feedback or a bug report</Text>
@@ -37,27 +30,6 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.bg,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space[6],
-    paddingVertical: space[4],
-  },
-  back: {
-    color: colors.text,
-    fontSize: 28,
-    width: 24,
-  },
-  title: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: fontWeight.medium,
-  },
-  headerRule: {
-    height: 2,
-    backgroundColor: colors.divider,
   },
   row: {
     flexDirection: 'row',

@@ -6,8 +6,10 @@ import { useAuth } from '../../../lib/auth';
 import { supabase } from '../../../lib/supabase';
 import { unstarMessage } from '../../../lib/chatActions';
 import { decryptTextField, isEncryptedRow } from '../../../lib/crypto';
+import { ScreenHeader } from '../../../components/ScreenHeader';
+import { StarIcon } from '../../../components/icons';
 import { useAccentTheme } from '../../../lib/accentTheme';
-import { colors, fontWeight, space } from '../../../lib/theme';
+import { colors, space } from '../../../lib/theme';
 
 interface StarredItem {
   message_id: string;
@@ -104,14 +106,7 @@ export default function StarredMessagesScreen() {
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <Text style={styles.back}>‹</Text>
-        </Pressable>
-        <Text style={styles.title}>Starred messages</Text>
-        <View style={{ width: 24 }} />
-      </View>
-      <View style={styles.headerRule} />
+      <ScreenHeader title="Starred messages" />
 
       {loading ? (
         <View style={styles.centered}>
@@ -137,8 +132,8 @@ export default function StarredMessagesScreen() {
                 </Text>
                 <Text style={styles.timestamp}>{formatTimestamp(item.created_at)}</Text>
               </View>
-              <Pressable onPress={() => handleUnstar(item.message_id)} hitSlop={8}>
-                <Text style={[styles.starGlyph, { color: accentColors.accent }]}>★</Text>
+              <Pressable onPress={() => handleUnstar(item.message_id)} hitSlop={8} style={styles.starGlyph}>
+                <StarIcon size={18} color={accentColors.accent} filled />
               </Pressable>
             </Pressable>
           )}
@@ -158,27 +153,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: space[8],
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space[6],
-    paddingVertical: space[4],
-  },
-  back: {
-    color: colors.text,
-    fontSize: 28,
-    width: 24,
-  },
-  title: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: fontWeight.medium,
-  },
-  headerRule: {
-    height: 2,
-    backgroundColor: colors.divider,
   },
   emptyText: {
     color: colors.textMuted,
@@ -213,7 +187,6 @@ const styles = StyleSheet.create({
     marginTop: space[1],
   },
   starGlyph: {
-    fontSize: 18,
     marginTop: space[1],
   },
 });

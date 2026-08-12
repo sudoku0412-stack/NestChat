@@ -6,7 +6,8 @@ import { useAuth } from '../../lib/auth';
 import { useChatList } from '../../lib/hooks/useChatList';
 import { supabase } from '../../lib/supabase';
 import { ChatRow } from '../../components/ChatRow';
-import { colors, fontWeight, space } from '../../lib/theme';
+import { ScreenHeader } from '../../components/ScreenHeader';
+import { colors, space } from '../../lib/theme';
 
 export default function ArchivedChatsScreen() {
   const insets = useSafeAreaInsets();
@@ -48,14 +49,7 @@ export default function ArchivedChatsScreen() {
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <Text style={styles.back}>‹</Text>
-        </Pressable>
-        <Text style={styles.title}>Archived</Text>
-        <View style={{ width: 24 }} />
-      </View>
-      <View style={styles.headerRule} />
+      <ScreenHeader title="Archived" />
 
       <FlatList
         data={chats}
@@ -91,27 +85,6 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.bg,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space[6],
-    paddingVertical: space[4],
-  },
-  back: {
-    color: colors.text,
-    fontSize: 28,
-    width: 24,
-  },
-  title: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: fontWeight.medium,
-  },
-  headerRule: {
-    height: 2,
-    backgroundColor: colors.divider,
   },
   empty: {
     padding: space[8],

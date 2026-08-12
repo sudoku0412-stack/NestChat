@@ -10,6 +10,7 @@ import { softDeleteMessage } from '../../lib/chatActions';
 import { decryptTextField, getDecryptedMediaUri, isEncryptedRow } from '../../lib/crypto';
 import { useAuth } from '../../lib/auth';
 import { colors, fontWeight, space } from '../../lib/theme';
+import { CloseIcon } from '../../components/icons';
 import { useAccentTheme } from '../../lib/accentTheme';
 import type { MediaKind } from '../../lib/database.types';
 
@@ -99,8 +100,8 @@ export default function MediaViewerScreen() {
   return (
     <View style={styles.screen}>
       <View style={[styles.topBar, { paddingTop: insets.top + space[2] }]}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <Text style={styles.close}>✕</Text>
+        <Pressable onPress={() => router.back()} hitSlop={8} style={styles.close}>
+          <CloseIcon size={20} color={colors.text} />
         </Pressable>
         <Text style={styles.kindLabel}>
           {kind === 'video' ? 'Video' : kind === 'gif' ? 'GIF' : kind === 'sticker' ? 'Sticker' : 'Photo'}
@@ -147,8 +148,6 @@ const styles = StyleSheet.create({
     paddingBottom: space[3],
   },
   close: {
-    color: colors.text,
-    fontSize: 20,
     width: 24,
   },
   kindLabel: {

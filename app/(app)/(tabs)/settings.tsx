@@ -9,6 +9,7 @@ import { useThemeMode } from '../../../lib/themeMode';
 import { Avatar } from '../../../components/Avatar';
 import { MemberRow } from '../../../components/MemberRow';
 import { OutlineButton } from '../../../components/OutlineButton';
+import { CloseIcon } from '../../../components/icons';
 import { colors, fontWeight, space } from '../../../lib/theme';
 
 export default function SettingsScreen() {
@@ -81,7 +82,7 @@ export default function SettingsScreen() {
             trailing={
               item.id !== profile?.id ? (
                 <Pressable onPress={() => handleRemoveMember(item.id, item.display_name)} hitSlop={8}>
-                  <Text style={styles.removeGlyph}>✕</Text>
+                  <CloseIcon size={16} color={colors.danger} />
                 </Pressable>
               ) : null
             }
@@ -160,10 +161,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[6],
     paddingTop: space[6],
     paddingBottom: space[2],
-  },
-  removeGlyph: {
-    color: colors.danger,
-    fontSize: 16,
   },
   logoutWrap: {
     paddingHorizontal: space[6],

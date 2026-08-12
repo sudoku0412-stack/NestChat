@@ -8,8 +8,9 @@ import { clearChat } from '../../../lib/chatActions';
 import { Avatar } from '../../../components/Avatar';
 import { OutlineButton } from '../../../components/OutlineButton';
 import { WallpaperPickerModal } from '../../../components/WallpaperPickerModal';
+import { ScreenHeader } from '../../../components/ScreenHeader';
 import { useAccentTheme } from '../../../lib/accentTheme';
-import { colors, fonts, fontWeight, space } from '../../../lib/theme';
+import { colors, fonts, space } from '../../../lib/theme';
 import type { Member } from '../../../lib/types';
 
 function formatLastSeen(iso: string | null) {
@@ -126,14 +127,7 @@ export default function ContactInfoScreen() {
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <Text style={styles.back}>‹</Text>
-        </Pressable>
-        <Text style={styles.title}>Contact info</Text>
-        <View style={{ width: 24 }} />
-      </View>
-      <View style={styles.headerRule} />
+      <ScreenHeader title="Contact info" />
 
       <View style={styles.summary}>
         <Avatar name={member.display_name} avatarUrl={member.avatar_url} size={96} />
@@ -218,27 +212,6 @@ const styles = StyleSheet.create({
   centered: {
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space[6],
-    paddingVertical: space[4],
-  },
-  back: {
-    color: colors.text,
-    fontSize: 28,
-    width: 24,
-  },
-  title: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: fontWeight.medium,
-  },
-  headerRule: {
-    height: 2,
-    backgroundColor: colors.divider,
   },
   summary: {
     alignItems: 'center',

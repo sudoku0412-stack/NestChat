@@ -1,6 +1,13 @@
 import Svg, { Circle, G, Line, Path, Rect } from 'react-native-svg';
 import { colors } from '../../lib/theme';
 
+/**
+ * NOTE for the Hearth 2.0 rollout: every icon here defaults its `color` prop to the legacy
+ * dark-only `colors.text` so existing, not-yet-migrated call sites render unchanged. Screens
+ * migrated to `useTheme()` should pass an explicit `color` from that theme instead of relying
+ * on the default.
+ */
+
 export interface IconProps {
   size?: number;
   color?: string;
@@ -10,7 +17,12 @@ export interface IconProps {
 const DEFAULT_SIZE = 24;
 const DEFAULT_COLOR = colors.text;
 
-export function ChatBubbleIcon({ size = DEFAULT_SIZE, color = DEFAULT_COLOR, strokeWidth = 1.8 }: IconProps) {
+export function ChatBubbleIcon({
+  size = DEFAULT_SIZE,
+  color = DEFAULT_COLOR,
+  strokeWidth = 1.8,
+  filled = false,
+}: IconProps & { filled?: boolean }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
@@ -19,24 +31,36 @@ export function ChatBubbleIcon({ size = DEFAULT_SIZE, color = DEFAULT_COLOR, str
         strokeWidth={strokeWidth}
         strokeLinejoin="round"
         strokeLinecap="round"
+        fill={filled ? color : 'none'}
+        fillOpacity={filled ? 0.18 : 0}
       />
     </Svg>
   );
 }
 
-export function StatusRingIcon({ size = DEFAULT_SIZE, color = DEFAULT_COLOR, strokeWidth = 1.8 }: IconProps) {
+export function StatusRingIcon({
+  size = DEFAULT_SIZE,
+  color = DEFAULT_COLOR,
+  strokeWidth = 1.8,
+  filled = false,
+}: IconProps & { filled?: boolean }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={7.5} stroke={color} strokeWidth={strokeWidth} />
+      <Circle cx={12} cy={12} r={7.5} stroke={color} strokeWidth={strokeWidth} fill={filled ? color : 'none'} fillOpacity={filled ? 0.18 : 0} />
       <Circle cx={12} cy={12} r={2} fill={color} />
     </Svg>
   );
 }
 
-export function GearIcon({ size = DEFAULT_SIZE, color = DEFAULT_COLOR, strokeWidth = 1.6 }: IconProps) {
+export function GearIcon({
+  size = DEFAULT_SIZE,
+  color = DEFAULT_COLOR,
+  strokeWidth = 1.6,
+  filled = false,
+}: IconProps & { filled?: boolean }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={4.2} stroke={color} strokeWidth={strokeWidth} />
+      <Circle cx={12} cy={12} r={4.2} stroke={color} strokeWidth={strokeWidth} fill={filled ? color : 'none'} fillOpacity={filled ? 0.18 : 0} />
       {[0, 60, 120, 180, 240, 300].map((deg) => (
         <G key={deg} rotation={deg} origin="12,12">
           <Rect x={10.7} y={2.3} width={2.6} height={4} rx={1} fill={color} />
@@ -241,6 +265,106 @@ export function StickerIcon({ size = DEFAULT_SIZE, color = DEFAULT_COLOR, stroke
         strokeWidth={strokeWidth}
         strokeLinecap="round"
       />
+    </Svg>
+  );
+}
+
+export function ChevronLeftIcon({ size = DEFAULT_SIZE, color = DEFAULT_COLOR, strokeWidth = 2 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M15 4.5 7.5 12l7.5 7.5" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+export function ChevronRightIcon({ size = DEFAULT_SIZE, color = DEFAULT_COLOR, strokeWidth = 2 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M9 4.5 16.5 12 9 19.5" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+export function SearchIcon({ size = DEFAULT_SIZE, color = DEFAULT_COLOR, strokeWidth = 1.8 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx={10.5} cy={10.5} r={6.5} stroke={color} strokeWidth={strokeWidth} />
+      <Line x1={20} y1={20} x2={15.5} y2={15.5} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+export function SendIcon({ size = DEFAULT_SIZE, color = DEFAULT_COLOR }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M4 12h13.5M13 5l7 7-7 7" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+export function CloseIcon({ size = DEFAULT_SIZE, color = DEFAULT_COLOR, strokeWidth = 1.8 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Line x1={6} y1={6} x2={18} y2={18} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+      <Line x1={18} y1={6} x2={6} y2={18} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+export function CheckIcon({ size = DEFAULT_SIZE, color = DEFAULT_COLOR, strokeWidth = 1.8 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 16 10" fill="none">
+      <Path d="M1 5L4.6 8.6L14.6 1" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+export function DoubleCheckIcon({ size = DEFAULT_SIZE, color = DEFAULT_COLOR, strokeWidth = 1.8 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 20 10" fill="none">
+      <Path d="M1 5L4.6 8.6L11.6 1" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M6.4 5L10 8.6L19 1" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+export function BellIcon({ size = DEFAULT_SIZE, color = DEFAULT_COLOR, strokeWidth = 1.8 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M6 10.5a6 6 0 0 1 12 0v3.2c0 .8.3 1.6.9 2.2l.6.6H4.5l.6-.6c.6-.6.9-1.4.9-2.2v-3.2Z"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <Path d="M9.5 19.5a2.5 2.5 0 0 0 5 0" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+export function BellOffIcon({ size = DEFAULT_SIZE, color = DEFAULT_COLOR, strokeWidth = 1.8 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M6 10.5a6 6 0 0 1 10.2-4.3M18 10.5v3.2c0 .8.3 1.6.9 2.2l.6.6H4.5l.6-.6c.6-.6.9-1.4.9-2.2v-3.2"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <Path d="M9.5 19.5a2.5 2.5 0 0 0 5 0" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+      <Line x1={4} y1={4} x2={20} y2={20} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+export function ArchiveIcon({ size = DEFAULT_SIZE, color = DEFAULT_COLOR, strokeWidth = 1.8 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Rect x={3.5} y={4.5} width={17} height={4} rx={1.2} stroke={color} strokeWidth={strokeWidth} strokeLinejoin="round" />
+      <Path d="M5 8.5v9A1.5 1.5 0 0 0 6.5 19h11a1.5 1.5 0 0 0 1.5-1.5v-9" stroke={color} strokeWidth={strokeWidth} strokeLinejoin="round" />
+      <Line x1={10} y1={12} x2={14} y2={12} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
     </Svg>
   );
 }

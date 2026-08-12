@@ -15,6 +15,7 @@ import { useAuth } from '../../lib/auth';
 import { useAppContacts, type MatchedContact, type UnmatchedContact } from '../../lib/hooks/useAppContacts';
 import { supabase } from '../../lib/supabase';
 import { Avatar } from '../../components/Avatar';
+import { ScreenHeader } from '../../components/ScreenHeader';
 import { useAccentTheme } from '../../lib/accentTheme';
 import { colors, fontWeight, radius, space } from '../../lib/theme';
 
@@ -69,18 +70,16 @@ export default function MembersScreen() {
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <Text style={styles.back}>‹</Text>
-        </Pressable>
-        <Text style={styles.title}>New Chat</Text>
-        <Pressable onPress={goToNewGroup} hitSlop={8}>
-          <Text style={[styles.action, { color: accentColors.accent }]}>
-            New Group{selected.size > 0 ? ` (${selected.size})` : ''}
-          </Text>
-        </Pressable>
-      </View>
-      <View style={styles.headerRule} />
+      <ScreenHeader
+        title="New Chat"
+        right={
+          <Pressable onPress={goToNewGroup} hitSlop={8}>
+            <Text style={[styles.action, { color: accentColors.accent }]}>
+              New Group{selected.size > 0 ? ` (${selected.size})` : ''}
+            </Text>
+          </Pressable>
+        }
+      />
 
       {permissionDenied && (
         <View style={styles.permissionBanner}>
@@ -178,30 +177,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space[6],
-    paddingVertical: space[4],
-  },
-  back: {
-    color: colors.text,
-    fontSize: 28,
-    width: 28,
-  },
-  title: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: fontWeight.medium,
-  },
   action: {
     fontSize: 14,
     fontWeight: fontWeight.semibold,
-  },
-  headerRule: {
-    height: 2,
-    backgroundColor: colors.divider,
   },
   permissionBanner: {
     padding: space[4],
