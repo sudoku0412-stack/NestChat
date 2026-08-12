@@ -1,6 +1,8 @@
 # NestChat — Handover
 
-Last updated: 2026-08-11 (end of session — E2EE Phase 3 just landed, not yet TestFlight-tested)
+Last updated: 2026-08-12 (end of session — E2EE media fix verified on device; WhatsApp-style
+features batch landed + code-reviewed; **all of it is uncommitted**; next project is the
+"Hearth 2.0" UI revamp, plan already approved at `~/.claude/plans/vivid-puzzling-giraffe.md`)
 
 ## What this is
 
@@ -120,8 +122,14 @@ rationale. Key decisions locked in with the user:
   - **Known, accepted UX regression** (per the user's own household-scale tradeoff): videos fully
     download-and-decrypt before playback starts, no streaming decrypt -- same limitation as no
     `crypto_secretstream`.
-  - **Not yet verified on a real device** -- the Giphy GIF/sticker send path in particular
-    (fetch remote URL → encrypt → upload) only has mock-level test coverage right now.
+  - **Verified on a real device (2026-08-12)** — but only after a real bug was found and fixed:
+    `react-native-libsodium`'s native binding for `crypto_aead_xchacha20poly1305_ietf_encrypt`/
+    `_decrypt` **throws at runtime unless `additional_data` is a string** — passing `null`
+    (which the TypeScript types happily accept) fails with "input type not yet implemented".
+    `lib/crypto/media.ts`'s two file-content AEAD calls passed `null`; every media send (photo,
+    video, doc, GIF, sticker) failed silently until fixed to pass `''`. The key-wrap calls were
+    unaffected (they always passed a real AD string). The Jest mock does NOT replicate this
+    native quirk, so tests passed throughout — device testing was what caught it.
 - **Not started yet**: Phase 4 (live location + statuses), Phase 5 (iOS Notification Service
   Extension so push notifications can still say "sent you a GIF" without the server ever reading
   plaintext — until then, encrypted-message push notifications just say generic "New message"),
@@ -145,26 +153,37 @@ test coverage; it does not validate the actual native library, which Phase 0's d
 
 - Repo: https://github.com/sudoku0412-stack/NestChat (private)
 - Supabase project: `sudoku0412-stack's Org / NestChat` (project ref `hfmjigdtmjbgyqcnneqt`)
-- **App version 2.0.0, build 4** in `app.json` still (unchanged all session) — `ios/NestChat.xcodeproj`
-  / `ios/NestChat/Info.plist` must stay in sync with it (see the recurring `expo prebuild`-wipes
-  gotcha below). **A huge amount of code has landed since build 4 was last discussed** (all of
-  E2EE Phases 0–3, reactions, GIF/sticker picker, notification fixes) with zero TestFlight
-  validation yet — bump the build number before archiving this time.
-- Everything through this session is **committed and pushed to `origin/master`**, latest commit
-  `6eb1d0a` ("E2EE Phase 3: media encryption"). Tests (102/102) and `tsc --noEmit` clean at push
-  time. `git log --oneline` from there back covers the full session if more context is needed.
-- Auth: **anonymous auth + typed-in phone number**, not real OTP, now with **PIN-based account
-  recovery** (migrations `0006`–`0008`) so signing out or reinstalling doesn't lose your identity
-  — see "This session's work" below for the full story of why that took 3 migrations to get right.
-- **20 migrations total** (`0001`–`0020`). `0001`–`0013` are confirmed run against the live
-  Supabase project. **Status of `0014`–`0020` is the main thing to verify at the start of the next
-  session** — the user was actively running these throughout this session (confirmed: `0014`
-  re-run idempotently after a partial first attempt, `0015`, `0016`, the two `notify_send_push`-
-  related trigger-function migrations `0017`/`0020` with the real service-role JWT pasted in by the
-  user each time). `0018` (E2EE key tables), `0019` (`get_chat_list()` enc columns) should also be
-  in by now but re-confirm — **don't assume; check `supabase migration list` or query the tables
-  directly**. If resuming from a git checkout on a different machine, diff `supabase/migrations/`
-  against what's actually live before assuming anything is applied.
+- **⚠️ NOTHING from the 2026-08-12 session is committed.** Last commit is still `6eb1d0a`
+  ("E2EE Phase 3"). The working tree holds ~14 modified files + ~16 new files (all of the
+  WhatsApp-features batch, the media-encryption fix, the code-review fixes, and migrations
+  `0021`–`0025`). **Committing and pushing this is step one of the next session** — a crash or
+  checkout would lose a full day of work. Tests (107/107) and `tsc --noEmit` were clean at
+  session end.
+- **App version 2.0.0, build 6** in `app.json`, synced into `ios/NestChat.xcodeproj`
+  (`CURRENT_PROJECT_VERSION = 6`) and `ios/NestChat/Info.plist` (`CFBundleVersion = 6`).
+  Build 5 was archived and TestFlight-tested this session (E2EE text + media verified end-to-end
+  on device, including the media AEAD fix). The user also installed a build containing the
+  features batch (they exercised Help→email and the settings menu on device), but the **final
+  changes came after that install**: settings menu moved from the Settings tab into
+  Edit profile, support email → `support@craftloop.ca`, and all 7 code-review fixes. Those need
+  a fresh archive. **No `expo prebuild` needed** — everything since build 5's prebuild is
+  JS/SQL-only, and the Push Notifications capability the user re-added in Xcode for build 5
+  survives as long as prebuild isn't re-run.
+- Auth: **anonymous auth + typed-in phone number**, not real OTP, with **PIN-based account
+  recovery** (migrations `0006`–`0008`), and now also **self-service account deletion**
+  (tombstone pattern, migrations `0021`/`0025` — see the features-batch section below).
+- **25 migrations total** (`0001`–`0025`). `0001`–`0020` are **confirmed live** (verified this
+  session via REST checks against the enc tables/columns and by the user pasting the live
+  `notify_send_push` body). **`0021`–`0025` exist only locally and have NOT been run** — they
+  must be pasted into the Supabase SQL Editor in order before the features batch works
+  server-side. None of them need the service-role-JWT dance (unlike `0017`/`0020`). Note the
+  CLI's `supabase migration list` shows *nothing* as applied remotely — migrations have always
+  been run via SQL Editor paste, so the CLI history table is empty; verify by querying schema,
+  not the CLI.
+- **`supabase/functions/send-push/index.ts` was modified** (per-user `notify_messages`/
+  `notify_media`/`notify_reactions` gating) and needs redeploying:
+  `supabase functions deploy send-push` from the repo root (project is linked). Deploy after
+  running `0022`, or the function will reference columns that don't exist yet.
 - Two Database Webhooks were added this session beyond the original `messages` one:
   `message_media` INSERT and `message_reactions` INSERT+UPDATE, both → the `send-push` edge
   function (found under **Database → Triggers** in the current dashboard UI, not a separate
@@ -215,34 +234,40 @@ test coverage; it does not validate the actual native library, which Phase 0's d
   starred-messages count, **custom per-user-per-chat photo wallpaper**, "create group with this
   person," and "clear chat" (hides messages from your view only — never deletes the other side's
   copy).
-- **Jest test suite** (`npm test`, **102 tests / 15 suites**, all passing as of this session,
+- **Jest test suite** (`npm test`, **107 tests / 16 suites**, all passing as of 2026-08-12,
   `npx tsc --noEmit` clean) + a husky pre-push hook running both before every `git push`. Neither
   covers native/device-only behavior — that still needs manual on-device QA, which for this
-  project means a TestFlight round-trip (see above). **None of this session's E2EE work (Phases
-  0–3) has been through a TestFlight build yet** — that's the actual next step, see below.
+  project means a TestFlight round-trip (see above). E2EE Phases 0–3 **have now been verified
+  on-device** (text + all media kinds, 2026-08-12); the features batch's final state has not —
+  see Immediate next step.
 
 ## Immediate next step for whoever picks this up
 
-1. **Confirm the pending migrations are actually live** (see the migrations bullet above) before
-   assuming any E2EE code will work — `0018`/`0019`/`0020` in particular.
-2. **Archive and upload a new build**, then get it onto every household member's device **at the
-   same time** — this is the important one, spelled out in the E2EE section above: an older build
-   renders an encrypted message as a blank bubble. Bump the build number in `app.json` first (it's
-   been a while since the last archive — check what's actually live in App Store Connect before
-   assuming the current `app.json` number hasn't already been used).
-3. **This build also needs a fresh `expo prebuild -p ios`** (new native deps landed this session:
-   `react-native-libsodium`, `react-native-keychain`, `expo-sharing`) — re-run the full
-   prebuild-wipes checklist below (build number, `UIBackgroundModes`, Push Notifications
-   capability) after prebuilding, before archiving.
-4. **Verify end-to-end on-device** per the E2EE section's checklist: send/receive text, a photo, a
-   GIF/sticker, open a document, play a video (expect a brief full-download pause — that's
-   accepted, not a bug), confirm `message_media.wrapped_key` populates in the dashboard for a new
-   photo send.
-5. Only after that's confirmed working: pick up **Phase 4 (live location + statuses encryption)**
-   — see the E2EE section's plan-doc reference for the design.
-4. Original TestFlight distribution setup (External Testing group, Beta App Review) — this was
-   completed in an earlier session; if starting fresh on a new Apple account this whole section
-   would need redoing. See git history / this file's own history for the original steps if needed.
+1. **Commit and push everything.** The whole 2026-08-12 session is sitting uncommitted (see
+   Current state). Sensible split: (a) media-encryption AEAD fix + send-error alerts,
+   (b) WhatsApp features batch + migrations 0021–0024, (c) code-review fixes + migration 0025.
+   One commit is also fine — just get it onto `origin/master`. The husky pre-push hook runs
+   tests + tsc automatically.
+2. **Run migrations `0021`–`0025`** in the Supabase SQL Editor, in order. No JWT pasting needed.
+3. **Redeploy the edge function**: `supabase functions deploy send-push` (after `0022`).
+4. **Archive build 6** (no prebuild — see Current state) and install on every household device.
+   Verify: the settings menu now lives under Edit profile (tap your own profile row), account
+   deletion end-to-end with a throwaway member (chat history should show "Deleted account",
+   remaining members can still send), notification toggles actually gate pushes, storage screen
+   totals, media tap-to-download when auto-download is off, Lists CRUD, and a broadcast send to
+   2+ members (recipients see a normal 1:1 message).
+5. **Then start the next project: the "Hearth 2.0" UI revamp.** The user asked for a
+   WhatsApp-quality visual overhaul ("currently it's looking like a robotic chat app"). A full
+   plan is **already researched and user-approved** — canonical copy in this repo at
+   `docs/hearth-2-redesign-plan.md` (also at `~/.claude/plans/vivid-puzzling-giraffe.md` on the
+   original machine) — read it before touching any UI code. Locked
+   decisions: refine the warm Hearth identity (do NOT clone WhatsApp's green), and add a true
+   light + dark theme system. Phases: A theme foundation → B shared ScreenHeader/SettingsRow +
+   icon completion → C chat thread (bubbles/ticks/grouping/date chips/composer) → D chat list +
+   tab bar → E propagation. The plan file has the full findings inventory (why it feels
+   "robotic") and per-phase file lists.
+6. Still parked behind all of the above: **E2EE Phase 4 (live location + statuses encryption)**
+   and Phase 5 (notification service extension) — see the E2EE section.
 
 ### Why TestFlight, not public App Store
 
@@ -258,12 +283,58 @@ public App Store listing. If this ever needs to go fully public, that gap needs 
 - No SMS OTP — signup is open, not invite-gated, mitigated (not eliminated) by PIN-based recovery.
 - Live location sharing asks for "Always" location permission — invasive; worth revisiting.
 - Expired statuses aren't cleaned up automatically (optional `pg_cron` snippet in `0003_status.sql`).
-- No in-app account deletion flow. Apple requires this (Guideline 5.1.1v) before any public listing.
+- ~~No in-app account deletion flow~~ **Fixed 2026-08-12** — self-service deletion shipped
+  (Account → Delete my account; tombstone pattern, migrations `0021`+`0025`), satisfying
+  Apple Guideline 5.1.1v once those migrations run.
 - Reply/Star/pinned-message banners don't scroll-to-message on tap — acceptable v1 limitation, not
   a bug.
 - Full list of build-vs-prototype deviations is in README's "Design notes & deviations" section.
 
-## This session's work (2026-08-03/04) — large session, quick summary
+## This session's work (2026-08-12) — quick summary
+
+In rough order:
+
+- **Verified migrations `0018`–`0020` live** (REST probes + user pasting the trigger body) —
+  the previous session's open question, now closed.
+- **Build 4 → 5**: prebuild (for the Phase-3 native deps), full wipe-checklist re-applied, user
+  re-added Push Notifications capability in Xcode and archived. A start-a-chat crash reported on
+  the *old* build 4 did not reproduce on build 5 (never root-caused — no crash log available).
+- **Media encryption was silently broken on device** — every media send failed. Two-part fix:
+  (1) `handlePick`/`handleSelectGif` in `chat/[id].tsx` had `try/finally` with no `catch`, so
+  failures showed nothing — added `Alert.alert` error surfacing; (2) that surfaced the real bug,
+  the libsodium `additional_data` string requirement (see the E2EE Phase 3 bullet above) — fixed
+  in `lib/crypto/media.ts`. User confirmed working on device.
+- **WhatsApp-style features batch** (7 phases, planned + executed same session): Settings
+  reorganized into a WhatsApp-style menu (initially on the Settings tab, then **moved into
+  `edit-profile.tsx`** at the user's request — tapping your own profile row opens profile fields
+  + the full menu); new screens `account/appearance/privacy/chats-settings/help/
+  notification-settings/storage-and-data/lists/list-edit/[id]/broadcast` + global
+  `starred-messages/index.tsx`; **self-service account deletion** (migration `0021`: tombstone
+  `_tombstone_user` helper, `delete_own_account` RPC, and a fix for a latent FK-violation bug in
+  `remove_household_member` — it hard-deleted `users` rows, which RESTRICTs on
+  `messages.sender_id`); **per-category notification prefs** (`0022` + send-push gating);
+  **media auto-download toggle + per-chat storage usage** (`0023`; `useDecryptedMediaUri` now
+  returns `{url, load}` with an `autoLoad` param); **Lists + Broadcast** (`0024`;
+  `lib/broadcast.ts` fans out via `find_or_create_dm` + the existing per-chat E2EE send path —
+  recipients just see a normal DM). `sendMediaMessage` now returns `{id: messageId}`.
+  Deliberately excluded (user-acknowledged): Linked devices (conflicts with one-device E2EE),
+  Payments, Parental controls.
+- **Adversarial code review of the batch** found 7 confirmed issues, all fixed. The big three
+  were tombstone-model gaps: a deleted account's *other-device session* kept working
+  (`loadProfile` only checked `!data`, not `deleted_at`) and could even republish a device key;
+  the `users_update_self` RLS policy let a tombstoned session un-scrub its own row; and
+  `_tombstone_user`'s cleanup list missed the broadcast tables added in the same batch (plus
+  `find_or_create_dm` had no `deleted_at` guard, so a stale list entry could message a deleted
+  account). All three fixed via **migration `0025`** + `lib/auth.tsx`. Also: list-edit save-path
+  error handling (silent member wipeout on network blip), chat labels matched by `display_name`
+  instead of user id (breaks when two members share a name), MediaTile permanent-spinner when
+  auto-download is off (now a "Tap to download" placeholder), and broadcast log batched from ~60
+  queries to 3 `.in()` queries.
+- Support email in `help.tsx` → `support@craftloop.ca`. Build bumped 5 → 6 (all three places).
+  Tests grew 102 → 107 (broadcast fan-out suite + tombstone sign-out regression test).
+- **"Hearth 2.0" UI revamp planned and approved** — see Immediate next step #5.
+
+## Previous session's work (2026-08-03/04) — large session, quick summary
 
 In rough order: PIN-based account recovery (3 follow-up migrations to get the merge-on-recovery
 logic and no-pin-yet self-service path correct) → full "Hearth" visual redesign (palette, Fraunces
@@ -277,8 +348,29 @@ accent color (the biggest single piece — required auditing every `colors.accen
 ~20 files to find which were frozen in module-level `StyleSheet.create` calls vs. already
 reactive, then splitting each frozen one into static-structure + inline-color-override).
 
-## Gotchas hit this session, if they recur
+## Gotchas hit across sessions, if they recur
 
+- **`react-native-libsodium` AEAD calls require `additional_data` to be a string.** The TS
+  types accept `string | Uint8Array | null`, but the native binding throws
+  `"input type not yet implemented"` at runtime for anything but a string — pass `''` for
+  "no AD", never `null`. The Jest mock (`lib/testUtils/libsodiumMock.js`) does NOT replicate
+  this, so only device testing catches regressions. This broke all media sends once already.
+- **`try/finally` without `catch` around send paths = invisible failures.** The media-send
+  handlers swallowed every error for a full session's worth of debugging. Any new async send
+  path in `chat/[id].tsx` must surface errors (the codebase pattern is `Alert.alert` with the
+  real error message — that message is what identified the libsodium bug in one screenshot).
+- **`.expo/types/router.d.ts` is a stale cache** — it only regenerates during a Metro bundle,
+  which this project never runs locally. New expo-router routes fail `tsc` with bogus
+  "not assignable to route" errors until the next real bundle. Workaround in the tree: `as any`
+  casts on `router.push` targets in `edit-profile.tsx` (MENU_ROWS) and `lists.tsx`, each with a
+  comment. They can be removed after any archive (the bundle regenerates the file).
+- **Tombstone deletion has a wide blast radius.** Account removal is now `UPDATE users SET
+  deleted_at=...` (never a row delete), which means FK `ON DELETE CASCADE` never fires — any
+  NEW table with a `users(id)` FK must also be added to `_tombstone_user`'s explicit cleanup
+  list (see `0025` for the shape), and any new "pick a member" query needs
+  `.is('deleted_at', null)` (or go through `useMembers`, which has it). The code review caught
+  three separate holes of exactly this shape — assume a fourth exists whenever users are
+  referenced somewhere new.
 - **The user tests via TestFlight only — see the dedicated section at the top of this file.** This
   caused the single biggest time-sink of the session (theme color appearing "completely broken"
   for many turns when the actual bug was a one-line fix, just never reaching the device).
