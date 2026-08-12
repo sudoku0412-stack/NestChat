@@ -39,7 +39,7 @@ export function encryptFileBuffer(
   const fileNonce = randombytes_buf(crypto_aead_xchacha20poly1305_ietf_NPUBBYTES);
   const ciphertext = crypto_aead_xchacha20poly1305_ietf_encrypt(
     buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer),
-    null,
+    '',
     null,
     fileNonce,
     fileKey
@@ -84,5 +84,5 @@ export function decryptFileBuffer(
 
   const fileNonce = encryptedBytes.slice(0, crypto_aead_xchacha20poly1305_ietf_NPUBBYTES);
   const fileCiphertext = encryptedBytes.slice(crypto_aead_xchacha20poly1305_ietf_NPUBBYTES);
-  return crypto_aead_xchacha20poly1305_ietf_decrypt(null, fileCiphertext, null, fileNonce, fileKey);
+  return crypto_aead_xchacha20poly1305_ietf_decrypt(null, fileCiphertext, '', fileNonce, fileKey);
 }

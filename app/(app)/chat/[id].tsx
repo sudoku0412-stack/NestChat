@@ -237,6 +237,8 @@ export default function ThreadScreen() {
     setPendingCount((c) => c + 1);
     try {
       await sendMediaMessage(id, profile.id, asset);
+    } catch (err) {
+      Alert.alert('Could not send', err instanceof Error ? err.message : 'Try again.');
     } finally {
       setPendingCount((c) => Math.max(0, c - 1));
       refresh();
@@ -253,6 +255,8 @@ export default function ThreadScreen() {
         width: item.width,
         height: item.height,
       });
+    } catch (err) {
+      Alert.alert('Could not send', err instanceof Error ? err.message : 'Try again.');
     } finally {
       setPendingCount((c) => Math.max(0, c - 1));
       refresh();

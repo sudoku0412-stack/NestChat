@@ -8,49 +8,59 @@ import type { MessageMediaRow } from '../database.types';
 // forever without a migration/backfill.
 const plaintextUrlCache = new Map<string, string>();
 
+// autoLoad gates whether decrypt-and-cache happens automatically on mount (the "media
+// auto-download" preference, Settings -> Storage and data) -- when false, `url` stays null until
+// something calls the returned `load()` explicitly, so tap-to-load still always works regardless
+// of the setting.
 export function useDecryptedMediaUri(
   media: MessageMediaRow,
   chatId: string,
   messageId: string,
   keyId: string | null,
-  myUserId: string | null
-): string | null {
+  myUserId: string | null,
+  autoLoad: boolean = true
+): { url: string | null; load: () => Promise<string | null> } {
   const [url, setUrl] = useState<string | null>(null);
+
+  async function load(): Promise<string | null> {
+    if (media.wrapped_key && keyId && myUserId) {
+      const uri = await getDecryptedMediaUri({
+        mediaId: media.id,
+        storagePath: media.storage_path,
+        wrappedKey: media.wrapped_key,
+        chatId,
+        messageId,
+        keyId,
+        myUserId,
+      });
+      setUrl(uri);
+      return uri;
+    }
+
+    const cached = plaintextUrlCache.get(media.storage_path);
+    if (cached) {
+      setUrl(cached);
+      return cached;
+    }
+    const signed = await getSignedMediaUrl(media.storage_path);
+    if (signed) plaintextUrlCache.set(media.storage_path, signed);
+    setUrl(signed);
+    return signed;
+  }
 
   useEffect(() => {
     let active = true;
-
-    async function load() {
-      if (media.wrapped_key && keyId && myUserId) {
-        const uri = await getDecryptedMediaUri({
-          mediaId: media.id,
-          storagePath: media.storage_path,
-          wrappedKey: media.wrapped_key,
-          chatId,
-          messageId,
-          keyId,
-          myUserId,
-        });
-        if (active) setUrl(uri);
-        return;
-      }
-
-      const cached = plaintextUrlCache.get(media.storage_path);
-      if (cached) {
-        if (active) setUrl(cached);
-        return;
-      }
-      const signed = await getSignedMediaUrl(media.storage_path);
-      if (signed) plaintextUrlCache.set(media.storage_path, signed);
-      if (active) setUrl(signed);
-    }
-
     setUrl(null);
-    load();
+    if (autoLoad) {
+      load().then((uri) => {
+        if (active) setUrl(uri);
+      });
+    }
     return () => {
       active = false;
     };
-  }, [media.id, media.wrapped_key, media.storage_path, chatId, messageId, keyId, myUserId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [media.id, media.wrapped_key, media.storage_path, chatId, messageId, keyId, myUserId, autoLoad]);
 
-  return url;
+  return { url, load };
 }
