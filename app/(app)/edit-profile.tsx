@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -18,6 +19,23 @@ import { Avatar } from '../../components/Avatar';
 import { OutlineButton } from '../../components/OutlineButton';
 import { useAccentTheme } from '../../lib/accentTheme';
 import { colors, fontWeight, radius, space } from '../../lib/theme';
+
+// `.expo/types/router.d.ts` is stale (predates these routes) and only regenerates during a real
+// Metro bundle, which this project's TestFlight-only workflow doesn't run locally -- it'll
+// self-correct at the next archive. `as any` here is purely to bypass that stale-cache false
+// positive; every path below is a real screen that exists on disk.
+const MENU_ROWS: { label: string; href: any }[] = [
+  { label: 'Lists', href: '/(app)/lists' },
+  { label: 'Broadcast messages', href: '/(app)/broadcast' },
+  { label: 'Starred', href: '/(app)/starred-messages' },
+  { label: 'Account', href: '/(app)/account' },
+  { label: 'Privacy', href: '/(app)/privacy' },
+  { label: 'Chats', href: '/(app)/chats-settings' },
+  { label: 'Appearance', href: '/(app)/appearance' },
+  { label: 'Notifications', href: '/(app)/notification-settings' },
+  { label: 'Storage and data', href: '/(app)/storage-and-data' },
+  { label: 'Help and feedback', href: '/(app)/help' },
+];
 
 export default function EditProfileScreen() {
   const { profile, refreshProfile } = useAuth();
@@ -79,7 +97,7 @@ export default function EditProfileScreen() {
       </View>
       <View style={styles.headerRule} />
 
-      <View style={styles.content}>
+      <ScrollView style={styles.content} keyboardShouldPersistTaps="handled">
         <Pressable style={styles.avatarPicker} onPress={handlePickAvatar}>
           <Avatar
             name={name || profile?.display_name || '?'}
@@ -119,7 +137,16 @@ export default function EditProfileScreen() {
             <OutlineButton label="Save" onPress={handleSave} disabled={!name.trim()} />
           )}
         </View>
-      </View>
+
+        <View style={styles.menu}>
+          {MENU_ROWS.map((row) => (
+            <Pressable key={row.label} style={styles.menuRow} onPress={() => router.push(row.href)}>
+              <Text style={styles.menuLabel}>{row.label}</Text>
+              <Text style={styles.chevron}>›</Text>
+            </Pressable>
+          ))}
+        </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -152,6 +179,29 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: space[8],
+  },
+  menu: {
+    marginTop: space[8],
+    marginHorizontal: -space[8],
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
+  },
+  menuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: space[8],
+    paddingVertical: space[4],
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+  },
+  menuLabel: {
+    color: colors.text,
+    fontSize: 15,
+  },
+  chevron: {
+    color: colors.textMuted,
+    fontSize: 20,
   },
   avatarPicker: {
     alignItems: 'center',

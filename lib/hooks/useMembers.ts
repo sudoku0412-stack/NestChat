@@ -13,7 +13,11 @@ export function useMembers(excludeUserId?: string | null) {
     let active = true;
 
     async function load() {
-      const { data } = await supabase.from('users').select('*').order('display_name');
+      const { data } = await supabase
+        .from('users')
+        .select('*')
+        .is('deleted_at', null)
+        .order('display_name');
       if (!active) return;
       setMembers(((data as Member[]) ?? []).filter((m) => m.id !== excludeUserId));
       setLoading(false);

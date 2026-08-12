@@ -37,7 +37,7 @@ async function openDocument(url: string) {
 }
 
 function GridTile({ item, ownMessage, myUserId }: { item: GalleryItem; ownMessage: boolean; myUserId: string | null }) {
-  const url = useDecryptedMediaUri(item, item.chat_id, item.message_id, item.key_id, myUserId);
+  const { url } = useDecryptedMediaUri(item, item.chat_id, item.message_id, item.key_id, myUserId);
   const { colors: accentColors } = useAccentTheme();
   return (
     <Pressable
@@ -62,7 +62,7 @@ function GridTile({ item, ownMessage, myUserId }: { item: GalleryItem; ownMessag
 }
 
 function DocumentRow({ item, myUserId }: { item: GalleryItem; myUserId: string | null }) {
-  const url = useDecryptedMediaUri(item, item.chat_id, item.message_id, item.key_id, myUserId);
+  const { url } = useDecryptedMediaUri(item, item.chat_id, item.message_id, item.key_id, myUserId);
   return (
     <Pressable style={styles.documentRow} onPress={() => url && openDocument(url)} disabled={!url}>
       <Text style={styles.documentGlyph}>📄</Text>

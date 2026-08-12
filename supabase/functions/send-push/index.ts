@@ -71,15 +71,16 @@ async function handleMessageInsert(record: {
     supabase.from('chats').select('type, name').eq('id', record.chat_id).single(),
     supabase
       .from('chat_members')
-      .select('user_id, muted, users(push_token)')
+      .select('user_id, muted, users(push_token, notify_messages)')
       .eq('chat_id', record.chat_id)
       .neq('user_id', record.sender_id)
       .eq('muted', false),
   ]);
 
   const tokens = (recipients ?? [])
-    .map((r) => (r.users as unknown as { push_token: string | null } | null)?.push_token)
-    .filter((t): t is string => !!t);
+    .map((r) => r.users as unknown as { push_token: string | null; notify_messages: boolean } | null)
+    .filter((u): u is { push_token: string; notify_messages: boolean } => !!u?.push_token && u.notify_messages)
+    .map((u) => u.push_token);
   if (tokens.length === 0) return new Response('no recipients', { status: 200 });
 
   const senderName = sender?.display_name ?? 'Someone';
@@ -114,15 +115,16 @@ async function handleMediaInsert(record: {
     supabase.from('chats').select('type, name').eq('id', message.chat_id).single(),
     supabase
       .from('chat_members')
-      .select('user_id, muted, users(push_token)')
+      .select('user_id, muted, users(push_token, notify_media)')
       .eq('chat_id', message.chat_id)
       .neq('user_id', message.sender_id)
       .eq('muted', false),
   ]);
 
   const tokens = (recipients ?? [])
-    .map((r) => (r.users as unknown as { push_token: string | null } | null)?.push_token)
-    .filter((t): t is string => !!t);
+    .map((r) => r.users as unknown as { push_token: string | null; notify_media: boolean } | null)
+    .filter((u): u is { push_token: string; notify_media: boolean } => !!u?.push_token && u.notify_media)
+    .map((u) => u.push_token);
   if (tokens.length === 0) return new Response('no recipients', { status: 200 });
 
   const senderName = sender?.display_name ?? 'Someone';
@@ -155,14 +157,18 @@ async function handleReactionUpsert(record: { message_id: string; user_id: strin
     supabase.from('users').select('display_name').eq('id', record.user_id).single(),
     supabase
       .from('chat_members')
-      .select('muted, users(push_token)')
+      .select('muted, users(push_token, notify_reactions)')
       .eq('chat_id', message.chat_id)
       .eq('user_id', message.sender_id)
       .single(),
   ]);
 
   if (recipientMember?.muted) return new Response('chat muted, skipped', { status: 200 });
-  const token = (recipientMember?.users as unknown as { push_token: string | null } | null)?.push_token;
+  const recipientUser = recipientMember?.users as unknown as
+    | { push_token: string | null; notify_reactions: boolean }
+    | null;
+  if (!recipientUser?.notify_reactions) return new Response('reactions muted, skipped', { status: 200 });
+  const token = recipientUser.push_token;
   if (!token) return new Response('no push token', { status: 200 });
 
   const reactorName = reactor?.display_name ?? 'Someone';

@@ -59,7 +59,11 @@ export async function sendTextMessage(
 // wrap's AEAD additional-data binds it to this specific message id (see lib/crypto/media.ts) --
 // something to bind to has to exist before encrypting, and a DB round-trip for it would defeat
 // the point of generating ids client-side in the first place.
-export async function sendMediaMessage(chatId: string, senderId: string, asset: PickedAsset) {
+export async function sendMediaMessage(
+  chatId: string,
+  senderId: string,
+  asset: PickedAsset
+): Promise<{ id: string }> {
   const messageId = generateId();
   const { asset: prepared, bytes } = await readAssetBytes(asset);
 
@@ -106,6 +110,8 @@ export async function sendMediaMessage(chatId: string, senderId: string, asset: 
     await supabase.storage.from('chat-media').remove([uploaded.storagePath]);
     throw mediaError;
   }
+
+  return { id: messageId };
 }
 
 export async function softDeleteMessage(messageId: string) {

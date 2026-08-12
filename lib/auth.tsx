@@ -38,10 +38,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function loadProfile(userId: string) {
     const { data } = await supabase.from('users').select('*').eq('id', userId).single();
-    if (!data) {
-      // The session's user row doesn't exist (e.g. it was merged away by account recovery, or
-      // removed by an admin, from a different device) — it will never load. Clear the dead
-      // session locally instead of leaving the app stuck on session-without-profile forever.
+    // The session's user row doesn't exist (merged away by account recovery, removed by an
+    // admin from a different device) or is tombstoned (deleted_at set -- the row is scrubbed
+    // in place, not dropped, so removal/self-deletion never makes `data` itself go away) — it
+    // will never load as a real account again. Clear the dead session locally instead of
+    // leaving the app stuck on (or silently continuing with) a session with no live profile.
+    if (!data || (data as UsersRow).deleted_at) {
       await supabase.auth.signOut();
       setSession(null);
       setProfile(null);

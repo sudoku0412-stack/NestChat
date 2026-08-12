@@ -10,7 +10,9 @@ import {
 import { Image } from 'expo-image';
 import * as Sharing from 'expo-sharing';
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { useDecryptedMediaUri } from '../lib/hooks/useDecryptedMediaUri';
+import { useAuth } from '../lib/auth';
 import { colors, radius, space } from '../lib/theme';
 import { useAccentTheme } from '../lib/accentTheme';
 import type { MessageMediaRow } from '../lib/database.types';
@@ -50,20 +52,36 @@ async function openDocument(url: string) {
 }
 
 export function MediaTile({ media, chatId, messageId, keyId, myUserId, ownMessage, onLongPress }: MediaTileProps) {
-  const url = useDecryptedMediaUri(media, chatId, messageId, keyId, myUserId);
+  const { profile } = useAuth();
+  const autoLoad = profile?.media_autodownload !== 'never';
+  const { url, load } = useDecryptedMediaUri(media, chatId, messageId, keyId, myUserId, autoLoad);
   const { colors: accentColors } = useAccentTheme();
+  const [fetching, setFetching] = useState(false);
 
   function handleLongPress(e: GestureResponderEvent) {
     onLongPress?.(e.nativeEvent.pageY);
+  }
+
+  async function ensureLoaded(): Promise<string | null> {
+    if (url) return url;
+    setFetching(true);
+    try {
+      return await load();
+    } finally {
+      setFetching(false);
+    }
   }
 
   if (media.kind === 'document') {
     return (
       <Pressable
         style={styles.documentTile}
-        onPress={() => url && openDocument(url)}
+        onPress={async () => {
+          const resolved = await ensureLoaded();
+          if (resolved) openDocument(resolved);
+        }}
         onLongPress={handleLongPress}
-        disabled={!url}
+        disabled={fetching}
       >
         <Text style={styles.documentGlyph}>📄</Text>
         <View style={styles.documentInfo}>
@@ -79,16 +97,27 @@ export function MediaTile({ media, chatId, messageId, keyId, myUserId, ownMessag
   return (
     <Pressable
       style={styles.tile}
-      onPress={() =>
+      onPress={async () => {
+        // Not loaded yet (auto-download off) -- first tap fetches the thumbnail instead of
+        // jumping straight to the viewer, matching a familiar "tap to download" affordance.
+        if (!url) {
+          await ensureLoaded();
+          return;
+        }
         router.push({
           pathname: '/(app)/media-viewer',
           params: { messageId, mediaId: media.id, ownMessage: ownMessage ? '1' : '0' },
-        })
-      }
+        });
+      }}
       onLongPress={handleLongPress}
     >
       {url ? (
         <Image source={{ uri: url }} style={styles.image} contentFit="cover" />
+      ) : !autoLoad && !fetching ? (
+        <View style={styles.loading}>
+          <Text style={styles.downloadGlyph}>⬇</Text>
+          <Text style={styles.downloadLabel}>Tap to download</Text>
+        </View>
       ) : (
         <View style={styles.loading}>
           <ActivityIndicator color={accentColors.accent} />
@@ -155,6 +184,15 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  downloadGlyph: {
+    color: colors.textMuted,
+    fontSize: 22,
+  },
+  downloadLabel: {
+    color: colors.textMuted,
+    fontSize: 12,
+    marginTop: space[1],
   },
   playBadge: {
     position: 'absolute',

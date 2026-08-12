@@ -126,6 +126,26 @@ describe('recoverAccount', () => {
     expect(supabase.auth.signOut).toHaveBeenCalledTimes(1);
     expect(message).toBe('Incorrect PIN.');
   });
+
+  it('signs out and clears the profile if the loaded row is tombstoned (account deleted from another device)', async () => {
+    mockSignIn('new-uid');
+    mockProfile({ id: 'new-uid', deleted_at: '2026-01-01T00:00:00Z', display_name: 'Deleted account' });
+
+    (supabase.rpc as jest.Mock).mockImplementation((fn: string) => {
+      if (fn === 'verify_recovery_pin') return Promise.resolve({ data: true, error: null });
+      if (fn === 'recover_account') return Promise.resolve({ data: true, error: null });
+      return Promise.resolve({ data: null, error: null });
+    });
+
+    const { result } = await renderHook(() => useAuth(), { wrapper: AuthProvider });
+    await flush();
+
+    await result.current.recoverAccount('+15551234567', '1234');
+    await flush();
+
+    expect(supabase.auth.signOut).toHaveBeenCalled();
+    expect(result.current.profile).toBeNull();
+  });
 });
 
 describe('claimPhone', () => {

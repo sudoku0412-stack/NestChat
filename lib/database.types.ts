@@ -23,6 +23,11 @@ export type UsersRow = {
   theme_accent: string | null;
   public_key: string | null;
   key_updated_at: string | null;
+  deleted_at: string | null;
+  notify_messages: boolean;
+  notify_media: boolean;
+  notify_reactions: boolean;
+  media_autodownload: 'always' | 'never';
 }
 
 export type ChatsRow = {
@@ -129,6 +134,33 @@ export type MessageStarsRow = {
   starred_at: string;
 }
 
+export type BroadcastListsRow = {
+  id: string;
+  owner_id: string;
+  name: string;
+  created_at: string;
+}
+
+export type BroadcastListMembersRow = {
+  list_id: string;
+  member_id: string;
+  added_at: string;
+}
+
+export type BroadcastSendsRow = {
+  id: string;
+  sender_id: string;
+  list_id: string | null;
+  created_at: string;
+}
+
+export type BroadcastSendTargetsRow = {
+  send_id: string;
+  recipient_id: string;
+  chat_id: string;
+  message_id: string;
+}
+
 export type MessageReactionsRow = {
   message_id: string;
   user_id: string;
@@ -217,6 +249,26 @@ export interface Database {
         Insert: Partial<MessageStarsRow>;
         Update: Partial<MessageStarsRow>;
       } & Relationships;
+      broadcast_lists: {
+        Row: BroadcastListsRow;
+        Insert: Partial<BroadcastListsRow>;
+        Update: Partial<BroadcastListsRow>;
+      } & Relationships;
+      broadcast_list_members: {
+        Row: BroadcastListMembersRow;
+        Insert: Partial<BroadcastListMembersRow>;
+        Update: Partial<BroadcastListMembersRow>;
+      } & Relationships;
+      broadcast_sends: {
+        Row: BroadcastSendsRow;
+        Insert: Partial<BroadcastSendsRow>;
+        Update: Partial<BroadcastSendsRow>;
+      } & Relationships;
+      broadcast_send_targets: {
+        Row: BroadcastSendTargetsRow;
+        Insert: Partial<BroadcastSendTargetsRow>;
+        Update: Partial<BroadcastSendTargetsRow>;
+      } & Relationships;
       message_reactions: {
         Row: MessageReactionsRow;
         Insert: Partial<MessageReactionsRow>;
@@ -269,6 +321,7 @@ export interface Database {
       set_pin: { Args: { p_pin: string }; Returns: void };
       recover_account: { Args: { p_phone: string; p_pin: string }; Returns: boolean };
       delete_self: { Args: Record<string, never>; Returns: void };
+      delete_own_account: { Args: Record<string, never>; Returns: void };
     };
   };
 }
