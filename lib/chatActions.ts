@@ -1,6 +1,12 @@
 import { supabase } from './supabase';
-import { uploadMedia, type PickedAsset } from './media';
-import { SEND_ENCRYPTED, encryptMessageText, getIdentityKeyPair } from './crypto';
+import { readAssetBytes, uploadMediaBytes, type PickedAsset } from './media';
+import {
+  SEND_ENCRYPTED,
+  encryptFileBuffer,
+  encryptMessageText,
+  getIdentityKeyPair,
+  getOrCreateChatKey,
+} from './crypto';
 import type { MessagesRow } from './database.types';
 
 // Math.random-based v4 UUID — good enough for a client-generated primary key
@@ -46,31 +52,59 @@ export async function sendTextMessage(
   return data as MessagesRow;
 }
 
+// Id is generated client-side (like sendTextMessage) so the upload can happen *before* any DB
+// row exists -- if the upload fails, there's simply nothing to insert or clean up, unlike the
+// old flow which created a placeholder message row first and had to explicitly delete it on
+// failure. Also required for encryption: the file key gets wrapped with the chat key, and that
+// wrap's AEAD additional-data binds it to this specific message id (see lib/crypto/media.ts) --
+// something to bind to has to exist before encrypting, and a DB round-trip for it would defeat
+// the point of generating ids client-side in the first place.
 export async function sendMediaMessage(chatId: string, senderId: string, asset: PickedAsset) {
-  const { data: message, error } = await supabase
-    .from('messages')
-    .insert({ chat_id: chatId, sender_id: senderId, body: null })
-    .select()
-    .single();
-  if (error || !message) throw error ?? new Error('Failed to create message');
+  const messageId = generateId();
+  const { asset: prepared, bytes } = await readAssetBytes(asset);
 
-  try {
-    const uploaded = await uploadMedia(chatId, message.id, asset);
-    const { error: mediaError } = await supabase.from('message_media').insert({
-      message_id: message.id,
-      kind: uploaded.kind,
-      storage_path: uploaded.storagePath,
-      width: uploaded.width,
-      height: uploaded.height,
-      duration_seconds: uploaded.durationSeconds,
-      file_name: uploaded.fileName,
-      file_size: uploaded.fileSize,
-    });
-    if (mediaError) throw mediaError;
-  } catch (err) {
-    // Upload failed — remove the empty message rather than leaving a dangling bubble.
-    await supabase.from('messages').delete().eq('id', message.id);
-    throw err;
+  let uploadBytes: ArrayBuffer | Uint8Array = bytes;
+  let keyId: string | null = null;
+  let wrappedKey: string | null = null;
+
+  if (SEND_ENCRYPTED) {
+    const identity = await getIdentityKeyPair();
+    if (identity) {
+      const chatKeyHandle = await getOrCreateChatKey(chatId, senderId, identity);
+      const encrypted = encryptFileBuffer(bytes, chatKeyHandle.key, chatId, messageId, chatKeyHandle.keyId);
+      uploadBytes = encrypted.encryptedBytes;
+      wrappedKey = encrypted.wrappedKey;
+      keyId = chatKeyHandle.keyId;
+    }
+  }
+
+  const uploaded = await uploadMediaBytes(chatId, messageId, prepared, uploadBytes, {
+    encrypted: !!wrappedKey,
+  });
+
+  const { error: messageError } = await supabase
+    .from('messages')
+    .insert({ id: messageId, chat_id: chatId, sender_id: senderId, body: null, key_id: keyId });
+  if (messageError) {
+    await supabase.storage.from('chat-media').remove([uploaded.storagePath]);
+    throw messageError;
+  }
+
+  const { error: mediaError } = await supabase.from('message_media').insert({
+    message_id: messageId,
+    kind: uploaded.kind,
+    storage_path: uploaded.storagePath,
+    width: uploaded.width,
+    height: uploaded.height,
+    duration_seconds: uploaded.durationSeconds,
+    file_name: uploaded.fileName,
+    file_size: uploaded.fileSize,
+    wrapped_key: wrappedKey,
+  });
+  if (mediaError) {
+    await supabase.from('messages').delete().eq('id', messageId);
+    await supabase.storage.from('chat-media').remove([uploaded.storagePath]);
+    throw mediaError;
   }
 }
 

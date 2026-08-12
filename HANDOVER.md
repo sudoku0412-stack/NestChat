@@ -91,10 +91,41 @@ rationale. Key decisions locked in with the user:
   encrypted text message apart from a media-placeholder row and would silently never notify for
   encrypted messages). `0020` needs the same "paste in the real service-role JWT before running"
   step as `0017` did.
-- **Not started yet**: Phase 3 (media), Phase 4 (live location + statuses), Phase 5 (iOS
-  Notification Service Extension so push notifications can still say "sent you a GIF" without the
-  server ever reading plaintext — until then, encrypted-message push notifications just say
-  generic "New message"), Phase 6 (polish/hardening).
+- **Phase 3 (media encryption) — done, no new migration needed** (`message_media.wrapped_key` and
+  `messages.key_id` already existed from `0018`). Envelope-encryption design: each file gets its
+  own random 32-byte key, encrypted with `lib/crypto/media.ts`'s `encryptFileBuffer` (single-shot
+  AEAD over the whole buffer, not streamed — see the `crypto_secretstream` gotcha above), and
+  *that* file key is wrapped with the chat's own symmetric key (not per-member -- anyone who
+  already has the chat key can unwrap it), stored base64 in `message_media.wrapped_key`. The
+  message's own `key_id` column records which chat key did the wrapping, purely so history stays
+  decryptable after a key rotation, even though a pure-media message has no text `ciphertext`.
+  - `chatActions.sendMediaMessage` rewritten: generates the message id client-side (like
+    `sendTextMessage` always has), uploads *before* any DB row exists (nothing to clean up on a
+    failed upload — the old flow's placeholder-message-then-delete-on-failure dance is gone), then
+    inserts `messages` + `message_media` together.
+  - `lib/media.ts` split into `readAssetBytes` / `uploadMediaBytes` so `sendMediaMessage` can slot
+    an encryption step in between; `uploadMedia` still exists as a thin wrapper of the two for any
+    future plaintext-only caller.
+  - New `lib/crypto/mediaCache.ts` + `lib/hooks/useDecryptedMediaUri.ts`: downloads, decrypts, and
+    caches to a local file (`expo-file-system`'s new `File`/`Directory` class API, not the
+    deprecated string-based one) on first access; legacy plaintext rows (`wrapped_key` null) still
+    just get a signed URL, unchanged. `MediaTile`, `media-viewer.tsx`, `media-gallery/[chatId].tsx`
+    all swapped from `useSignedUrl` (now dead, deleted) to this hook.
+  - Opening a decrypted document needed a new dependency, **`expo-sharing`** (installed this
+    session — `expo prebuild -p ios` again, which means re-doing the usual wipe-checklist: build
+    number, `UIBackgroundModes`, Push Notifications capability). A decrypted document is a local
+    `file://` URI, which `Linking.openURL` doesn't handle; legacy plaintext documents are still a
+    remote signed URL, which `Sharing.shareAsync` can't open directly -- both `MediaTile` and
+    `media-gallery` branch on the URL's scheme to pick the right one.
+  - **Known, accepted UX regression** (per the user's own household-scale tradeoff): videos fully
+    download-and-decrypt before playback starts, no streaming decrypt -- same limitation as no
+    `crypto_secretstream`.
+  - **Not yet verified on a real device** -- the Giphy GIF/sticker send path in particular
+    (fetch remote URL → encrypt → upload) only has mock-level test coverage right now.
+- **Not started yet**: Phase 4 (live location + statuses), Phase 5 (iOS Notification Service
+  Extension so push notifications can still say "sent you a GIF" without the server ever reading
+  plaintext — until then, encrypted-message push notifications just say generic "New message"),
+  Phase 6 (polish/hardening).
 
 **Gotcha specific to this feature**: `react-native-libsodium`'s exposed API (this version) does
 NOT include `crypto_secretstream`/`crypto_pwhash` on native (only "with loadSumoVersion" on web).

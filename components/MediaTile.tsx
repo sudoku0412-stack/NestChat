@@ -8,15 +8,19 @@ import {
   type GestureResponderEvent,
 } from 'react-native';
 import { Image } from 'expo-image';
+import * as Sharing from 'expo-sharing';
 import { router } from 'expo-router';
-import { useSignedUrl } from '../lib/hooks/useSignedUrl';
+import { useDecryptedMediaUri } from '../lib/hooks/useDecryptedMediaUri';
 import { colors, radius, space } from '../lib/theme';
 import { useAccentTheme } from '../lib/accentTheme';
 import type { MessageMediaRow } from '../lib/database.types';
 
 interface MediaTileProps {
   media: MessageMediaRow;
+  chatId: string;
   messageId: string;
+  keyId: string | null;
+  myUserId: string | null;
   ownMessage: boolean;
   // MediaTile is itself a Pressable (tap opens the media viewer / document), nested inside
   // MessageBubble's own Pressable (tap-and-hold to react/reply/etc). RN's gesture responder
@@ -32,8 +36,21 @@ function formatFileSize(bytes: number | null) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function MediaTile({ media, messageId, ownMessage, onLongPress }: MediaTileProps) {
-  const url = useSignedUrl(media.storage_path);
+// A decrypted document lives at a local file:// URI, which Linking.openURL doesn't handle well
+// (it's built for web URLs / registered schemes) -- expo-sharing's share sheet does, and also
+// covers the "which app opens this" step Linking.openURL used to skip for legacy plaintext rows.
+// Legacy rows are still a remote https signed URL, which Sharing can't open directly, so those
+// keep going through Linking.openURL exactly as before.
+async function openDocument(url: string) {
+  if (url.startsWith('file://')) {
+    if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(url);
+  } else {
+    Linking.openURL(url);
+  }
+}
+
+export function MediaTile({ media, chatId, messageId, keyId, myUserId, ownMessage, onLongPress }: MediaTileProps) {
+  const url = useDecryptedMediaUri(media, chatId, messageId, keyId, myUserId);
   const { colors: accentColors } = useAccentTheme();
 
   function handleLongPress(e: GestureResponderEvent) {
@@ -44,7 +61,7 @@ export function MediaTile({ media, messageId, ownMessage, onLongPress }: MediaTi
     return (
       <Pressable
         style={styles.documentTile}
-        onPress={() => url && Linking.openURL(url)}
+        onPress={() => url && openDocument(url)}
         onLongPress={handleLongPress}
         disabled={!url}
       >

@@ -100,13 +100,7 @@ export interface UploadedMedia {
   fileSize?: number;
 }
 
-export async function uploadMedia(
-  chatId: string,
-  messageId: string,
-  rawAsset: PickedAsset
-): Promise<UploadedMedia> {
-  const asset = await prepareForUpload(rawAsset);
-
+function extensionAndContentType(asset: PickedAsset): { extension: string; contentType: string } {
   const isGifLike = asset.kind === 'gif' || asset.kind === 'sticker';
   let extension = asset.kind === 'video' ? 'mp4' : isGifLike ? 'gif' : 'jpg';
   let contentType = asset.kind === 'video' ? 'video/mp4' : isGifLike ? 'image/gif' : 'image/jpeg';
@@ -114,14 +108,37 @@ export async function uploadMedia(
     extension = asset.fileName?.split('.').pop() || 'bin';
     contentType = asset.mimeType || 'application/octet-stream';
   }
+  return { extension, contentType };
+}
+
+// Split out from uploadMedia so chatActions.sendMediaMessage can insert an encryption step
+// between "read the (possibly resized) file's bytes" and "upload it" -- resize must still happen
+// on the plaintext image, so prepareForUpload runs here, before any encryption.
+export async function readAssetBytes(rawAsset: PickedAsset): Promise<{ asset: PickedAsset; bytes: ArrayBuffer }> {
+  const asset = await prepareForUpload(rawAsset);
+  const response = await fetch(asset.uri);
+  const bytes = await response.arrayBuffer();
+  return { asset, bytes };
+}
+
+export async function uploadMediaBytes(
+  chatId: string,
+  messageId: string,
+  asset: PickedAsset,
+  bytes: ArrayBuffer | Uint8Array,
+  opts: { encrypted?: boolean } = {}
+): Promise<UploadedMedia> {
+  let { extension, contentType } = extensionAndContentType(asset);
+  if (opts.encrypted) {
+    // Encrypted bytes aren't a valid image/video/whatever anymore -- labeling them as such would
+    // be actively misleading (and some CDNs/proxies sniff content-type to "help", which is the
+    // last thing ciphertext needs).
+    extension = `${extension}.enc`;
+    contentType = 'application/octet-stream';
+  }
   const path = `${chatId}/${messageId}/${Date.now()}.${extension}`;
 
-  const response = await fetch(asset.uri);
-  const arrayBuffer = await response.arrayBuffer();
-
-  const { error } = await supabase.storage.from('chat-media').upload(path, arrayBuffer, {
-    contentType,
-  });
+  const { error } = await supabase.storage.from('chat-media').upload(path, bytes, { contentType });
   if (error) throw error;
 
   return {
@@ -133,6 +150,15 @@ export async function uploadMedia(
     fileName: asset.fileName,
     fileSize: asset.fileSize,
   };
+}
+
+export async function uploadMedia(
+  chatId: string,
+  messageId: string,
+  rawAsset: PickedAsset
+): Promise<UploadedMedia> {
+  const { asset, bytes } = await readAssetBytes(rawAsset);
+  return uploadMediaBytes(chatId, messageId, asset, bytes);
 }
 
 export async function getSignedMediaUrl(path: string): Promise<string | null> {

@@ -468,6 +468,7 @@ export default function ThreadScreen() {
                 }}
                 onReactionPress={(emoji) => reactToMessage(item.id, emoji)}
                 pendingMediaCount={isLastOwnWithMedia ? pendingCount : 0}
+                myUserId={profile?.id ?? null}
               />
             );
           }}

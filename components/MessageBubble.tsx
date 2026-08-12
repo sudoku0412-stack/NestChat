@@ -49,6 +49,7 @@ interface MessageBubbleProps {
   onLongPress?: (y: number) => void;
   onReactionPress?: (emoji: string) => void;
   pendingMediaCount?: number;
+  myUserId: string | null;
 }
 
 export function MessageBubble({
@@ -62,6 +63,7 @@ export function MessageBubble({
   onLongPress,
   onReactionPress,
   pendingMediaCount = 0,
+  myUserId,
 }: MessageBubbleProps) {
   const isDeleted = !!message.deleted_at;
   const { colors: accentColors } = useAccentTheme();
@@ -101,7 +103,10 @@ export function MessageBubble({
             <MediaTile
               key={m.id}
               media={m}
+              chatId={message.chat_id}
               messageId={message.id}
+              keyId={message.key_id}
+              myUserId={myUserId}
               ownMessage={isOwn}
               onLongPress={onLongPress}
             />

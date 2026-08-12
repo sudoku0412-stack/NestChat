@@ -1,10 +1,12 @@
 import { chainable, type RecordedCall } from './testUtils/chain';
 
-jest.mock('./supabase', () => ({ supabase: { from: jest.fn() } }));
-jest.mock('./media', () => ({ uploadMedia: jest.fn() }));
+jest.mock('./supabase', () => ({
+  supabase: { from: jest.fn(), storage: { from: jest.fn(() => ({ remove: jest.fn().mockResolvedValue({}) })) } },
+}));
+jest.mock('./media', () => ({ readAssetBytes: jest.fn(), uploadMediaBytes: jest.fn() }));
 
 import { supabase } from './supabase';
-import { uploadMedia } from './media';
+import { readAssetBytes, uploadMediaBytes } from './media';
 import { generateId, sendMediaMessage, sendTextMessage, softDeleteMessage } from './chatActions';
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -62,64 +64,89 @@ describe('sendMediaMessage', () => {
   afterEach(() => jest.resetAllMocks());
 
   const asset = { uri: 'file://photo.jpg', kind: 'photo' as const };
+  const bytes = new ArrayBuffer(8);
 
-  it('creates a placeholder message, uploads, then records the media row', async () => {
-    const message = { id: 'msg-2' };
+  beforeEach(() => {
+    (readAssetBytes as jest.Mock).mockResolvedValue({ asset, bytes });
+  });
+
+  it('reads bytes, uploads, then records the message and media rows with the same id', async () => {
     const messagesCalls: RecordedCall[] = [];
     const mediaCalls: RecordedCall[] = [];
 
     (supabase.from as jest.Mock).mockImplementation((table: string) => {
-      if (table === 'messages') return chainable({ data: message, error: null }, messagesCalls);
+      if (table === 'messages') return chainable({ data: null, error: null }, messagesCalls);
       return chainable({ data: null, error: null }, mediaCalls);
     });
-    (uploadMedia as jest.Mock).mockResolvedValue({
+    (uploadMediaBytes as jest.Mock).mockResolvedValue({
       kind: 'photo',
-      storagePath: 'chat-1/msg-2/123.jpg',
+      storagePath: 'chat-1/msg-x/123.jpg',
       width: 100,
       height: 100,
     });
 
     await sendMediaMessage('chat-1', 'user-1', asset);
 
-    expect(uploadMedia).toHaveBeenCalledWith('chat-1', 'msg-2', asset);
+    expect(readAssetBytes).toHaveBeenCalledWith(asset);
+    const uploadCall = (uploadMediaBytes as jest.Mock).mock.calls[0];
+    const [uploadChatId, uploadMessageId, uploadAsset, uploadedBytes, uploadOpts] = uploadCall;
+    expect(uploadChatId).toBe('chat-1');
+    expect(uploadAsset).toBe(asset);
+    expect(uploadedBytes).toBe(bytes); // no identity key in this test's keychain -> plaintext
+    expect(uploadOpts).toEqual({ encrypted: false });
+
+    const insertMessageCall = messagesCalls.find((c) => c.method === 'insert')!;
+    expect(insertMessageCall.args[0]).toMatchObject({
+      id: uploadMessageId,
+      chat_id: 'chat-1',
+      sender_id: 'user-1',
+      body: null,
+      key_id: null,
+    });
+
     const insertMediaCall = mediaCalls.find((c) => c.method === 'insert')!;
     expect(insertMediaCall.args[0]).toMatchObject({
-      message_id: 'msg-2',
+      message_id: uploadMessageId,
       kind: 'photo',
-      storage_path: 'chat-1/msg-2/123.jpg',
+      storage_path: 'chat-1/msg-x/123.jpg',
+      wrapped_key: null,
     });
   });
 
-  it('deletes the placeholder message and rethrows if the upload fails', async () => {
-    const message = { id: 'msg-3' };
-    const messagesCalls: RecordedCall[] = [];
-
-    (supabase.from as jest.Mock).mockImplementation((table: string) => {
-      if (table === 'messages') return chainable({ data: message, error: null }, messagesCalls);
-      return chainable({ data: null, error: null });
-    });
-    (uploadMedia as jest.Mock).mockRejectedValue(new Error('upload failed'));
+  it('rethrows if the upload fails, without touching the messages table', async () => {
+    (uploadMediaBytes as jest.Mock).mockRejectedValue(new Error('upload failed'));
 
     await expect(sendMediaMessage('chat-1', 'user-1', asset)).rejects.toThrow('upload failed');
-
-    const deleteCall = messagesCalls.find((c) => c.method === 'delete');
-    expect(deleteCall).toBeDefined();
-    const eqCall = messagesCalls.find((c) => c.method === 'eq' && c.args[1] === 'msg-3');
-    expect(eqCall).toBeDefined();
+    expect(supabase.from).not.toHaveBeenCalledWith('messages');
   });
 
-  it('deletes the placeholder message and throws if recording the media row fails', async () => {
-    const message = { id: 'msg-4' };
+  it('removes the uploaded file and rethrows if inserting the message row fails', async () => {
     const messagesCalls: RecordedCall[] = [];
-
+    const removeMock = jest.fn().mockResolvedValue({});
+    (supabase.storage.from as jest.Mock).mockReturnValue({ remove: removeMock });
     (supabase.from as jest.Mock).mockImplementation((table: string) => {
-      if (table === 'messages') return chainable({ data: message, error: null }, messagesCalls);
+      if (table === 'messages') return chainable({ data: null, error: new Error('message insert failed') }, messagesCalls);
+      return chainable({ data: null, error: null });
+    });
+    (uploadMediaBytes as jest.Mock).mockResolvedValue({ kind: 'photo', storagePath: 'chat-1/msg-y/x.jpg' });
+
+    await expect(sendMediaMessage('chat-1', 'user-1', asset)).rejects.toThrow('message insert failed');
+    expect(removeMock).toHaveBeenCalledWith(['chat-1/msg-y/x.jpg']);
+  });
+
+  it('deletes the message row and removes the uploaded file if recording the media row fails', async () => {
+    const messagesCalls: RecordedCall[] = [];
+    const removeMock = jest.fn().mockResolvedValue({});
+    (supabase.storage.from as jest.Mock).mockReturnValue({ remove: removeMock });
+    (supabase.from as jest.Mock).mockImplementation((table: string) => {
+      if (table === 'messages') return chainable({ data: null, error: null }, messagesCalls);
       return chainable({ data: null, error: new Error('media insert failed') });
     });
-    (uploadMedia as jest.Mock).mockResolvedValue({ kind: 'photo', storagePath: 'x' });
+    (uploadMediaBytes as jest.Mock).mockResolvedValue({ kind: 'photo', storagePath: 'chat-1/msg-z/x.jpg' });
 
     await expect(sendMediaMessage('chat-1', 'user-1', asset)).rejects.toThrow('media insert failed');
     expect(messagesCalls.some((c) => c.method === 'delete')).toBe(true);
+    expect(removeMock).toHaveBeenCalledWith(['chat-1/msg-z/x.jpg']);
   });
 });
 

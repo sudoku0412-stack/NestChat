@@ -89,7 +89,8 @@
           "locationWhenInUsePermission": "NestChat uses your location to share it in a chat.",
           "isAndroidBackgroundLocationEnabled": true
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true

@@ -12,20 +12,32 @@ import {
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
+import * as Sharing from 'expo-sharing';
 import { useAuth } from '../../../lib/auth';
 import { supabase } from '../../../lib/supabase';
-import { useSignedUrl } from '../../../lib/hooks/useSignedUrl';
+import { useDecryptedMediaUri } from '../../../lib/hooks/useDecryptedMediaUri';
 import { colors, fontWeight, space } from '../../../lib/theme';
 import { useAccentTheme } from '../../../lib/accentTheme';
 import type { MessageMediaRow } from '../../../lib/database.types';
 
-type GalleryItem = MessageMediaRow & { message_id: string; sender_id: string };
+type GalleryItem = MessageMediaRow & { message_id: string; chat_id: string; sender_id: string; key_id: string | null };
 
 const COLUMNS = 3;
 const TILE_SIZE = Dimensions.get('window').width / COLUMNS;
 
-function GridTile({ item, ownMessage }: { item: GalleryItem; ownMessage: boolean }) {
-  const url = useSignedUrl(item.storage_path);
+// Same reasoning as MediaTile's openDocument: a decrypted document is a local file:// URI, which
+// Sharing handles and Linking.openURL doesn't; legacy plaintext rows are still a remote signed
+// URL, which only Linking.openURL can open.
+async function openDocument(url: string) {
+  if (url.startsWith('file://')) {
+    if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(url);
+  } else {
+    Linking.openURL(url);
+  }
+}
+
+function GridTile({ item, ownMessage, myUserId }: { item: GalleryItem; ownMessage: boolean; myUserId: string | null }) {
+  const url = useDecryptedMediaUri(item, item.chat_id, item.message_id, item.key_id, myUserId);
   const { colors: accentColors } = useAccentTheme();
   return (
     <Pressable
@@ -49,10 +61,10 @@ function GridTile({ item, ownMessage }: { item: GalleryItem; ownMessage: boolean
   );
 }
 
-function DocumentRow({ item }: { item: GalleryItem }) {
-  const url = useSignedUrl(item.storage_path);
+function DocumentRow({ item, myUserId }: { item: GalleryItem; myUserId: string | null }) {
+  const url = useDecryptedMediaUri(item, item.chat_id, item.message_id, item.key_id, myUserId);
   return (
-    <Pressable style={styles.documentRow} onPress={() => url && Linking.openURL(url)} disabled={!url}>
+    <Pressable style={styles.documentRow} onPress={() => url && openDocument(url)} disabled={!url}>
       <Text style={styles.documentGlyph}>📄</Text>
       <Text style={styles.documentName} numberOfLines={1}>
         {item.file_name || 'Document'}
@@ -72,14 +84,16 @@ export default function MediaGalleryScreen() {
   useEffect(() => {
     supabase
       .from('message_media')
-      .select('*, messages!inner(chat_id, sender_id)')
+      .select('*, messages!inner(chat_id, sender_id, key_id)')
       .eq('messages.chat_id', chatId)
       .order('created_at', { ascending: false })
       .then(({ data }) => {
         const rows = (data ?? []).map((row: any) => ({
           ...row,
           message_id: row.message_id,
+          chat_id: row.messages.chat_id,
           sender_id: row.messages.sender_id,
+          key_id: row.messages.key_id,
         }));
         setItems(rows);
         setLoading(false);
@@ -122,14 +136,14 @@ export default function MediaGalleryScreen() {
                 numColumns={COLUMNS}
                 scrollEnabled={false}
                 renderItem={({ item: media }) => (
-                  <GridTile item={media} ownMessage={media.sender_id === profile?.id} />
+                  <GridTile item={media} ownMessage={media.sender_id === profile?.id} myUserId={profile?.id ?? null} />
                 )}
               />
             ) : (
               <View style={styles.documentsSection}>
                 <Text style={styles.sectionLabel}>Documents</Text>
                 {documents.map((doc) => (
-                  <DocumentRow key={doc.id} item={doc} />
+                  <DocumentRow key={doc.id} item={doc} myUserId={profile?.id ?? null} />
                 ))}
               </View>
             )

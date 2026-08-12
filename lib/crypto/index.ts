@@ -1,5 +1,6 @@
 import { ensureIdentityKeyPair, wipeIdentityKeyPair, type IdentityKeyPair } from './keys';
 import { publishPublicKeyIfNeeded } from './registry';
+import { purgeDecryptedMediaCache } from './mediaCache';
 
 export { SEND_ENCRYPTED } from './config';
 export { isEncryptedRow } from './envelope';
@@ -8,6 +9,8 @@ export type { IdentityKeyPair } from './keys';
 export { getOrCreateChatKey, rewrapChatKeyForMembers, rotateChatKeyOnRemoval } from './chatKeys';
 export { encryptMessageText, decryptMessageText } from './message';
 export { decryptTextField } from './decryptRow';
+export { encryptFileBuffer, decryptFileBuffer } from './media';
+export { getDecryptedMediaUri, purgeDecryptedMediaCache } from './mediaCache';
 
 // Call once per app session after the user is known (onboarding completion, sign-in, recovery)
 // -- generates a device identity keypair if one doesn't exist yet and publishes the public half.
@@ -25,4 +28,5 @@ export async function initializeCrypto(userId: string): Promise<IdentityKeyPair>
 // co-member's device rewraps history for the new key -- "social recovery", see the E2EE plan).
 export async function clearCryptoState(): Promise<void> {
   await wipeIdentityKeyPair();
+  purgeDecryptedMediaCache();
 }

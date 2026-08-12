@@ -7,7 +7,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { getSignedMediaUrl } from '../../lib/media';
 import { softDeleteMessage } from '../../lib/chatActions';
-import { decryptTextField, isEncryptedRow } from '../../lib/crypto';
+import { decryptTextField, getDecryptedMediaUri, isEncryptedRow } from '../../lib/crypto';
 import { useAuth } from '../../lib/auth';
 import { colors, fontWeight, space } from '../../lib/theme';
 import { useAccentTheme } from '../../lib/accentTheme';
@@ -49,8 +49,19 @@ export default function MediaViewerScreen() {
 
       if (media) {
         setKind(media.kind);
-        const signed = await getSignedMediaUrl(media.storage_path);
-        setUrl(signed);
+        const resolved =
+          media.wrapped_key && message?.key_id && profile?.id
+            ? await getDecryptedMediaUri({
+                mediaId: media.id,
+                storagePath: media.storage_path,
+                wrappedKey: media.wrapped_key,
+                chatId: message.chat_id,
+                messageId,
+                keyId: message.key_id,
+                myUserId: profile.id,
+              })
+            : await getSignedMediaUrl(media.storage_path);
+        setUrl(resolved);
       }
       if (message) {
         const caption = isEncryptedRow(message)
