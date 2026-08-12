@@ -10,7 +10,7 @@ import { ThemeModeProvider, useThemeMode } from '../lib/themeMode';
 import '../lib/locationTask';
 
 function Shell() {
-  const { bg } = useThemeMode();
+  const { bg, resolvedGround } = useThemeMode();
   const [fontsLoaded] = useFonts({ Fraunces_600SemiBold });
 
   if (!fontsLoaded) {
@@ -20,7 +20,9 @@ function Shell() {
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: bg }}>
       <SafeAreaProvider>
-        <StatusBar style="light" />
+        {/* Status bar text/icon color reads against the app's own ground, not the OS's --
+            light text on the dark ground, dark text on the light one. */}
+        <StatusBar style={resolvedGround === 'dark' ? 'light' : 'dark'} />
         <Slot />
       </SafeAreaProvider>
     </GestureHandlerRootView>

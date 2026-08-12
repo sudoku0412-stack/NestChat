@@ -5,17 +5,21 @@ interface AvatarProps {
   name: string;
   avatarUrl?: string | null;
   size?: number;
+  /** Adds a border in this color — used by GroupAvatarStack so overlapping avatars visually
+   * separate from each other instead of their edges just touching. */
+  ringColor?: string;
 }
 
-export function Avatar({ name, avatarUrl, size = 44 }: AvatarProps) {
+export function Avatar({ name, avatarUrl, size = 44, ringColor }: AvatarProps) {
   const style = { width: size, height: size, borderRadius: size / 2 };
+  const ringStyle = ringColor ? { borderWidth: 1.5, borderColor: ringColor } : null;
 
   if (avatarUrl) {
-    return <Image source={{ uri: avatarUrl }} style={[styles.image, style]} />;
+    return <Image source={{ uri: avatarUrl }} style={[styles.image, style, ringStyle]} />;
   }
 
   return (
-    <View style={[styles.container, style, { backgroundColor: colorForName(name) }]}>
+    <View style={[styles.container, style, { backgroundColor: colorForName(name) }, ringStyle]}>
       <Text style={[styles.initials, { fontSize: size * 0.38 }]}>{initials(name)}</Text>
     </View>
   );
@@ -38,7 +42,7 @@ export function GroupAvatarStack({ members, size = 44 }: { members: { display_na
             top: i * offset,
           }}
         >
-          <Avatar name={m.display_name} avatarUrl={m.avatar_url} size={stackSize} />
+          <Avatar name={m.display_name} avatarUrl={m.avatar_url} size={stackSize} ringColor={colors.bg} />
         </View>
       ))}
     </View>

@@ -15,12 +15,12 @@
     },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "automatic",
     "backgroundColor": "#161826",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.nestchat.app",
-      "buildNumber": "6",
+      "buildNumber": "7",
       "infoPlist": {
         "NSCameraUsageDescription": "NestChat uses your camera to attach photos and videos to messages.",
         "NSPhotoLibraryUsageDescription": "NestChat uses your photo library to attach photos and videos to messages.",
