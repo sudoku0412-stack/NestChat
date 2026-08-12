@@ -10,7 +10,7 @@ alter table public.users add column if not exists deleted_at timestamptz;
 
 -- Internal only (not granted to anyone directly) -- walks every table FK'd to users.id that
 -- would otherwise cascade-delete if the row itself were removed, then scrubs + tombstones it.
-create function public._tombstone_user(target_id uuid)
+create or replace function public._tombstone_user(target_id uuid)
 returns void
 language plpgsql
 security definer
@@ -66,7 +66,7 @@ $$;
 
 -- Self-service deletion. Blocks a sole admin from deleting themselves into a headless
 -- household -- same "at least one admin must exist" spirit as 0001's original setup.
-create function public.delete_own_account()
+create or replace function public.delete_own_account()
 returns void
 language plpgsql
 security definer
