@@ -1,6 +1,6 @@
 # NestChat — Handover
 
-Last updated: 2026-08-11 (end of session)
+Last updated: 2026-08-11 (end of session — E2EE Phase 3 just landed, not yet TestFlight-tested)
 
 ## What this is
 
@@ -145,21 +145,30 @@ test coverage; it does not validate the actual native library, which Phase 0's d
 
 - Repo: https://github.com/sudoku0412-stack/NestChat (private)
 - Supabase project: `sudoku0412-stack's Org / NestChat` (project ref `hfmjigdtmjbgyqcnneqt`)
-- **App version 2.0.0, build 4** (`app.json` / `ios/NestChat.xcodeproj` / `ios/NestChat/Info.plist`
-  — all three must stay in sync; see the recurring gotcha below about `expo prebuild` wiping the
-  build number back down). **Build 4 has not yet been archived/uploaded** — that's the immediate
-  next step, see below.
-- All of this session's work (commit `7001938`, "Hearth redesign, PIN account recovery, chat
-  overhaul, accent theming") is **committed and pushed to `origin/master`** as of 2026-08-04. Tests
-  (79/79) and `tsc --noEmit` were clean at push time.
+- **App version 2.0.0, build 4** in `app.json` still (unchanged all session) — `ios/NestChat.xcodeproj`
+  / `ios/NestChat/Info.plist` must stay in sync with it (see the recurring `expo prebuild`-wipes
+  gotcha below). **A huge amount of code has landed since build 4 was last discussed** (all of
+  E2EE Phases 0–3, reactions, GIF/sticker picker, notification fixes) with zero TestFlight
+  validation yet — bump the build number before archiving this time.
+- Everything through this session is **committed and pushed to `origin/master`**, latest commit
+  `6eb1d0a` ("E2EE Phase 3: media encryption"). Tests (102/102) and `tsc --noEmit` clean at push
+  time. `git log --oneline` from there back covers the full session if more context is needed.
 - Auth: **anonymous auth + typed-in phone number**, not real OTP, now with **PIN-based account
   recovery** (migrations `0006`–`0008`) so signing out or reinstalling doesn't lose your identity
   — see "This session's work" below for the full story of why that took 3 migrations to get right.
-- **15 migrations total** (`0001`–`0015`). `0001`–`0013` are already run against the live Supabase
-  project. **`0014_message_reactions.sql` and `0015_gif_media_kind.sql` are new this session and
-  have NOT been run against the live project yet** — run those before the emoji-reaction / GIF
-  features will work end-to-end. If resuming from a git checkout on a different machine, diff
-  `supabase/migrations/` against what's actually live before assuming anything is applied.
+- **20 migrations total** (`0001`–`0020`). `0001`–`0013` are confirmed run against the live
+  Supabase project. **Status of `0014`–`0020` is the main thing to verify at the start of the next
+  session** — the user was actively running these throughout this session (confirmed: `0014`
+  re-run idempotently after a partial first attempt, `0015`, `0016`, the two `notify_send_push`-
+  related trigger-function migrations `0017`/`0020` with the real service-role JWT pasted in by the
+  user each time). `0018` (E2EE key tables), `0019` (`get_chat_list()` enc columns) should also be
+  in by now but re-confirm — **don't assume; check `supabase migration list` or query the tables
+  directly**. If resuming from a git checkout on a different machine, diff `supabase/migrations/`
+  against what's actually live before assuming anything is applied.
+- Two Database Webhooks were added this session beyond the original `messages` one:
+  `message_media` INSERT and `message_reactions` INSERT+UPDATE, both → the `send-push` edge
+  function (found under **Database → Triggers** in the current dashboard UI, not a separate
+  "Webhooks" page — that moved/was renamed at some point after this app's original setup).
 - **Message reactions** (WhatsApp-style long-press emoji bar, 👍❤️😂😮😢🙏 + a "+" opening a full
   emoji grid via `components/EmojiPickerModal.tsx`) — `supabase/migrations/0014_message_reactions.sql`,
   `lib/chatActions.ts`'s `setMessageReaction`/`clearMessageReaction`, wired through `useMessages`
@@ -206,21 +215,31 @@ test coverage; it does not validate the actual native library, which Phase 0's d
   starred-messages count, **custom per-user-per-chat photo wallpaper**, "create group with this
   person," and "clear chat" (hides messages from your view only — never deletes the other side's
   copy).
-- **Jest test suite** (`npm test`, 79 tests / 9 suites, all passing as of this session) + `npx tsc
-  --noEmit`. A husky pre-push hook runs both before every `git push`. Neither covers
-  native/device-only behavior — that still needs manual on-device QA, which for this project means
-  a TestFlight round-trip (see above).
+- **Jest test suite** (`npm test`, **102 tests / 15 suites**, all passing as of this session,
+  `npx tsc --noEmit` clean) + a husky pre-push hook running both before every `git push`. Neither
+  covers native/device-only behavior — that still needs manual on-device QA, which for this
+  project means a TestFlight round-trip (see above). **None of this session's E2EE work (Phases
+  0–3) has been through a TestFlight build yet** — that's the actual next step, see below.
 
 ## Immediate next step for whoever picks this up
 
-1. **Archive and upload build 4.** Push Notifications capability confirmed re-added in Xcode
-   (Signing & Capabilities) as of 2026-08-04. Next: Product → Archive → Distribute App → App Store
-   Connect.
-2. Once installed, **verify the App theme color picker actually works** (Settings → App theme
-   color → drag hue slider or type a hex → Save). This was broken all session due to a stale-closure
-   bug in `lib/accentTheme.tsx` (fixed, see gotchas below) — confirm the fix actually landed rather
-   than assuming.
-3. Decide on the **OTA setup** question above — finish it or drop it, don't leave it half-done.
+1. **Confirm the pending migrations are actually live** (see the migrations bullet above) before
+   assuming any E2EE code will work — `0018`/`0019`/`0020` in particular.
+2. **Archive and upload a new build**, then get it onto every household member's device **at the
+   same time** — this is the important one, spelled out in the E2EE section above: an older build
+   renders an encrypted message as a blank bubble. Bump the build number in `app.json` first (it's
+   been a while since the last archive — check what's actually live in App Store Connect before
+   assuming the current `app.json` number hasn't already been used).
+3. **This build also needs a fresh `expo prebuild -p ios`** (new native deps landed this session:
+   `react-native-libsodium`, `react-native-keychain`, `expo-sharing`) — re-run the full
+   prebuild-wipes checklist below (build number, `UIBackgroundModes`, Push Notifications
+   capability) after prebuilding, before archiving.
+4. **Verify end-to-end on-device** per the E2EE section's checklist: send/receive text, a photo, a
+   GIF/sticker, open a document, play a video (expect a brief full-download pause — that's
+   accepted, not a bug), confirm `message_media.wrapped_key` populates in the dashboard for a new
+   photo send.
+5. Only after that's confirmed working: pick up **Phase 4 (live location + statuses encryption)**
+   — see the E2EE section's plan-doc reference for the design.
 4. Original TestFlight distribution setup (External Testing group, Beta App Review) — this was
    completed in an earlier session; if starting fresh on a new Apple account this whole section
    would need redoing. See git history / this file's own history for the original steps if needed.
