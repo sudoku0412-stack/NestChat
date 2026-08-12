@@ -1,41 +1,59 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { useThemeMode } from '../../lib/themeMode';
+import { useThemeMode, useTheme, type ThemeModeSetting } from '../../lib/themeMode';
 import { useAccentTheme } from '../../lib/accentTheme';
 import { ThemeColorPickerModal } from '../../components/ThemeColorPickerModal';
-import { colors, fontWeight, space } from '../../lib/theme';
+import { ScreenHeader } from '../../components/ScreenHeader';
+import { fontWeight, space } from '../../lib/theme';
+
+const MODE_OPTIONS: { value: ThemeModeSetting; label: string }[] = [
+  { value: 'system', label: 'System' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+];
 
 export default function AppearanceScreen() {
   const insets = useSafeAreaInsets();
-  const { deepGround, setDeepGround, bg } = useThemeMode();
-  const { colors: accentColors, accentHex } = useAccentTheme();
+  const { mode, setMode } = useThemeMode();
+  const theme = useTheme();
+  const { accentHex } = useAccentTheme();
   const [themeModalVisible, setThemeModalVisible] = useState(false);
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: bg }]}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <Text style={styles.back}>‹</Text>
-        </Pressable>
-        <Text style={styles.title}>Appearance</Text>
-        <View style={{ width: 24 }} />
-      </View>
-      <View style={styles.headerRule} />
+    <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: theme.bg }]}>
+      <ScreenHeader title="Appearance" theme={theme} />
 
       <View style={styles.settingRow}>
-        <Text style={styles.settingLabel}>Dark mode</Text>
-        <Switch
-          value={deepGround}
-          onValueChange={setDeepGround}
-          trackColor={{ true: accentColors.accent700, false: colors.neutral800 }}
-          thumbColor={colors.text}
-        />
+        <Text style={[styles.settingLabel, { color: theme.text }]}>Theme</Text>
+        <View style={[styles.modeSeg, { backgroundColor: theme.surface }]}>
+          {MODE_OPTIONS.map((opt) => {
+            const active = mode === opt.value;
+            return (
+              <Pressable
+                key={opt.value}
+                onPress={() => setMode(opt.value)}
+                style={[styles.modeOption, active && { backgroundColor: theme.accent }]}
+              >
+                <Text
+                  style={[
+                    styles.modeOptionLabel,
+                    { color: active ? theme.bg : theme.textMuted },
+                  ]}
+                >
+                  {opt.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
-      <Pressable style={styles.settingRow} onPress={() => setThemeModalVisible(true)}>
-        <Text style={styles.settingLabel}>App theme color</Text>
-        <View style={[styles.themeSwatch, { backgroundColor: accentHex }]} />
+      <Pressable
+        style={[styles.settingRow, { borderBottomColor: theme.divider }]}
+        onPress={() => setThemeModalVisible(true)}
+      >
+        <Text style={[styles.settingLabel, { color: theme.text }]}>App theme color</Text>
+        <View style={[styles.themeSwatch, { backgroundColor: accentHex, borderColor: theme.divider }]} />
       </Pressable>
 
       <ThemeColorPickerModal visible={themeModalVisible} onClose={() => setThemeModalVisible(false)} />
@@ -46,28 +64,6 @@ export default function AppearanceScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.bg,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space[6],
-    paddingVertical: space[4],
-  },
-  back: {
-    color: colors.text,
-    fontSize: 28,
-    width: 24,
-  },
-  title: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: fontWeight.medium,
-  },
-  headerRule: {
-    height: 2,
-    backgroundColor: colors.divider,
   },
   settingRow: {
     flexDirection: 'row',
@@ -76,17 +72,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[6],
     paddingVertical: space[4],
     borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
   },
   settingLabel: {
-    color: colors.text,
     fontSize: 15,
+  },
+  modeSeg: {
+    flexDirection: 'row',
+    borderRadius: 999,
+    padding: 3,
+    gap: 2,
+  },
+  modeOption: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  modeOptionLabel: {
+    fontSize: 13,
+    fontWeight: fontWeight.semibold,
   },
   themeSwatch: {
     width: 24,
     height: 24,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.divider,
   },
 });
