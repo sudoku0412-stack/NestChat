@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { useAuth } from '../../../lib/auth';
 import { useStatuses, type StatusGroup } from '../../../lib/hooks/useStatuses';
 import { Avatar } from '../../../components/Avatar';
+import { PlusIcon } from '../../../components/icons';
 import { useAccentTheme } from '../../../lib/accentTheme';
 import { colors, fontWeight, space } from '../../../lib/theme';
 import { useThemeMode } from '../../../lib/themeMode';
@@ -38,10 +39,9 @@ export default function StatusScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Status</Text>
         <Pressable style={styles.addButton} onPress={() => router.push('/(app)/status/new')} hitSlop={8}>
-          <Text style={styles.addGlyph}>＋</Text>
+          <PlusIcon size={20} color={colors.text} />
         </Pressable>
       </View>
-      <View style={styles.headerRule} />
 
       <FlatList
         data={groups}
@@ -62,7 +62,7 @@ export default function StatusScreen() {
                     }}
                     hitSlop={4}
                   >
-                    <Text style={styles.plusGlyph}>+</Text>
+                    <PlusIcon size={13} color={colors.bg} strokeWidth={2.4} />
                   </Pressable>
                 </View>
                 <View style={styles.rowTexts}>
@@ -129,14 +129,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  addGlyph: {
-    color: colors.text,
-    fontSize: 20,
-  },
-  headerRule: {
-    height: 2,
-    backgroundColor: colors.divider,
-  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -167,12 +159,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: colors.bg,
-  },
-  plusGlyph: {
-    color: colors.bg,
-    fontSize: 13,
-    fontWeight: fontWeight.semibold,
-    lineHeight: 14,
   },
   rowTexts: {
     flex: 1,

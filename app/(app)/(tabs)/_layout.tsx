@@ -1,7 +1,7 @@
 import { StyleSheet, View, type ColorValue } from 'react-native';
 import { Tabs } from 'expo-router';
 import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
-import { radius } from '../../../lib/theme';
+import { fontWeight, radius } from '../../../lib/theme';
 import { useAccentTheme } from '../../../lib/accentTheme';
 import { useThemeMode } from '../../../lib/themeMode';
 import { ChatBubbleIcon, GearIcon, StatusRingIcon } from '../../../components/icons';
@@ -42,6 +42,10 @@ export default function TabsLayout() {
           backgroundColor: bg,
           borderTopColor: colors.divider,
         },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: fontWeight.semibold,
+        },
       }}
     >
       <Tabs.Screen
@@ -50,7 +54,7 @@ export default function TabsLayout() {
           title: 'Status',
           tabBarIcon: ({ color, focused }: { color: ColorValue; focused: boolean }) => (
             <AnimatedTabIcon focused={focused} pillColor={colors.accent800}>
-              <StatusRingIcon size={22} color={color as string} />
+              <StatusRingIcon size={22} color={color as string} filled={focused} />
             </AnimatedTabIcon>
           ),
         }}
@@ -61,7 +65,7 @@ export default function TabsLayout() {
           title: 'Chats',
           tabBarIcon: ({ color, focused }: { color: ColorValue; focused: boolean }) => (
             <AnimatedTabIcon focused={focused} pillColor={colors.accent800}>
-              <ChatBubbleIcon size={22} color={color as string} />
+              <ChatBubbleIcon size={22} color={color as string} filled={focused} />
             </AnimatedTabIcon>
           ),
         }}
@@ -72,7 +76,7 @@ export default function TabsLayout() {
           title: 'Settings',
           tabBarIcon: ({ color, focused }: { color: ColorValue; focused: boolean }) => (
             <AnimatedTabIcon focused={focused} pillColor={colors.accent800}>
-              <GearIcon size={22} color={color as string} />
+              <GearIcon size={22} color={color as string} filled={focused} />
             </AnimatedTabIcon>
           ),
         }}

@@ -9,6 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useAccentTheme } from '../lib/accentTheme';
 import { colors, fontWeight } from '../lib/theme';
+import { ArchiveIcon, BellIcon, BellOffIcon, StarIcon, TrashIcon } from './icons';
 
 const LEFT_ACTIONS_WIDTH = 120; // Mute/Unmute + Delete
 const RIGHT_ACTION_WIDTH = 120; // Favorite/Unfavorite + Archive/Unarchive
@@ -122,7 +123,7 @@ export function SwipeableRow({
             closeTo(0, false);
           }}
         >
-          <Text style={styles.actionGlyph}>{favorite ? '★' : '☆'}</Text>
+          <StarIcon size={18} color={colors.text} filled={favorite} />
           <Text style={styles.actionLabel}>{favorite ? 'Unfavorite' : 'Favorite'}</Text>
         </Pressable>
         <Pressable
@@ -132,6 +133,7 @@ export function SwipeableRow({
             closeTo(0, false);
           }}
         >
+          <ArchiveIcon size={18} color={colors.text} />
           <Text style={styles.actionLabel}>{isArchived ? 'Unarchive' : 'Archive'}</Text>
         </Pressable>
       </View>
@@ -144,6 +146,11 @@ export function SwipeableRow({
             closeTo(0, false);
           }}
         >
+          {muted ? (
+            <BellOffIcon size={18} color={colors.text} />
+          ) : (
+            <BellIcon size={18} color={colors.text} />
+          )}
           <Text style={styles.actionLabel}>{muted ? 'Unmute' : 'Mute'}</Text>
         </Pressable>
         <Pressable
@@ -153,6 +160,7 @@ export function SwipeableRow({
             closeTo(0, false);
           }}
         >
+          <TrashIcon size={18} color={colors.text} />
           <Text style={styles.actionLabel}>Delete</Text>
         </Pressable>
       </View>
@@ -189,6 +197,7 @@ const styles = StyleSheet.create({
   action: {
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 3,
     height: '100%',
   },
   actionLabel: {
@@ -196,9 +205,5 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
     fontSize: 13,
     textAlign: 'center',
-  },
-  actionGlyph: {
-    color: colors.text,
-    fontSize: 16,
   },
 });

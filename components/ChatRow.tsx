@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { Avatar, GroupAvatarStack } from './Avatar';
 import { SwipeableRow } from './SwipeableRow';
+import { BellOffIcon, StarIcon } from './icons';
 import { useAccentTheme } from '../lib/accentTheme';
 import { colors, fontWeight, radius, space } from '../lib/theme';
 import type { ChatListItem } from '../lib/types';
@@ -84,8 +85,8 @@ export function ChatRow({
         <View style={styles.middle}>
           <View style={styles.titleLine}>
             <View style={styles.titleRow}>
-              {chat.favorite && <Text style={[styles.favoriteGlyph, { color: accentColors.accent }]}>★</Text>}
-              <Text style={styles.title} numberOfLines={1}>
+              {chat.favorite && <StarIcon size={13} color={accentColors.accent} filled />}
+              <Text style={[styles.title, chat.unreadCount > 0 && styles.titleUnread]} numberOfLines={1}>
                 {chat.title}
               </Text>
             </View>
@@ -98,7 +99,7 @@ export function ChatRow({
             >
               {chat.lastMessagePreview}
             </Text>
-            {chat.muted && <Text style={styles.muteGlyph}>♪̸</Text>}
+            {chat.muted && <BellOffIcon size={13} color={colors.textMuted} />}
             {chat.unreadCount > 0 && (
               <View style={[styles.badge, { backgroundColor: accentColors.accent }]}>
                 <Text style={styles.badgeText}>{chat.unreadCount > 99 ? '99+' : chat.unreadCount}</Text>
@@ -116,10 +117,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: space[6],
-    paddingVertical: space[4],
+    paddingVertical: space[3],
+    marginBottom: space[1],
     gap: space[4],
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
   },
   checkCircle: {
     width: 22,
@@ -149,14 +149,14 @@ const styles = StyleSheet.create({
     gap: space[1],
     flexShrink: 1,
   },
-  favoriteGlyph: {
-    fontSize: 13,
-  },
   title: {
     color: colors.text,
     fontSize: 16,
     fontWeight: fontWeight.medium,
     flexShrink: 1,
+  },
+  titleUnread: {
+    fontWeight: fontWeight.bold,
   },
   timestamp: {
     color: colors.textMuted,
@@ -177,21 +177,17 @@ const styles = StyleSheet.create({
   previewUnread: {
     color: colors.text,
   },
-  muteGlyph: {
-    color: colors.textMuted,
-    fontSize: 12,
-  },
   badge: {
-    borderRadius: radius.sm,
+    borderRadius: radius.full,
     minWidth: 20,
     height: 20,
-    paddingHorizontal: 5,
+    paddingHorizontal: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
   badgeText: {
     color: colors.bg,
     fontSize: 11,
-    fontWeight: fontWeight.semibold,
+    fontWeight: fontWeight.bold,
   },
 });

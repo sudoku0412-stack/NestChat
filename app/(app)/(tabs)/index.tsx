@@ -6,8 +6,9 @@ import { useAuth } from '../../../lib/auth';
 import { useChatList } from '../../../lib/hooks/useChatList';
 import { supabase } from '../../../lib/supabase';
 import { ChatRow } from '../../../components/ChatRow';
+import { CloseIcon, PlusIcon, SearchIcon } from '../../../components/icons';
 import { useAccentTheme } from '../../../lib/accentTheme';
-import { colors, fonts, radius, space } from '../../../lib/theme';
+import { colors, fonts, fontWeight, radius, space } from '../../../lib/theme';
 import { useThemeMode } from '../../../lib/themeMode';
 
 type Filter = 'all' | 'unread' | 'groups' | 'favorites';
@@ -118,7 +119,7 @@ export default function ChatListScreen() {
       {selectMode ? (
         <View style={styles.header}>
           <Pressable onPress={exitSelectMode} hitSlop={8}>
-            <Text style={styles.cancelGlyph}>✕</Text>
+            <CloseIcon size={20} color={colors.text} />
           </Pressable>
           <Text style={styles.selectCount}>{selectedIds.size} selected</Text>
           <View style={styles.headerActions}>
@@ -136,14 +137,8 @@ export default function ChatListScreen() {
       ) : (
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Chats</Text>
-          <View style={styles.headerActions}>
-            <Pressable style={styles.iconButton} onPress={() => router.push('/(app)/members')}>
-              <Text style={styles.icon}>＋</Text>
-            </Pressable>
-          </View>
         </View>
       )}
-      <View style={styles.headerRule} />
 
       <FlatList
         data={filtered}
@@ -152,24 +147,29 @@ export default function ChatListScreen() {
         onRefresh={refresh}
         ListHeaderComponent={
           <View>
-            <TextInput
-              style={styles.search}
-              value={query}
-              onChangeText={setQuery}
-              placeholder="Search chats"
-              placeholderTextColor={colors.textMuted}
-            />
+            <View style={styles.searchRow}>
+              <SearchIcon size={16} color={colors.textMuted} />
+              <TextInput
+                style={styles.search}
+                value={query}
+                onChangeText={setQuery}
+                placeholder="Search chats"
+                placeholderTextColor={colors.textMuted}
+              />
+            </View>
             <View style={styles.chipsRow}>
               {FILTERS.map((f) => (
                 <Pressable
                   key={f.key}
-                  style={[
-                    styles.chip,
-                    filter === f.key && { backgroundColor: accentColors.accent700 },
-                  ]}
+                  style={[styles.chip, filter === f.key && { backgroundColor: accentColors.accent }]}
                   onPress={() => setFilter(f.key)}
                 >
-                  <Text style={[styles.chipLabel, filter === f.key && styles.chipLabelActive]}>
+                  <Text
+                    style={[
+                      styles.chipLabel,
+                      filter === f.key && [styles.chipLabelActive, { color: accentColors.accent100 }],
+                    ]}
+                  >
                     {f.label}
                   </Text>
                 </Pressable>
@@ -204,12 +204,21 @@ export default function ChatListScreen() {
               <Text style={styles.emptyText}>
                 {query || filter !== 'all'
                   ? 'No chats match.'
-                  : 'No chats yet. Tap ＋ to message a household member.'}
+                  : 'No chats yet. Tap the + button to message a household member.'}
               </Text>
             </View>
           ) : null
         }
       />
+
+      {!selectMode && (
+        <Pressable
+          style={[styles.fab, { backgroundColor: accentColors.accent }]}
+          onPress={() => router.push('/(app)/members')}
+        >
+          <PlusIcon size={22} color={accentColors.accent100} />
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -236,20 +245,6 @@ const styles = StyleSheet.create({
     gap: space[4],
     alignItems: 'center',
   },
-  iconButton: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  icon: {
-    color: colors.text,
-    fontSize: 20,
-  },
-  cancelGlyph: {
-    color: colors.text,
-    fontSize: 18,
-  },
   selectCount: {
     color: colors.text,
     fontSize: 15,
@@ -260,17 +255,19 @@ const styles = StyleSheet.create({
   selectActionDanger: {
     color: colors.danger,
   },
-  headerRule: {
-    height: 2,
-    backgroundColor: colors.divider,
-  },
-  search: {
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[2],
     marginHorizontal: space[6],
     marginTop: space[4],
     paddingHorizontal: space[4],
-    paddingVertical: space[3],
     backgroundColor: colors.surface,
     borderRadius: radius.xl,
+  },
+  search: {
+    flex: 1,
+    paddingVertical: space[3],
     color: colors.text,
     fontSize: 15,
   },
@@ -291,7 +288,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   chipLabelActive: {
-    color: colors.text,
+    fontWeight: fontWeight.semibold,
   },
   archivedRow: {
     flexDirection: 'row',
@@ -317,5 +314,20 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textAlign: 'center',
     fontSize: 14,
+  },
+  fab: {
+    position: 'absolute',
+    right: space[6],
+    bottom: space[8],
+    width: 56,
+    height: 56,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
   },
 });
