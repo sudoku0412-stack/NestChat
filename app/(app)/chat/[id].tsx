@@ -43,8 +43,48 @@ import { MessageActionsModal } from '../../../components/MessageActionsModal';
 import { EmojiPickerModal } from '../../../components/EmojiPickerModal';
 import type { GiphyItem } from '../../../lib/giphy';
 import { addRecentEmoji } from '../../../lib/recentEmojis';
+import { ScreenHeader } from '../../../components/ScreenHeader';
+import { BellIcon, BellOffIcon } from '../../../components/icons';
 import { colors, fontWeight, space } from '../../../lib/theme';
 import { useThemeMode } from '../../../lib/themeMode';
+
+// Same-sender messages within this window group into one visual run (tight spacing, tail
+// radius only on the last bubble, sender name only on the first) instead of every message
+// getting an identical, evenly-spaced bubble regardless of how fast they came in.
+const GROUP_WINDOW_MS = 2 * 60 * 1000;
+
+function isSameGroup(a: MessageWithMedia | undefined, b: MessageWithMedia | undefined) {
+  if (!a || !b || a.sender_id !== b.sender_id) return false;
+  return Math.abs(new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) < GROUP_WINDOW_MS;
+}
+
+function isSameDay(aIso: string, bIso: string) {
+  const a = new Date(aIso);
+  const b = new Date(bIso);
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function formatDateChipLabel(iso: string) {
+  const date = new Date(iso);
+  const now = new Date();
+  if (isSameDay(iso, now.toISOString())) return 'Today';
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (isSameDay(iso, yesterday.toISOString())) return 'Yesterday';
+  return date.toLocaleDateString([], {
+    day: 'numeric',
+    month: 'long',
+    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+  });
+}
+
+function DateChip({ label }: { label: string }) {
+  return (
+    <View style={styles.dateChipRow}>
+      <Text style={styles.dateChipText}>{label}</Text>
+    </View>
+  );
+}
 
 function formatLastSeen(iso: string | null) {
   if (!iso) return 'Offline';
@@ -377,34 +417,39 @@ export default function ThreadScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={{ paddingTop: insets.top }}>
-        <View style={styles.header}>
-          <Pressable onPress={() => router.back()} hitSlop={8}>
-            <Text style={styles.back}>‹</Text>
-          </Pressable>
-          <Pressable
-            style={styles.headerCenter}
-            onPress={() => {
-              if (isGroup) router.push(`/(app)/group-info/${id}`);
-              else if (otherMember)
-                router.push({
-                  pathname: '/(app)/contact-info/[id]',
-                  params: { id: otherMember.id, chatId: id },
-                });
-            }}
-          >
-            <Avatar name={title} avatarUrl={isGroup ? null : otherMember?.avatar_url} size={32} />
-            <View style={styles.headerTexts}>
-              <Text style={styles.headerTitle} numberOfLines={1}>
-                {title}
-              </Text>
-              <Text style={styles.headerSubtitle}>{subtitle}</Text>
-            </View>
-          </Pressable>
-          <Pressable onPress={toggleMute} hitSlop={8}>
-            <Text style={styles.muteToggle}>{muted ? '♪̸' : '♪'}</Text>
-          </Pressable>
-        </View>
-        <View style={styles.headerRule} />
+        <ScreenHeader
+          title={title}
+          centerContent={
+            <Pressable
+              style={styles.headerCenter}
+              onPress={() => {
+                if (isGroup) router.push(`/(app)/group-info/${id}`);
+                else if (otherMember)
+                  router.push({
+                    pathname: '/(app)/contact-info/[id]',
+                    params: { id: otherMember.id, chatId: id },
+                  });
+              }}
+            >
+              <Avatar name={title} avatarUrl={isGroup ? null : otherMember?.avatar_url} size={32} />
+              <View style={styles.headerTexts}>
+                <Text style={styles.headerTitle} numberOfLines={1}>
+                  {title}
+                </Text>
+                <Text style={styles.headerSubtitle}>{subtitle}</Text>
+              </View>
+            </Pressable>
+          }
+          right={
+            <Pressable onPress={toggleMute} hitSlop={8}>
+              {muted ? (
+                <BellOffIcon size={20} color={colors.textMuted} />
+              ) : (
+                <BellIcon size={20} color={colors.textMuted} />
+              )}
+            </Pressable>
+          }
+        />
       </View>
 
       {pinnedMessage && (
@@ -439,14 +484,22 @@ export default function ThreadScreen() {
           renderItem={({ item, index }) => {
             const isOwn = item.sender_id === profile?.id;
             const prev = displayMessages[index - 1];
-            const showSenderName = isGroup && !isOwn && (!prev || prev.sender_id !== item.sender_id);
+            const next = displayMessages[index + 1];
+            const showSenderName = isGroup && !isOwn && !isSameGroup(prev, item);
+            const isLastInGroup = !isSameGroup(item, next);
+            const showDateChip = !prev || !isSameDay(prev.created_at, item.created_at);
             const isLastOwnWithMedia = isOwn && index === displayMessages.length - 1;
+
+            const dateChip = showDateChip ? <DateChip label={formatDateChipLabel(item.created_at)} /> : null;
 
             if (item.liveLocation) {
               return (
-                <View style={isOwn ? styles.liveLocationOwn : styles.liveLocationOther}>
-                  <LiveLocationBubble location={item.liveLocation} isOwn={isOwn} />
-                </View>
+                <>
+                  {dateChip}
+                  <View style={isOwn ? styles.liveLocationOwn : styles.liveLocationOther}>
+                    <LiveLocationBubble location={item.liveLocation} isOwn={isOwn} />
+                  </View>
+                </>
               );
             }
 
@@ -458,22 +511,26 @@ export default function ThreadScreen() {
               : null;
 
             return (
-              <MessageBubble
-                message={{ ...item, sender: membersById.get(item.sender_id) }}
-                isOwn={isOwn}
-                showSenderName={showSenderName}
-                showReadReceipts={canSeeReadReceipts}
-                isRead={isReadByOthers(item)}
-                isStarred={starredMessageIds.has(item.id)}
-                replyTo={replyTo}
-                onLongPress={(y) => {
-                  setActionMessage(item);
-                  setActionMenuY(y);
-                }}
-                onReactionPress={(emoji) => reactToMessage(item.id, emoji)}
-                pendingMediaCount={isLastOwnWithMedia ? pendingCount : 0}
-                myUserId={profile?.id ?? null}
-              />
+              <>
+                {dateChip}
+                <MessageBubble
+                  message={{ ...item, sender: membersById.get(item.sender_id) }}
+                  isOwn={isOwn}
+                  showSenderName={showSenderName}
+                  showReadReceipts={canSeeReadReceipts}
+                  isRead={isReadByOthers(item)}
+                  isStarred={starredMessageIds.has(item.id)}
+                  isLastInGroup={isLastInGroup}
+                  replyTo={replyTo}
+                  onLongPress={(y) => {
+                    setActionMessage(item);
+                    setActionMenuY(y);
+                  }}
+                  onReactionPress={(emoji) => reactToMessage(item.id, emoji)}
+                  pendingMediaCount={isLastOwnWithMedia ? pendingCount : 0}
+                  myUserId={profile?.id ?? null}
+                />
+              </>
             );
           }}
         />
@@ -555,13 +612,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: space[4],
-    paddingVertical: space[3],
-    gap: space[3],
-  },
   headerCenter: {
     flex: 1,
     flexDirection: 'row',
@@ -580,20 +630,18 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 12,
   },
-  back: {
-    color: colors.text,
-    fontSize: 28,
-    width: 24,
+  dateChipRow: {
+    alignItems: 'center',
+    marginVertical: space[3],
   },
-  muteToggle: {
+  dateChipText: {
     color: colors.textMuted,
-    fontSize: 20,
-    width: 24,
-    textAlign: 'center',
-  },
-  headerRule: {
-    height: 2,
-    backgroundColor: colors.divider,
+    fontSize: 11,
+    fontWeight: fontWeight.semibold,
+    backgroundColor: colors.surface,
+    paddingHorizontal: space[3],
+    paddingVertical: 4,
+    borderRadius: 999,
   },
   pinnedBanner: {
     flexDirection: 'row',

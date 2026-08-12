@@ -10,17 +10,19 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { useAccentTheme } from '../lib/accentTheme';
 import { colors, fontWeight, radius, space } from '../lib/theme';
 import {
   CameraIcon,
+  CloseIcon,
   DocumentIcon,
   ImageIcon,
   KeyboardIcon,
   LocationPinIcon,
   PersonIcon,
   PlusIcon,
+  SendIcon,
   StickerIcon,
 } from './icons';
 import { GifStickerPanel } from './GifStickerPanel';
@@ -76,8 +78,18 @@ export function Composer({
   const insets = useSafeAreaInsets();
   const canSend = value.trim().length > 0;
   const rotation = useSharedValue(0);
+  const sendAnim = useSharedValue(canSend ? 1 : 0);
   const inputRef = useRef<TextInput>(null);
   const { colors: accentColors } = useAccentTheme();
+
+  useEffect(() => {
+    sendAnim.value = withSpring(canSend ? 1 : 0, { damping: 16, stiffness: 220 });
+  }, [canSend, sendAnim]);
+
+  const sendButtonStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: sendAnim.value }],
+    opacity: sendAnim.value,
+  }));
 
   // Remembers the device's real keyboard height so the sticker panel can be sized to exactly
   // swap into that footprint instead of guessing — see DEFAULT_KEYBOARD_HEIGHT above for the
@@ -193,8 +205,8 @@ export function Composer({
               {replyingTo.preview}
             </Text>
           </View>
-          <Pressable onPress={onCancelReply} hitSlop={8}>
-            <Text style={styles.replyStripClose}>✕</Text>
+          <Pressable onPress={onCancelReply} hitSlop={8} style={styles.replyStripClose}>
+            <CloseIcon size={16} color={colors.textMuted} />
           </Pressable>
         </View>
       )}
@@ -221,17 +233,12 @@ export function Composer({
             <StickerIcon size={22} color={colors.textMuted} />
           )}
         </Pressable>
-        <Pressable
-          style={[
-            styles.sendButton,
-            !canSend ? styles.sendButtonDisabled : { borderColor: accentColors.accent },
-          ]}
-          onPress={onSend}
-          disabled={!canSend}
-        >
-          <Text style={[styles.sendGlyph, !canSend ? styles.sendGlyphDisabled : { color: accentColors.accent }]}>
-            ↑
-          </Text>
+        <Pressable style={styles.sendButton} onPress={onSend} disabled={!canSend} hitSlop={8}>
+          <Animated.View
+            style={[styles.sendButtonInner, { backgroundColor: accentColors.accent }, sendButtonStyle]}
+          >
+            <SendIcon size={16} color={accentColors.accent100} />
+          </Animated.View>
         </Pressable>
       </View>
 
@@ -298,20 +305,15 @@ const styles = StyleSheet.create({
   sendButton: {
     width: 36,
     height: 36,
-    borderRadius: radius.full,
-    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sendButtonDisabled: {
-    borderColor: colors.divider,
-  },
-  sendGlyph: {
-    fontSize: 18,
-    fontWeight: fontWeight.semibold,
-  },
-  sendGlyphDisabled: {
-    color: colors.textMuted,
+  sendButtonInner: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   replyStrip: {
     flexDirection: 'row',
@@ -338,8 +340,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   replyStripClose: {
-    color: colors.textMuted,
-    fontSize: 16,
     paddingHorizontal: space[2],
   },
   drawer: {

@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native';
 import { MediaTile, PendingMediaTile } from './MediaTile';
+import { CheckIcon, DoubleCheckIcon, StarIcon } from './icons';
 import { useAccentTheme } from '../lib/accentTheme';
 import { colors, radius, space } from '../lib/theme';
 import type { MessageWithMedia } from '../lib/types';
@@ -45,6 +46,9 @@ interface MessageBubbleProps {
   showReadReceipts: boolean;
   isRead: boolean;
   isStarred?: boolean;
+  /** False for every bubble but the last in a same-sender, close-in-time run — squares off the
+   * tail corner and tightens the gap to the next bubble so the run reads as one group. */
+  isLastInGroup?: boolean;
   replyTo?: { senderName: string; preview: string } | null;
   onLongPress?: (y: number) => void;
   onReactionPress?: (emoji: string) => void;
@@ -59,6 +63,7 @@ export function MessageBubble({
   showReadReceipts,
   isRead,
   isStarred = false,
+  isLastInGroup = true,
   replyTo = null,
   onLongPress,
   onReactionPress,
@@ -70,7 +75,11 @@ export function MessageBubble({
 
   return (
     <Pressable
-      style={[styles.container, isOwn ? styles.containerOwn : styles.containerOther]}
+      style={[
+        styles.container,
+        isOwn ? styles.containerOwn : styles.containerOther,
+        { marginBottom: isLastInGroup ? space[3] : space[1] },
+      ]}
       onLongPress={(e: GestureResponderEvent) => onLongPress?.(e.nativeEvent.pageY)}
     >
       {showSenderName && !isOwn && (
@@ -86,8 +95,12 @@ export function MessageBubble({
           style={[
             styles.bubble,
             isOwn
-              ? [styles.bubbleOwn, { backgroundColor: accentColors.accent900, borderColor: accentColors.accent }]
-              : styles.bubbleOther,
+              ? [
+                  styles.bubbleOwn,
+                  { backgroundColor: accentColors.accent700 },
+                  { borderBottomRightRadius: isLastInGroup ? radius.sm : radius.xl },
+                ]
+              : [styles.bubbleOther, { borderBottomLeftRadius: isLastInGroup ? radius.sm : radius.xl }],
             message.media.length > 0 && styles.bubbleMedia,
           ]}
         >
@@ -115,29 +128,35 @@ export function MessageBubble({
             <PendingMediaTile key={`pending-${i}`} />
           ))}
           {message.body ? (
-            <Text style={[styles.body, message.media.length > 0 && { marginTop: space[2] }]}>
+            <Text
+              style={[
+                styles.body,
+                isOwn && { color: accentColors.accent100 },
+                message.media.length > 0 && { marginTop: space[2] },
+              ]}
+            >
               {message.body}
             </Text>
           ) : null}
+
+          <View style={styles.metaRow}>
+            {isStarred && <StarIcon size={10} color={isOwn ? accentColors.accent100 : accentColors.accent} filled />}
+            <Text style={[styles.metaText, isOwn && { color: accentColors.accent200 }]}>
+              {formatTime(message.created_at)}
+            </Text>
+            {isOwn &&
+              showReadReceipts &&
+              (isRead ? (
+                <DoubleCheckIcon size={13} color={accentColors.accent100} />
+              ) : (
+                <CheckIcon size={11} color={accentColors.accent200} />
+              ))}
+          </View>
         </View>
       )}
 
       {!isDeleted && (
         <ReactionRow reactions={message.reactions ?? []} isOwn={isOwn} onPress={onReactionPress} />
-      )}
-
-      {isOwn && !isDeleted && (
-        <Text style={styles.meta}>
-          {isStarred ? <Text style={[styles.starGlyph, { color: accentColors.accent }]}>★ </Text> : null}
-          {formatTime(message.created_at)}
-          {showReadReceipts ? `  ·  ${isRead ? 'Read' : 'Delivered'}` : ''}
-        </Text>
-      )}
-      {!isOwn && !isDeleted && (
-        <Text style={styles.meta}>
-          {isStarred ? <Text style={[styles.starGlyph, { color: accentColors.accent }]}>★ </Text> : null}
-          {formatTime(message.created_at)}
-        </Text>
       )}
     </Pressable>
   );
@@ -145,7 +164,7 @@ export function MessageBubble({
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: space[1],
+    marginTop: space[1],
     paddingHorizontal: space[6],
     maxWidth: '84%',
   },
@@ -169,14 +188,11 @@ const styles = StyleSheet.create({
     paddingVertical: space[3],
   },
   bubbleOwn: {
-    borderWidth: 1,
-    // A tighter tail-side corner reads as a hand-folded note rather than a
-    // uniform rounded rectangle — the one detail every other chat app skips.
-    borderBottomRightRadius: radius.sm,
+    // Tail radius (tighter on the last bubble of a group) is applied inline, not here — it
+    // depends on isLastInGroup, which this static stylesheet has no way to express.
   },
   bubbleOther: {
     backgroundColor: colors.surface,
-    borderBottomLeftRadius: radius.sm,
   },
   bubbleMedia: {
     gap: space[2],
@@ -204,13 +220,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontStyle: 'italic',
   },
-  meta: {
-    color: colors.textMuted,
-    fontSize: 11,
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    alignSelf: 'flex-end',
     marginTop: space[1],
-    marginHorizontal: space[1],
   },
-  starGlyph: {
+  metaText: {
+    color: colors.textMuted,
     fontSize: 11,
   },
   reactionRow: {

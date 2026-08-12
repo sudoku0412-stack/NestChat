@@ -1,42 +1,54 @@
-import { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, View } from 'react-native';
+import { useEffect } from 'react';
+import { StyleSheet, View } from 'react-native';
+import Animated, {
+  Easing,
+  cancelAnimation,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import { colors, radius, space } from '../lib/theme';
 
 function useBounce(delay: number) {
-  const value = useRef(new Animated.Value(0)).current;
+  const value = useSharedValue(0);
 
   useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.delay(delay),
-        Animated.timing(value, { toValue: 1, duration: 300, useNativeDriver: true }),
-        Animated.timing(value, { toValue: 0, duration: 300, useNativeDriver: true }),
-        Animated.delay(300),
-      ])
+    value.value = withDelay(
+      delay,
+      withRepeat(
+        withSequence(
+          withTiming(1, { duration: 300, easing: Easing.out(Easing.quad) }),
+          withTiming(0, { duration: 300, easing: Easing.in(Easing.quad) }),
+          withTiming(0, { duration: 300 })
+        ),
+        -1
+      )
     );
-    loop.start();
-    return () => loop.stop();
+    return () => cancelAnimation(value);
   }, [value, delay]);
 
-  return value;
+  return useAnimatedStyle(() => ({
+    opacity: 0.3 + value.value * 0.7,
+    transform: [{ translateY: value.value * -3 }],
+  }));
 }
 
+// Same grouped-bubble shape as a real message from the other side, so the indicator reads as
+// "someone is about to send a message here" instead of a floating, differently-styled widget.
 export function TypingIndicator() {
-  const dot1 = useBounce(0);
-  const dot2 = useBounce(150);
-  const dot3 = useBounce(300);
-
-  const dotStyle = (value: Animated.Value) => ({
-    opacity: value.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }),
-    transform: [{ translateY: value.interpolate({ inputRange: [0, 1], outputRange: [0, -3] }) }],
-  });
+  const dot1Style = useBounce(0);
+  const dot2Style = useBounce(150);
+  const dot3Style = useBounce(300);
 
   return (
     <View style={styles.container}>
       <View style={styles.bubble}>
-        <Animated.View style={[styles.dot, dotStyle(dot1)]} />
-        <Animated.View style={[styles.dot, dotStyle(dot2)]} />
-        <Animated.View style={[styles.dot, dotStyle(dot3)]} />
+        <Animated.View style={[styles.dot, dot1Style]} />
+        <Animated.View style={[styles.dot, dot2Style]} />
+        <Animated.View style={[styles.dot, dot3Style]} />
       </View>
     </View>
   );
@@ -53,6 +65,7 @@ const styles = StyleSheet.create({
     gap: space[1],
     backgroundColor: colors.surface,
     borderRadius: radius.xl,
+    borderBottomLeftRadius: radius.sm,
     paddingHorizontal: space[4],
     paddingVertical: space[3],
   },
