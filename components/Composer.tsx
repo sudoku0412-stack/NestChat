@@ -86,9 +86,12 @@ export function Composer({
     sendAnim.value = withSpring(canSend ? 1 : 0, { damping: 16, stiffness: 220 });
   }, [canSend, sendAnim]);
 
+  // Animates between a dimmed at-rest state and a full accent fill rather than 0 -> 1 --
+  // fully hiding the button when the composer is empty read as "the send button disappeared"
+  // (there's no mic/voice-note feature here to swap in for that empty state).
   const sendButtonStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: sendAnim.value }],
-    opacity: sendAnim.value,
+    transform: [{ scale: 0.82 + sendAnim.value * 0.18 }],
+    opacity: 0.35 + sendAnim.value * 0.65,
   }));
 
   // Remembers the device's real keyboard height so the sticker panel can be sized to exactly
