@@ -1,4 +1,4 @@
-import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useAuth } from '../../../lib/auth';
@@ -10,7 +10,7 @@ import { Avatar } from '../../../components/Avatar';
 import { MemberRow } from '../../../components/MemberRow';
 import { OutlineButton } from '../../../components/OutlineButton';
 import { CloseIcon } from '../../../components/icons';
-import { colors, fontWeight, space } from '../../../lib/theme';
+import { colors, fonts, fontWeight, radius, space } from '../../../lib/theme';
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -71,48 +71,41 @@ export default function SettingsScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Settings</Text>
       </View>
-      <View style={styles.headerRule} />
 
-      <FlatList
-        data={allMembers}
-        keyExtractor={(m) => m.id}
-        renderItem={({ item }) => (
-          <MemberRow
-            member={item}
-            trailing={
-              item.id !== profile?.id ? (
-                <Pressable onPress={() => handleRemoveMember(item.id, item.display_name)} hitSlop={8}>
-                  <CloseIcon size={16} color={colors.danger} />
-                </Pressable>
-              ) : null
-            }
-          />
-        )}
-        ListHeaderComponent={
-          <>
-            {profile && (
-              <Pressable style={styles.profileRow} onPress={() => router.push('/(app)/edit-profile')}>
-                <Avatar name={profile.display_name} avatarUrl={profile.avatar_url} size={56} />
-                <View>
-                  <Text style={styles.profileName}>{profile.display_name}</Text>
-                  <Text style={styles.profileSub}>
-                    {profile.role === 'admin' ? 'Admin' : 'Member'} · this device
-                  </Text>
-                </View>
-              </Pressable>
-            )}
-
-            <Text style={styles.sectionLabel}>Contacts ({allMembers.length})</Text>
-          </>
-        }
-        ListFooterComponent={
-          <>
-            <View style={styles.logoutWrap}>
-              <OutlineButton label="Log out" onPress={signOut} variant="neutral" />
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {profile && (
+          <Pressable style={styles.profileCard} onPress={() => router.push('/(app)/edit-profile')}>
+            <Avatar name={profile.display_name} avatarUrl={profile.avatar_url} size={56} />
+            <View>
+              <Text style={styles.profileName}>{profile.display_name}</Text>
+              <Text style={styles.profileSub}>
+                {profile.role === 'admin' ? 'Admin' : 'Member'} · this device
+              </Text>
             </View>
-          </>
-        }
-      />
+          </Pressable>
+        )}
+
+        <Text style={styles.sectionLabel}>Contacts ({allMembers.length})</Text>
+        <View style={styles.contactsCard}>
+          {allMembers.map((item) => (
+            <MemberRow
+              key={item.id}
+              member={item}
+              trailing={
+                item.id !== profile?.id ? (
+                  <Pressable onPress={() => handleRemoveMember(item.id, item.display_name)} hitSlop={8}>
+                    <CloseIcon size={16} color={colors.danger} />
+                  </Pressable>
+                ) : null
+              }
+            />
+          ))}
+        </View>
+
+        <View style={styles.logoutWrap}>
+          <OutlineButton label="Log out" onPress={signOut} variant="neutral" />
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -130,19 +123,20 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 28,
     fontWeight: fontWeight.heading,
+    fontFamily: fonts.display,
   },
-  headerRule: {
-    height: 2,
-    backgroundColor: colors.divider,
+  scrollContent: {
+    paddingHorizontal: space[6],
+    paddingBottom: space[8],
   },
-  profileRow: {
+  profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space[4],
-    paddingHorizontal: space[6],
-    paddingVertical: space[6],
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
+    padding: space[6],
+    marginBottom: space[6],
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
   },
   profileName: {
     color: colors.text,
@@ -158,12 +152,13 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 12,
     letterSpacing: 0.4,
-    paddingHorizontal: space[6],
-    paddingTop: space[6],
     paddingBottom: space[2],
   },
+  contactsCard: {
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+  },
   logoutWrap: {
-    paddingHorizontal: space[6],
-    paddingVertical: space[8],
+    paddingTop: space[8],
   },
 });

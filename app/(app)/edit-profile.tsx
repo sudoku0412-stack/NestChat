@@ -19,6 +19,20 @@ import { Avatar } from '../../components/Avatar';
 import { OutlineButton } from '../../components/OutlineButton';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { SettingsRow } from '../../components/SettingsRow';
+import { SettingsCard } from '../../components/SettingsCard';
+import {
+  ArchiveIcon,
+  BellIcon,
+  ChatBubbleIcon,
+  ListIcon,
+  PersonIcon,
+  QuestionIcon,
+  SendIcon,
+  ShieldIcon,
+  StarIcon,
+  StatusRingIcon,
+  type IconProps,
+} from '../../components/icons';
 import { useAccentTheme } from '../../lib/accentTheme';
 import { colors, fontWeight, radius, space } from '../../lib/theme';
 
@@ -26,17 +40,17 @@ import { colors, fontWeight, radius, space } from '../../lib/theme';
 // Metro bundle, which this project's TestFlight-only workflow doesn't run locally -- it'll
 // self-correct at the next archive. `as any` here is purely to bypass that stale-cache false
 // positive; every path below is a real screen that exists on disk.
-const MENU_ROWS: { label: string; href: any }[] = [
-  { label: 'Lists', href: '/(app)/lists' },
-  { label: 'Broadcast messages', href: '/(app)/broadcast' },
-  { label: 'Starred', href: '/(app)/starred-messages' },
-  { label: 'Account', href: '/(app)/account' },
-  { label: 'Privacy', href: '/(app)/privacy' },
-  { label: 'Chats', href: '/(app)/chats-settings' },
-  { label: 'Appearance', href: '/(app)/appearance' },
-  { label: 'Notifications', href: '/(app)/notification-settings' },
-  { label: 'Storage and data', href: '/(app)/storage-and-data' },
-  { label: 'Help and feedback', href: '/(app)/help' },
+const MENU_ROWS: { label: string; href: any; Icon: (props: IconProps) => React.ReactElement }[] = [
+  { label: 'Lists', href: '/(app)/lists', Icon: ListIcon },
+  { label: 'Broadcast messages', href: '/(app)/broadcast', Icon: SendIcon },
+  { label: 'Starred', href: '/(app)/starred-messages', Icon: StarIcon },
+  { label: 'Account', href: '/(app)/account', Icon: PersonIcon },
+  { label: 'Privacy', href: '/(app)/privacy', Icon: ShieldIcon },
+  { label: 'Chats', href: '/(app)/chats-settings', Icon: ChatBubbleIcon },
+  { label: 'Appearance', href: '/(app)/appearance', Icon: StatusRingIcon },
+  { label: 'Notifications', href: '/(app)/notification-settings', Icon: BellIcon },
+  { label: 'Storage and data', href: '/(app)/storage-and-data', Icon: ArchiveIcon },
+  { label: 'Help and feedback', href: '/(app)/help', Icon: QuestionIcon },
 ];
 
 export default function EditProfileScreen() {
@@ -134,9 +148,20 @@ export default function EditProfileScreen() {
         </View>
 
         <View style={styles.menu}>
-          {MENU_ROWS.map((row) => (
-            <SettingsRow key={row.label} label={row.label} onPress={() => router.push(row.href)} />
-          ))}
+          <SettingsCard>
+            {MENU_ROWS.map((row) => (
+              <SettingsRow
+                key={row.label}
+                label={row.label}
+                onPress={() => router.push(row.href)}
+                icon={
+                  <View style={[styles.menuIconBg, { backgroundColor: accentColors.accent100 }]}>
+                    <row.Icon size={16} color={accentColors.accent700} strokeWidth={1.7} />
+                  </View>
+                }
+              />
+            ))}
+          </SettingsCard>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -153,12 +178,13 @@ const styles = StyleSheet.create({
   },
   menu: {
     marginTop: space[8],
-    // SettingsRow pads itself space[6] internally; offset only the difference from this
-    // screen's own space[8] content padding so row labels stay aligned with the rest of the
-    // screen instead of sitting 2pt closer to the edge.
-    marginHorizontal: -(space[8] - space[6]),
-    borderTopWidth: 1,
-    borderTopColor: colors.divider,
+  },
+  menuIconBg: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   avatarPicker: {
     alignItems: 'center',

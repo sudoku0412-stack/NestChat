@@ -368,3 +368,42 @@ export function ArchiveIcon({ size = DEFAULT_SIZE, color = DEFAULT_COLOR, stroke
     </Svg>
   );
 }
+
+export function ListIcon({ size = DEFAULT_SIZE, color = DEFAULT_COLOR, strokeWidth = 1.8 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Line x1={4} y1={6.5} x2={20} y2={6.5} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+      <Line x1={4} y1={12} x2={20} y2={12} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+      <Line x1={4} y1={17.5} x2={14} y2={17.5} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+export function ShieldIcon({ size = DEFAULT_SIZE, color = DEFAULT_COLOR, strokeWidth = 1.8 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 3.5 19 6.5v5.2c0 4.5-3.3 7.6-7 8.8-3.7-1.2-7-4.3-7-8.8V6.5L12 3.5Z"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+export function QuestionIcon({ size = DEFAULT_SIZE, color = DEFAULT_COLOR, strokeWidth = 1.8 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx={12} cy={12} r={8.5} stroke={color} strokeWidth={strokeWidth} />
+      <Path
+        d="M9.5 9.8a2.5 2.5 0 1 1 3.7 2.2c-.7.4-1.2 1-1.2 1.9v.4"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Circle cx={12} cy={17} r={0.9} fill={color} />
+    </Svg>
+  );
+}

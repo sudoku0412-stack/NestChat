@@ -18,7 +18,7 @@ interface SettingsRowProps {
 
 export function SettingsRow({ label, icon, onPress, trailing, labelColor, disabled, theme = colors }: SettingsRowProps) {
   const content = (
-    <View style={[styles.row, { borderBottomColor: theme.divider }]}>
+    <View style={styles.row}>
       {icon ? <View style={styles.iconSlot}>{icon}</View> : null}
       <Text style={[styles.label, { color: labelColor ?? theme.text }]} numberOfLines={1}>
         {label}
@@ -42,12 +42,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: space[3],
-    paddingHorizontal: space[6],
+    paddingHorizontal: space[4],
     paddingVertical: space[4],
-    borderBottomWidth: 1,
   },
   iconSlot: {
-    width: 24,
+    width: 30,
     alignItems: 'center',
   },
   label: {
