@@ -67,6 +67,12 @@ export default function ArchivedChatsScreen() {
             onArchive={() => handleUnarchive(item.id)}
             onFavoriteToggle={() => handleFavoriteToggle(item.id, item.favorite)}
             isArchived
+            showPresence={
+              item.type !== 'group' &&
+              !!profile?.show_read_receipts &&
+              !!item.avatarMembers[0]?.show_read_receipts &&
+              !!item.avatarMembers[0]?.is_online
+            }
           />
         )}
         ListEmptyComponent={

@@ -3,7 +3,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Slot } from 'expo-router';
-import { useFonts, Fraunces_600SemiBold } from '@expo-google-fonts/fraunces';
+import { useFonts, Poppins_600SemiBold } from '@expo-google-fonts/poppins';
 import { AuthProvider } from '../lib/auth';
 import { AccentThemeProvider } from '../lib/accentTheme';
 import { ThemeModeProvider, useThemeMode } from '../lib/themeMode';
@@ -11,7 +11,7 @@ import '../lib/locationTask';
 
 function Shell() {
   const { bg, resolvedGround } = useThemeMode();
-  const [fontsLoaded] = useFonts({ Fraunces_600SemiBold });
+  const [fontsLoaded] = useFonts({ Poppins_600SemiBold });
 
   if (!fontsLoaded) {
     return <View style={{ flex: 1, backgroundColor: bg }} />;

@@ -1,7 +1,14 @@
-// "Hearth" design tokens — warm, tactile palette (terracotta/clay accent, cream text,
-// warm-brown darks) replacing the earlier cool-blurple "Nocturne" system. Shape of every
-// export (colors/space/radius/fontWeight/avatarPalette) is kept identical to Nocturne so
-// existing screens keep working purely from the new values — only `fonts` is new.
+// Design tokens generated from the `ui-ux-pro-max` skill's design-system search for
+// "private household messaging chat app" — it returned a dedicated Chat & Messaging App
+// color profile (Messenger blue + indigo + emerald "online" green), Minimalism & Swiss
+// Style, and Poppins/Open Sans typography. Replaces the earlier warm terracotta "Hearth"
+// identity. `accent`/`accent2`/`accentXXX` map to the profile's Primary/Secondary — they
+// stay the single hue-ramp the app's accent-color picker already drives (see
+// `buildAccentRamp`); `success` maps to the profile's dedicated online/success green and
+// is a *ground* token, not part of the user-customizable accent ramp, so "online" always
+// reads as green regardless of the user's chosen brand color. Shape of every export
+// (colors/space/radius/fontWeight/avatarPalette) is kept identical to the previous system
+// so existing screens keep working purely from the new values.
 
 export interface Colors {
   bg: string;
@@ -34,77 +41,76 @@ export interface Colors {
   success: string;
 }
 
-// Dark ground — the original, still-default Hearth palette.
+// Dark ground.
 export const darkPalette: Colors = {
-  bg: '#1E1815',
-  bgDeep: '#171310', // second dark depth for the Settings "dark mode" stand-in toggle
-  surface: '#2A231E',
-  text: '#F2E9DE',
-  textMuted: '#A89A8C',
-  divider: 'rgba(242, 233, 222, 0.14)',
+  bg: '#0F172A',
+  bgDeep: '#0B1220',
+  surface: '#1E293B',
+  text: '#F1F5F9',
+  textMuted: '#94A3B8',
+  divider: 'rgba(241, 245, 249, 0.10)',
 
-  accent: '#D97B4F',
-  accent2: '#E8B368',
+  accent: '#3B82F6',
+  accent2: '#60A5FA',
 
-  neutral100: '#F5EDE3',
-  neutral200: '#E8DDD0',
-  neutral300: '#D6C7B8',
-  neutral400: '#B9A793',
-  neutral500: '#A89A8C',
-  neutral600: '#8A7A6B',
-  neutral700: '#6B5D50',
-  neutral800: '#4A4038',
-  neutral900: '#332B25',
+  neutral100: '#F1F5F9',
+  neutral200: '#E2E8F0',
+  neutral300: '#CBD5E1',
+  neutral400: '#94A3B8',
+  neutral500: '#64748B',
+  neutral600: '#475569',
+  neutral700: '#334155',
+  neutral800: '#1E293B',
+  neutral900: '#0F172A',
 
-  accent100: '#FBEAE0',
-  accent200: '#F5D3BE',
-  accent300: '#EDB48F',
-  accent400: '#E39868',
-  accent500: '#D97B4F',
-  accent600: '#BC623A',
-  accent700: '#954C2D',
-  accent800: '#6E3820',
-  accent900: '#482514',
+  accent100: '#DBEAFE',
+  accent200: '#BFDBFE',
+  accent300: '#93C5FD',
+  accent400: '#60A5FA',
+  accent500: '#3B82F6',
+  accent600: '#2563EB',
+  accent700: '#1D4ED8',
+  accent800: '#1E40AF',
+  accent900: '#1E3A8A',
 
-  danger: '#C0523F',
-  success: '#7A9B72',
+  danger: '#F87171',
+  success: '#34D399',
 };
 
-// Light ground — Hearth 2.0. Warm cream/white, not a cold neutral swap, so the identity
-// carries over instead of the app just inverting into a generic light theme.
+// Light ground.
 export const lightPalette: Colors = {
-  bg: '#FAF5EE',
-  bgDeep: '#F1E9DD',
-  surface: '#FFFDF9',
-  text: '#2A2018',
-  textMuted: '#8A7A6B',
-  divider: 'rgba(42, 32, 24, 0.10)',
+  bg: '#FFFFFF',
+  bgDeep: '#E4ECFC',
+  surface: '#F1F5FD',
+  text: '#0F172A',
+  textMuted: '#475569',
+  divider: '#E4ECFC',
 
-  accent: '#D97B4F',
-  accent2: '#B8863E',
+  accent: '#2563EB',
+  accent2: '#6366F1',
 
-  neutral100: '#2A2018',
-  neutral200: '#4A3B2E',
-  neutral300: '#6B5D50',
-  neutral400: '#8A7A6B',
-  neutral500: '#A89A8C',
-  neutral600: '#C7BAA9',
-  neutral700: '#DDD1C1',
-  neutral800: '#EEE5D8',
-  neutral900: '#F6F0E6',
+  neutral100: '#0F172A',
+  neutral200: '#1E293B',
+  neutral300: '#334155',
+  neutral400: '#475569',
+  neutral500: '#64748B',
+  neutral600: '#94A3B8',
+  neutral700: '#CBD5E1',
+  neutral800: '#E2E8F0',
+  neutral900: '#F1F5F9',
 
-  accent100: '#F6E4D8',
-  accent200: '#EAC8AE',
-  accent300: '#DDA87C',
-  accent400: '#DE8C58',
-  accent500: '#D97B4F',
-  accent600: '#B25E38',
-  accent700: '#8A472A',
-  accent800: '#623119',
-  accent900: '#3D1D0E',
+  accent100: '#EAF1FE',
+  accent200: '#D6E4FD',
+  accent300: '#93C5FD',
+  accent400: '#60A5FA',
+  accent500: '#2563EB',
+  accent600: '#1D4ED8',
+  accent700: '#1E40AF',
+  accent800: '#1E3A8A',
+  accent900: '#172554',
 
-  danger: '#B24D38',
-  success: '#5E7D55',
+  danger: '#DC2626',
+  success: '#059669',
 };
 
 /** @deprecated Ground-only alias kept so unmigrated files keep compiling during the phased
@@ -215,9 +221,16 @@ export const fontWeight = {
 };
 
 // Display font for wordmarks/headers — loaded via expo-font in app/_layout.tsx
-// (see useFonts/@expo-google-fonts/fraunces). Body text stays on the system font.
+// (see useFonts/@expo-google-fonts/poppins). Body text stays on the system font: the
+// skill's pairing also names Open Sans for body, but every `fontWeight.X` in this app is a
+// numeric RN style applied to the system font, which renders each weight from one font
+// file; Open Sans via expo-font ships each weight as a *separate* named family, so making
+// it the sitewide body font would mean touching every StyleSheet that sets `fontWeight` to
+// also pick the matching Open-Sans-weight family, or every `fontWeight` style silently stops
+// doing anything. Not worth that blast radius for a body face that already reads close to
+// the system font.
 export const fonts = {
-  display: 'Fraunces_600SemiBold',
+  display: 'Poppins_600SemiBold',
 } as const;
 
 // Monogram avatar background colors, drawn from the neutral/accent ramps

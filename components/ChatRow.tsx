@@ -32,6 +32,10 @@ interface ChatRowProps {
   isArchived?: boolean;
   selectMode?: boolean;
   selected?: boolean;
+  /** Only meaningful for a 1:1 chat — a group's avatar is a member stack, not one person's
+   * presence. Callers are expected to have already applied the mutual read-receipts privacy
+   * gate (same one the thread header uses) before passing this. */
+  showPresence?: boolean;
 }
 
 export function ChatRow({
@@ -47,6 +51,7 @@ export function ChatRow({
   isArchived = false,
   selectMode = false,
   selected = false,
+  showPresence = false,
 }: ChatRowProps) {
   const { colors: accentColors } = useAccentTheme();
   return (
@@ -79,7 +84,10 @@ export function ChatRow({
         {chat.type === 'group' ? (
           <GroupAvatarStack members={chat.avatarMembers} />
         ) : (
-          <Avatar name={chat.title} avatarUrl={chat.avatarMembers[0]?.avatar_url} />
+          <View>
+            <Avatar name={chat.title} avatarUrl={chat.avatarMembers[0]?.avatar_url} />
+            {showPresence && <View style={styles.presenceDot} />}
+          </View>
         )}
 
         <View style={styles.middle}>
@@ -134,6 +142,17 @@ const styles = StyleSheet.create({
     color: colors.bg,
     fontSize: 12,
     fontWeight: fontWeight.semibold,
+  },
+  presenceDot: {
+    position: 'absolute',
+    right: -1,
+    bottom: -1,
+    width: 12,
+    height: 12,
+    borderRadius: radius.full,
+    backgroundColor: colors.success,
+    borderWidth: 2,
+    borderColor: colors.bg,
   },
   middle: {
     flex: 1,

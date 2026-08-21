@@ -431,7 +431,10 @@ export default function ThreadScreen() {
                   });
               }}
             >
-              <Avatar name={title} avatarUrl={isGroup ? null : otherMember?.avatar_url} size={32} />
+              <View>
+                <Avatar name={title} avatarUrl={isGroup ? null : otherMember?.avatar_url} size={32} />
+                {canSeePresence && otherMember?.is_online && <View style={styles.headerPresenceDot} />}
+              </View>
               <View style={styles.headerTexts}>
                 <Text style={styles.headerTitle} numberOfLines={1}>
                   {title}
@@ -620,6 +623,17 @@ const styles = StyleSheet.create({
   },
   headerTexts: {
     flex: 1,
+  },
+  headerPresenceDot: {
+    position: 'absolute',
+    right: -1,
+    bottom: -1,
+    width: 10,
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: colors.success,
+    borderWidth: 2,
+    borderColor: colors.bg,
   },
   headerTitle: {
     color: colors.text,

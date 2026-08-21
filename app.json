@@ -20,7 +20,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.nestchat.app",
-      "buildNumber": "7",
+      "buildNumber": "8",
       "infoPlist": {
         "NSCameraUsageDescription": "NestChat uses your camera to attach photos and videos to messages.",
         "NSPhotoLibraryUsageDescription": "NestChat uses your photo library to attach photos and videos to messages.",

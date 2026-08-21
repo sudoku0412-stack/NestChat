@@ -196,6 +196,12 @@ export default function ChatListScreen() {
             onFavoriteToggle={() => handleFavoriteToggle(item.id, item.favorite)}
             selectMode={selectMode}
             selected={selectedIds.has(item.id)}
+            showPresence={
+              item.type !== 'group' &&
+              !!profile?.show_read_receipts &&
+              !!item.avatarMembers[0]?.show_read_receipts &&
+              !!item.avatarMembers[0]?.is_online
+            }
           />
         )}
         ListEmptyComponent={
