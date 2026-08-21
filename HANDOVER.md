@@ -3,10 +3,14 @@
 Last updated: 2026-08-21 (end of session — the app's visual identity was replaced again,
 this time via the `ui-ux-pro-max` skill's design-system output: blue/indigo "Chat &
 Messaging App" palette + Poppins display font, replacing the "Hearth" terracotta system
-that Phases A–D below shipped. See "This session" near the top of the log below for what
-changed and why. Build bumped to **8**, all committed and pushed to `origin/master`.
-Nothing archived to TestFlight since build 5 — still the single biggest gap, now compounded
-by two full visual-identity changes sitting on top of each other unverified on a device.)
+that Phases A–D below shipped. Partway through, the user caught that the Settings screens'
+icons/card-grouping from the approved prototype had never actually been wired into real
+code — that's fixed too. See "This session" near the top of the log below for the full
+account of both. Build bumped to **9**, everything committed and pushed to `origin/master`.
+**Nothing has been archived to TestFlight since build 5** — still the single biggest gap,
+now compounded by two full visual-identity changes sitting on top of each other, both
+completely unverified on a device. Read "Immediate next step" below before doing anything
+else in a fresh session.)
 
 ## What this is
 
@@ -161,18 +165,19 @@ test coverage; it does not validate the actual native library, which Phase 0's d
   (`553571b`..`0b9cc0e`) — the media-encryption fix, the WhatsApp features batch + migrations
   `0021`–`0025`, and Hearth 2.0 Phases A–D + part of E, each as its own commit. Tests (107/107)
   and `tsc --noEmit` are clean as of the last commit.
-- **App version 2.0.0, build 7** in `app.json`, synced into `ios/NestChat.xcodeproj`
-  (`CURRENT_PROJECT_VERSION = 7`) and `ios/NestChat/Info.plist` (`CFBundleVersion = 7`).
+- **App version 2.0.0, build 9** in `app.json`, synced into `ios/NestChat.xcodeproj`
+  (`CURRENT_PROJECT_VERSION = 9`) and `ios/NestChat/Info.plist` (`CFBundleVersion = 9`).
   **⚠️ `ios/` is gitignored and untracked** (`git ls-files ios/` returns nothing — checked this
-  session, wasn't previously documented here). That means the build-number bump and the
-  `UIUserInterfaceStyle` fix (see Hearth 2.0 section below) only exist on *this* machine's local
-  checkout; they are not in git and won't survive a re-clone or a different machine. If that's
-  ever a problem, either start tracking `ios/` for real or re-apply these edits by hand elsewhere.
-  Build 5 was the last one archived and TestFlight-tested (E2EE text + media verified end-to-end
-  on device). **Nothing since build 5 has been archived** — the features batch, build 6, and now
-  build 7's entire Hearth 2.0 redesign are all still only sitting in a local checkout, never seen
-  on a device. **No `expo prebuild` needed** for any of it — everything since build 5's prebuild
-  is JS/SQL/plist-only, and the Push Notifications capability the user re-added in Xcode for
+  session, wasn't previously documented here). That means every build-number bump and the
+  `UIUserInterfaceStyle` fix (see the Hearth 2.0 section below) only exist on *this* machine's
+  local checkout; they are not in git and won't survive a re-clone or a different machine. If
+  that's ever a problem, either start tracking `ios/` for real or re-apply these edits by hand
+  elsewhere. Build 5 was the last one archived and TestFlight-tested (E2EE text + media verified
+  end-to-end on device). **Nothing since build 5 has been archived** — the WhatsApp features
+  batch (6), the Hearth 2.0 redesign (7), the blue/indigo re-skin (8), and the Settings-screen
+  icon/card fix (9) are all still only sitting in a local checkout, never seen on a device. **No
+  `expo prebuild` needed** for any of it — everything since build 5's prebuild is
+  JS/SQL/plist-only, and the Push Notifications capability the user re-added in Xcode for
   build 5 survives as long as prebuild isn't re-run.
 - Auth: **anonymous auth + typed-in phone number**, not real OTP, with **PIN-based account
   recovery** (migrations `0006`–`0008`), and now also **self-service account deletion**
@@ -263,40 +268,47 @@ test coverage; it does not validate the actual native library, which Phase 0's d
 
 ## Immediate next step for whoever picks this up
 
-1. **Archive build 8 and get it on TestFlight.** No prebuild needed (see Current state). This is
-   the single biggest gap right now: builds 6, 7, and 8 — the WhatsApp features batch, the
-   Hearth 2.0 redesign, AND this session's blue/indigo re-skin on top of it — have never been
-   seen running on a device. Verify on-device (blue/indigo palette now, not terracotta):
+1. **Archive build 9 and get it on TestFlight.** No prebuild needed (see Current state). This is
+   the single biggest gap right now: builds 6 through 9 — the WhatsApp features batch, the
+   Hearth 2.0 redesign, the blue/indigo re-skin, and the Settings-screen icon/card fix — have
+   never been seen running on a device, stacked on each other, unverified. Verify on-device
+   (blue/indigo palette now, not terracotta):
    - Both themes: Settings → Appearance → System/Light/Dark, in both directions, plus toggling
      the OS appearance while on "System" mode. Watch the keyboard and any native alert/action
-     sheet — `UIUserInterfaceStyle` was just changed from hardcoded "Dark" to "Automatic" in
+     sheet — `UIUserInterfaceStyle` was changed from hardcoded "Dark" to "Automatic" in
      `Info.plist`, unverified.
+   - **Settings screens specifically** — this is what the user caught as broken/unfinished last:
+     `edit-profile.tsx`'s menu (now icons in colored squares, grouped in one rounded card) and
+     the Settings tab (profile card, contacts card, Poppins title). Compare directly against the
+     v3 prototype artifact from this session if it's still reachable.
    - Chat thread: send/receive, read ticks (single vs double, accent tint on read), message
      grouping (send several fast messages, then wait >2min and send another — spacing/tail radius
      should visibly change), date chips crossing a real day boundary, Composer's send button
-     animating in/out as you type/clear.
+     animating in/out as you type/clear (this specific bug — button fully disappearing at rest —
+     was already caught and fixed once this session; confirm it stays fixed).
    - Chat list: pill unread badges, FAB new-chat button, swipe actions (icon+label), search icon,
-     filter chip active state, and this session's new green presence dot on 1:1 avatars (chat
-     list + thread header) — confirm it actually respects the mutual read-receipts privacy
-     setting (turn it off on one test account, confirm the dot disappears for both directions).
+     filter chip active state, and the new green presence dot on 1:1 avatars (chat list + thread
+     header) — confirm it actually respects the mutual read-receipts privacy setting (turn it off
+     on one test account, confirm the dot disappears for both directions).
    - Accent-color picker in **both** themes now that the ramp feeds both grounds (Settings → App
-     theme color) — this is the thing the user specifically asked to confirm still works before
-     approving the redesign.
+     theme color) — this is the thing the user specifically asked to confirm still works. Note:
+     any account that already saved a custom accent color will keep showing *that* color, not
+     the new blue default — that's correct/expected behavior, not a bug, but worth knowing before
+     assuming the reskin "didn't take" on a test account that was already customized.
    - Everything from the WhatsApp features batch that was never verified after build 5's install:
      settings menu under Edit profile, account deletion end-to-end, notification toggles actually
      gating pushes, storage totals, media tap-to-download when auto-download is off, Lists CRUD,
      broadcast to 2+ members.
-2. **Finish Hearth 2.0 Phase E** if the above looks good. What's done: `OutlineButton`'s `filled`
-   variant, `GroupAvatarStack`'s ring, the two native-chrome fixes above. What's NOT done and is
-   genuinely the bulk of the remaining work — the plan itself flags this as "mechanical once B
-   exists," not small: migrating the ~48 screens still reading the frozen dark-only `colors`
-   alias over to `useTheme()` (pattern: structural props stay in `StyleSheet.create`, colors
-   applied inline — see any already-migrated screen, e.g. `appearance.tsx`, as the reference), then
-   deleting the `colors` alias from `lib/theme.ts` once nothing imports it (`tsc` will flag every
-   remaining holdout). Also unfinished: `PinModal`/`MessageActionsModal`/`EmojiPickerModal` weren't
-   touched this session (checked — they're already reasonably consistent on radius/elevation, but
-   they're also 3 of the ~48 screens still on the frozen `colors` alias).
-3. Still parked behind all of the above: **E2EE Phase 4 (live location + statuses encryption)**
+2. **The ~48-screen `useTheme()` migration is still not done** (Hearth 2.0 Phase E). This is the
+   root cause behind most "doesn't look right in light mode" reports on screens other than
+   Settings — those ~48 screens (account, privacy, notifications, contact info, group info,
+   media gallery, starred messages, most settings sub-screens, `PinModal`/`MessageActionsModal`/
+   `EmojiPickerModal`, etc.) still read from the frozen dark-only `colors` alias regardless of
+   the light/dark mode setting. Pattern for migrating one: structural props stay in
+   `StyleSheet.create`, colors applied inline from `useTheme()` — see `appearance.tsx` as the
+   reference. Delete the `colors` alias from `lib/theme.ts` once nothing imports it (`tsc` will
+   flag every remaining holdout as the migration progresses).
+3. Still parked behind everything above: **E2EE Phase 4 (live location + statuses encryption)**
    and Phase 5 (notification service extension) — see the E2EE section.
 
 ### Why TestFlight, not public App Store
@@ -372,16 +384,44 @@ own top-of-file comment is the source of truth for whichever palette is actually
   after, but this is a Bare/mobile-only app; those radix packages are web-only dev tooling
   and were never going to be exercised, which is *why* it was safe to route around rather
   than dig into fixing, not a signal to ignore the same warning somewhere that matters.
-- Build bumped **7 → 8** (all three places). **Not archived** — this build has never run on
-  a device, on top of build 7 (Hearth 2.0 A–D+E) *also* never having run on a device. Two
-  full visual-identity changes are now stacked, unverified, on top of the WhatsApp features
-  batch from the 2026-08-12 session, which itself was last confirmed working on build 5.
 - Third-party skill note for whoever picks this up: the skill was installed via its own CLI
   installer (`npm install -g ui-ux-pro-max-cli` + `uipro init --ai claude`) into
   `.claude/skills/ui-ux-pro-max/` — a local, machine-specific install, **not part of this
   git repo**. If a different machine picks up this session's work and wants to re-run the
   same design-system search, it needs that skill (re-)installed there first; the *output*
   of the search (the palette/font values above) is what actually landed in code either way.
+
+**Follow-up in the same session: Settings screens' icons/cards were never actually wired
+in.** After the reskin landed, the user compared the real app against the approved v3
+prototype and pointed out the Settings screens looked nothing like it — plain rows,
+hairline dividers, no icons. Real root cause, not a rendering bug: `SettingsRow` had
+supported an icon slot since Phase B (2026-08-12), but the one screen using it
+(`edit-profile.tsx`'s menu) never actually passed any icons, and the tab-root Settings
+screen (`(tabs)/settings.tsx`) never adopted `SettingsRow` or card grouping at all — it was
+still the original hand-rolled flat list. The prototype's polish for this screen had simply
+never been implemented, in either the Hearth 2.0 session or this one, until now. Fixed:
+- Three new icons (`ListIcon`/`ShieldIcon`/`QuestionIcon`) for menu rows that had no
+  matching icon in the existing set (Lists/Privacy/Help and feedback).
+- New `components/SettingsCard.tsx` — groups rows into one rounded, surface-colored card
+  with a divider *between* rows (not a trailing one after the last, which plain per-row
+  borders can't express). `SettingsRow` lost its own self-border to make room for this;
+  it's still the only place that imports `SettingsRow`/`SettingsCard`, so this was a safe,
+  contained change.
+- `edit-profile.tsx`'s menu rows each get an icon in an `accentColors.accent100`-tinted
+  rounded square now, wrapped in a real `SettingsCard`.
+- `(tabs)/settings.tsx`: converted from `FlatList` to `ScrollView`+`.map()` — the list is
+  always small (household members only), and `FlatList`'s header/footer-component split
+  made a real card wrapper awkward to express cleanly. Profile row and the contacts list
+  are now their own cards. **Deliberately left `MemberRow`'s own per-row border alone** —
+  it's shared across this screen, `members.tsx`, and `group-info/[id].tsx`, so changing its
+  self-border behavior for this one caller risked regressing the other two; the accepted
+  cosmetic cost is a redundant hairline after the last contact row, inside the rounded card.
+- Settings tab's title now uses the Poppins display font — it was the one tab-root screen
+  that had never gotten it (`(tabs)/index.tsx` and `(tabs)/status.tsx` already had it).
+- Build bumped **7 → 8 → 9** across this session (all three places each time). **None of
+  builds 6 through 9 have ever run on a device** — the WhatsApp features batch, the Hearth
+  2.0 redesign, this session's blue/indigo re-skin, and this Settings-screen fix are all
+  stacked on top of each other, completely unverified, on top of a last-known-good build 5.
 
 ## This session's work (2026-08-12) — quick summary
 
