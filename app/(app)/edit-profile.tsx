@@ -106,7 +106,11 @@ export default function EditProfileScreen() {
     >
       <ScreenHeader title="Edit profile" />
 
-      <ScrollView style={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={{ paddingBottom: insets.bottom + space[8] }}
+        keyboardShouldPersistTaps="handled"
+      >
         <Pressable style={styles.avatarPicker} onPress={handlePickAvatar}>
           <Avatar
             name={name || profile?.display_name || '?'}
