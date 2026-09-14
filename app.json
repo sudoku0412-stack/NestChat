@@ -16,7 +16,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "backgroundColor": "#161826",
+    "backgroundColor": "#181410",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.nestchat.app",
@@ -37,7 +37,7 @@
     "android": {
       "package": "com.nestchat.app",
       "adaptiveIcon": {
-        "backgroundColor": "#161826",
+        "backgroundColor": "#181410",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -73,7 +73,7 @@
         "expo-notifications",
         {
           "icon": "./assets/icon.png",
-          "color": "#9184d9"
+          "color": "#AD531F"
         }
       ],
       [
