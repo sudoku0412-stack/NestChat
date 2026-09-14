@@ -5,12 +5,14 @@ import { useAuth } from '../../lib/auth';
 import { useChatList } from '../../lib/hooks/useChatList';
 import { clearChat } from '../../lib/chatActions';
 import { ScreenHeader } from '../../components/ScreenHeader';
+import { useTheme } from '../../lib/themeMode';
 import { useAccentTheme } from '../../lib/accentTheme';
-import { colors, space } from '../../lib/theme';
+import { space } from '../../lib/theme';
 
 export default function ChatsSettingsScreen() {
   const insets = useSafeAreaInsets();
   const { profile } = useAuth();
+  const theme = useTheme();
   const { colors: accentColors } = useAccentTheme();
   const { chats } = useChatList(profile?.id ?? null);
   const [clearing, setClearing] = useState(false);
@@ -36,14 +38,14 @@ export default function ChatsSettingsScreen() {
   }
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <ScreenHeader title="Chats" />
+    <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: theme.bg }]}>
+      <ScreenHeader title="Chats" theme={theme} />
 
-      <Pressable style={styles.settingRow} onPress={handleClearAllChats} disabled={clearing}>
-        <Text style={[styles.settingLabel, { color: colors.danger }]}>Clear all chats</Text>
+      <Pressable style={[styles.settingRow, { borderBottomColor: theme.divider }]} onPress={handleClearAllChats} disabled={clearing}>
+        <Text style={[styles.settingLabel, { color: theme.danger }]}>Clear all chats</Text>
         {clearing && <ActivityIndicator color={accentColors.accent} />}
       </Pressable>
-      <Text style={styles.caption}>
+      <Text style={[styles.caption, { color: theme.textMuted }]}>
         Per-chat wallpaper is set from that chat's contact info screen, not here.
       </Text>
     </View>
@@ -53,7 +55,6 @@ export default function ChatsSettingsScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.bg,
   },
   settingRow: {
     flexDirection: 'row',
@@ -62,13 +63,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[6],
     paddingVertical: space[4],
     borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
   },
   settingLabel: {
     fontSize: 15,
   },
   caption: {
-    color: colors.textMuted,
     fontSize: 12,
     paddingHorizontal: space[6],
     paddingTop: space[2],

@@ -2,15 +2,16 @@ import { ActivityIndicator, View } from 'react-native';
 import { Redirect } from 'expo-router';
 import { useAuth } from '../lib/auth';
 import { useAccentTheme } from '../lib/accentTheme';
-import { colors } from '../lib/theme';
+import { useTheme } from '../lib/themeMode';
 
 export default function Index() {
   const { session, profile, loading, needsOnboarding } = useAuth();
   const { colors: accentColors } = useAccentTheme();
+  const theme = useTheme();
 
   if (loading || (session && !profile)) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ flex: 1, backgroundColor: theme.bg, alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator color={accentColors.accent} />
       </View>
     );

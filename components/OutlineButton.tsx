@@ -1,7 +1,8 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useAccentTheme } from '../lib/accentTheme';
-import { colors, fontWeight, radius, space } from '../lib/theme';
+import { useTheme } from '../lib/themeMode';
+import { fontWeight, radius, space } from '../lib/theme';
 
 interface OutlineButtonProps {
   label: string;
@@ -23,10 +24,11 @@ export function OutlineButton({
   filled = false,
 }: OutlineButtonProps) {
   const { colors: accentColors } = useAccentTheme();
+  const theme = useTheme();
   const scale = useSharedValue(1);
   const color =
-    variant === 'danger' ? colors.danger : variant === 'neutral' ? colors.textMuted : accentColors.accent;
-  const contrastColor = variant === 'accent' ? accentColors.accent100 : colors.text;
+    variant === 'danger' ? theme.danger : variant === 'neutral' ? theme.textMuted : accentColors.accent;
+  const contrastColor = variant === 'accent' ? accentColors.accent100 : theme.text;
   const isDisabled = disabled || loading;
 
   const pressStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));

@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { loadDeviceContactsForShare, type ShareableContact } from '../lib/contacts';
 import { Avatar } from './Avatar';
-import { colors, fontWeight, radius, space } from '../lib/theme';
+import { useTheme } from '../lib/themeMode';
+import { fontWeight, radius, space } from '../lib/theme';
 import { useAccentTheme } from '../lib/accentTheme';
 
 interface ContactPickerModalProps {
@@ -14,6 +15,7 @@ interface ContactPickerModalProps {
 export function ContactPickerModal({ visible, onClose, onSelect }: ContactPickerModalProps) {
   const [contacts, setContacts] = useState<ShareableContact[] | null>(null);
   const { colors: accentColors } = useAccentTheme();
+  const theme = useTheme();
 
   useEffect(() => {
     if (!visible) return;
@@ -23,13 +25,13 @@ export function ContactPickerModal({ visible, onClose, onSelect }: ContactPicker
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-          <Text style={styles.title}>Share a contact</Text>
+      <Pressable style={styles.backdrop} onPress={onClose} accessibilityViewIsModal>
+        <Pressable style={[styles.sheet, { backgroundColor: theme.surface }]} onPress={(e) => e.stopPropagation()}>
+          <Text style={[styles.title, { color: theme.text }]}>Share a contact</Text>
           {contacts === null ? (
             <ActivityIndicator color={accentColors.accent} style={styles.loading} />
           ) : contacts.length === 0 ? (
-            <Text style={styles.empty}>No contacts with a phone number found, or access was denied.</Text>
+            <Text style={[styles.empty, { color: theme.textMuted }]}>No contacts with a phone number found, or access was denied.</Text>
           ) : (
             <FlatList
               data={contacts}
@@ -45,8 +47,8 @@ export function ContactPickerModal({ visible, onClose, onSelect }: ContactPicker
                 >
                   <Avatar name={item.name} avatarUrl={null} size={36} />
                   <View style={styles.rowTexts}>
-                    <Text style={styles.rowName}>{item.name}</Text>
-                    <Text style={styles.rowPhone} numberOfLines={1}>
+                    <Text style={[styles.rowName, { color: theme.text }]}>{item.name}</Text>
+                    <Text style={[styles.rowPhone, { color: theme.textMuted }]} numberOfLines={1}>
                       {item.phones[0]}
                     </Text>
                   </View>
@@ -68,14 +70,12 @@ const styles = StyleSheet.create({
   },
   sheet: {
     maxHeight: '70%',
-    backgroundColor: colors.surface,
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
     paddingTop: space[4],
     paddingBottom: space[8],
   },
   title: {
-    color: colors.text,
     fontSize: 16,
     fontWeight: fontWeight.semibold,
     paddingHorizontal: space[6],
@@ -85,7 +85,6 @@ const styles = StyleSheet.create({
     paddingVertical: space[8],
   },
   empty: {
-    color: colors.textMuted,
     fontSize: 14,
     paddingHorizontal: space[6],
     paddingVertical: space[6],
@@ -104,11 +103,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   rowName: {
-    color: colors.text,
     fontSize: 15,
   },
   rowPhone: {
-    color: colors.textMuted,
     fontSize: 13,
   },
 });

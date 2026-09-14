@@ -17,11 +17,13 @@ import { pickImageFromLibrary, uploadAvatar, type PickedAsset } from '../lib/med
 import { Avatar } from '../components/Avatar';
 import { OutlineButton } from '../components/OutlineButton';
 import { useAccentTheme } from '../lib/accentTheme';
-import { colors, fontWeight, radius, space } from '../lib/theme';
+import { fontWeight, fonts, radius, space } from '../lib/theme';
+import { useTheme } from '../lib/themeMode';
 
 export default function OnboardingScreen() {
   const { session, profile, needsOnboarding, refreshProfile, signOut } = useAuth();
   const { colors: accentColors } = useAccentTheme();
+  const theme = useTheme();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [pickedAvatar, setPickedAvatar] = useState<PickedAsset | null>(null);
@@ -75,12 +77,15 @@ export default function OnboardingScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.screen}
+      style={[styles.screen, { backgroundColor: theme.bg }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.content}>
-        <Text style={styles.title}>Set up your profile</Text>
-        <Text style={styles.subtitle}>This is how the rest of the household will see you.</Text>
+        <Text style={[styles.title, { color: theme.text, fontFamily: fonts.display }]}>Welcome home.</Text>
+        <Text style={[styles.subtitle, { color: theme.textMuted }]}>
+          Add your name and a photo so the household knows it's you. Only the people inside this
+          home will ever see it.
+        </Text>
 
         <Pressable style={styles.avatarPicker} onPress={handlePickAvatar}>
           {pickedAvatar ? (
@@ -93,28 +98,32 @@ export default function OnboardingScreen() {
           </Text>
         </Pressable>
 
-        <Text style={styles.fieldLabel}>Your name</Text>
+        <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>Your name</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { borderColor: theme.divider, color: theme.text, backgroundColor: theme.surface }]}
           value={name}
           onChangeText={setName}
           placeholder="Jamie"
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={theme.textMuted}
         />
 
-        <Text style={styles.fieldLabel}>Email (optional)</Text>
+        <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>Email (optional)</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { borderColor: theme.divider, color: theme.text, backgroundColor: theme.surface }]}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
           autoCorrect={false}
           keyboardType="email-address"
           placeholder="you@example.com"
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={theme.textMuted}
         />
+        <Text style={[styles.hint, { color: theme.textMuted }]}>
+          Only used if you ever need to recover your account — never shown to anyone in the
+          household.
+        </Text>
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {error ? <Text style={[styles.error, { color: theme.danger }]}>{error}</Text> : null}
 
         <View style={{ marginTop: space[6] }}>
           {saving ? (
@@ -125,7 +134,7 @@ export default function OnboardingScreen() {
         </View>
 
         <Pressable onPress={signOut} style={{ marginTop: space[8] }}>
-          <Text style={styles.signOut}>Not you? Sign out</Text>
+          <Text style={[styles.signOut, { color: theme.textMuted }]}>Not you? Sign out</Text>
         </Pressable>
       </View>
     </KeyboardAvoidingView>
@@ -135,7 +144,6 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.bg,
   },
   content: {
     flex: 1,
@@ -143,13 +151,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[8],
   },
   title: {
-    color: colors.text,
     fontSize: 26,
     fontWeight: fontWeight.heading,
     marginBottom: space[2],
   },
   subtitle: {
-    color: colors.textMuted,
     fontSize: 14,
     marginBottom: space[8],
   },
@@ -163,7 +169,6 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
   },
   fieldLabel: {
-    color: colors.textMuted,
     fontSize: 12,
     letterSpacing: 0.4,
     marginBottom: space[2],
@@ -171,21 +176,20 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: colors.divider,
     borderRadius: radius.md,
     paddingHorizontal: space[4],
     paddingVertical: space[4],
-    color: colors.text,
     fontSize: 16,
-    backgroundColor: colors.surface,
+  },
+  hint: {
+    fontSize: 12,
+    marginTop: space[2],
   },
   error: {
-    color: colors.danger,
     marginTop: space[4],
     fontSize: 13,
   },
   signOut: {
-    color: colors.textMuted,
     fontSize: 13,
     textAlign: 'center',
   },

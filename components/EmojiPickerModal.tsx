@@ -1,5 +1,6 @@
 import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, fontWeight, radius, space } from '../lib/theme';
+import { useTheme } from '../lib/themeMode';
+import { fontWeight, radius, space } from '../lib/theme';
 
 interface EmojiPickerModalProps {
   visible: boolean;
@@ -22,11 +23,12 @@ const EMOJIS = [
 const COLUMN_COUNT = 6;
 
 export function EmojiPickerModal({ visible, onClose, onSelect }: EmojiPickerModalProps) {
+  const theme = useTheme();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-          <Text style={styles.title}>React</Text>
+      <Pressable style={styles.backdrop} onPress={onClose} accessibilityViewIsModal>
+        <Pressable style={[styles.sheet, { backgroundColor: theme.surface }]} onPress={(e) => e.stopPropagation()}>
+          <Text style={[styles.title, { color: theme.text }]}>React</Text>
           <FlatList
             data={EMOJIS}
             keyExtractor={(e, i) => `${e}-${i}`}
@@ -39,6 +41,8 @@ export function EmojiPickerModal({ visible, onClose, onSelect }: EmojiPickerModa
                   onSelect(item);
                   onClose();
                 }}
+                accessibilityRole="button"
+                accessibilityLabel={`React with ${item}`}
               >
                 <Text style={styles.glyph}>{item}</Text>
               </Pressable>
@@ -58,14 +62,12 @@ const styles = StyleSheet.create({
   },
   sheet: {
     maxHeight: '60%',
-    backgroundColor: colors.surface,
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
     paddingTop: space[4],
     paddingBottom: space[8],
   },
   title: {
-    color: colors.text,
     fontSize: 16,
     fontWeight: fontWeight.semibold,
     paddingHorizontal: space[6],

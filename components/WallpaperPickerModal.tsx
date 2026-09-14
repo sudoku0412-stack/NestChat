@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, fontWeight, radius, space } from '../lib/theme';
+import { useTheme } from '../lib/themeMode';
+import { fontWeight, radius, space } from '../lib/theme';
 import { useAccentTheme } from '../lib/accentTheme';
 import { pickImageFromLibrary, uploadWallpaper } from '../lib/media';
 import { setChatWallpaper } from '../lib/chatActions';
@@ -23,6 +24,7 @@ export function WallpaperPickerModal({
   onChanged,
 }: WallpaperPickerModalProps) {
   const { colors: accentColors } = useAccentTheme();
+  const theme = useTheme();
   const [busy, setBusy] = useState(false);
 
   async function handleChoosePhoto() {
@@ -52,9 +54,9 @@ export function WallpaperPickerModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <View style={styles.menu}>
-          <Text style={styles.title}>Chat wallpaper</Text>
+      <Pressable style={styles.backdrop} onPress={onClose} accessibilityViewIsModal>
+        <View style={[styles.menu, { backgroundColor: theme.surface }]}>
+          <Text style={[styles.title, { color: theme.textMuted }]}>Chat wallpaper</Text>
           {busy ? (
             <View style={styles.busyRow}>
               <ActivityIndicator color={accentColors.accent} />
@@ -62,13 +64,13 @@ export function WallpaperPickerModal({
           ) : (
             <>
               <Pressable style={styles.item} onPress={handleChoosePhoto}>
-                <Text style={styles.label}>Choose photo</Text>
+                <Text style={[styles.label, { color: theme.text }]}>Choose photo</Text>
               </Pressable>
               {hasWallpaper && (
                 <>
-                  <View style={styles.divider} />
+                  <View style={[styles.divider, { backgroundColor: theme.divider }]} />
                   <Pressable style={styles.item} onPress={handleReset}>
-                    <Text style={styles.label}>Reset to default</Text>
+                    <Text style={[styles.label, { color: theme.text }]}>Reset to default</Text>
                   </Pressable>
                 </>
               )}
@@ -89,12 +91,10 @@ const styles = StyleSheet.create({
   menu: {
     margin: space[4],
     marginBottom: space[8],
-    backgroundColor: colors.surface,
     borderRadius: radius.md,
     overflow: 'hidden',
   },
   title: {
-    color: colors.textMuted,
     fontSize: 12,
     textAlign: 'center',
     paddingTop: space[4],
@@ -105,14 +105,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[6],
   },
   label: {
-    color: colors.text,
     fontSize: 16,
     fontWeight: fontWeight.medium,
     textAlign: 'center',
   },
   divider: {
     height: 1,
-    backgroundColor: colors.divider,
   },
   busyRow: {
     paddingVertical: space[6],

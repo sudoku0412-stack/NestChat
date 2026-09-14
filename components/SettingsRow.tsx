@@ -19,7 +19,11 @@ interface SettingsRowProps {
 export function SettingsRow({ label, icon, onPress, trailing, labelColor, disabled, theme = colors }: SettingsRowProps) {
   const content = (
     <View style={styles.row}>
-      {icon ? <View style={styles.iconSlot}>{icon}</View> : null}
+      {icon ? (
+        <View style={styles.iconSlot}>
+          <View style={[styles.iconCircle, { backgroundColor: theme.bgDeep }]}>{icon}</View>
+        </View>
+      ) : null}
       <Text style={[styles.label, { color: labelColor ?? theme.text }]} numberOfLines={1}>
         {label}
       </Text>
@@ -46,8 +50,16 @@ const styles = StyleSheet.create({
     paddingVertical: space[4],
   },
   iconSlot: {
-    width: 30,
+    width: 32,
     alignItems: 'center',
+  },
+  // 32px bg-surface-sunken tinted circle around each row's leading icon, per the Hearth spec.
+  iconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   label: {
     flex: 1,

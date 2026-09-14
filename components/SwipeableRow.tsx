@@ -8,7 +8,8 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { useAccentTheme } from '../lib/accentTheme';
-import { colors, fontWeight } from '../lib/theme';
+import { useTheme } from '../lib/themeMode';
+import { fontWeight } from '../lib/theme';
 import { ArchiveIcon, BellIcon, BellOffIcon, StarIcon, TrashIcon } from './icons';
 
 const LEFT_ACTIONS_WIDTH = 120; // Mute/Unmute + Delete
@@ -49,6 +50,7 @@ export function SwipeableRow({
   disabled = false,
 }: SwipeableRowProps) {
   const { colors: accentColors } = useAccentTheme();
+  const theme = useTheme();
   const translateX = useSharedValue(0);
   const startX = useSharedValue(0);
 
@@ -108,7 +110,7 @@ export function SwipeableRow({
   if (disabled) {
     return (
       <Pressable onPress={onPress} onLongPress={onLongPress}>
-        <View style={styles.foreground}>{children}</View>
+        <View style={[styles.foreground, { backgroundColor: theme.bg }]}>{children}</View>
       </Pressable>
     );
   }
@@ -123,8 +125,8 @@ export function SwipeableRow({
             closeTo(0, false);
           }}
         >
-          <StarIcon size={18} color={colors.text} filled={favorite} />
-          <Text style={styles.actionLabel}>{favorite ? 'Unfavorite' : 'Favorite'}</Text>
+          <StarIcon size={18} color={theme.text} filled={favorite} />
+          <Text style={[styles.actionLabel, { color: theme.text }]}>{favorite ? 'Unfavorite' : 'Favorite'}</Text>
         </Pressable>
         <Pressable
           style={[styles.action, { backgroundColor: accentColors.accent700, width: 60 }]}
@@ -133,40 +135,40 @@ export function SwipeableRow({
             closeTo(0, false);
           }}
         >
-          <ArchiveIcon size={18} color={colors.text} />
-          <Text style={styles.actionLabel}>{isArchived ? 'Unarchive' : 'Archive'}</Text>
+          <ArchiveIcon size={18} color={theme.text} />
+          <Text style={[styles.actionLabel, { color: theme.text }]}>{isArchived ? 'Unarchive' : 'Archive'}</Text>
         </Pressable>
       </View>
 
       <View style={styles.rightActionTrack}>
         <Pressable
-          style={[styles.action, { backgroundColor: colors.neutral700, width: 60 }]}
+          style={[styles.action, { backgroundColor: theme.neutral700, width: 60 }]}
           onPress={() => {
             onMuteToggle();
             closeTo(0, false);
           }}
         >
           {muted ? (
-            <BellOffIcon size={18} color={colors.text} />
+            <BellOffIcon size={18} color={theme.text} />
           ) : (
-            <BellIcon size={18} color={colors.text} />
+            <BellIcon size={18} color={theme.text} />
           )}
-          <Text style={styles.actionLabel}>{muted ? 'Unmute' : 'Mute'}</Text>
+          <Text style={[styles.actionLabel, { color: theme.text }]}>{muted ? 'Unmute' : 'Mute'}</Text>
         </Pressable>
         <Pressable
-          style={[styles.action, { backgroundColor: colors.danger, width: 60 }]}
+          style={[styles.action, { backgroundColor: theme.danger, width: 60 }]}
           onPress={() => {
             onDelete();
             closeTo(0, false);
           }}
         >
-          <TrashIcon size={18} color={colors.text} />
-          <Text style={styles.actionLabel}>Delete</Text>
+          <TrashIcon size={18} color={theme.text} />
+          <Text style={[styles.actionLabel, { color: theme.text }]}>Delete</Text>
         </Pressable>
       </View>
 
       <GestureDetector gesture={composed}>
-        <Animated.View style={[styles.foreground, rowStyle]}>{children}</Animated.View>
+        <Animated.View style={[styles.foreground, { backgroundColor: theme.bg }, rowStyle]}>{children}</Animated.View>
       </GestureDetector>
     </View>
   );
@@ -177,9 +179,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
   },
-  foreground: {
-    backgroundColor: colors.bg,
-  },
+  foreground: {},
   leftActionTrack: {
     position: 'absolute',
     left: 0,
@@ -201,7 +201,6 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   actionLabel: {
-    color: colors.text,
     fontWeight: fontWeight.medium,
     fontSize: 13,
     textAlign: 'center',

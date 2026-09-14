@@ -45,8 +45,8 @@ import type { GiphyItem } from '../../../lib/giphy';
 import { addRecentEmoji } from '../../../lib/recentEmojis';
 import { ScreenHeader } from '../../../components/ScreenHeader';
 import { BellIcon, BellOffIcon } from '../../../components/icons';
-import { colors, fontWeight, space } from '../../../lib/theme';
-import { useThemeMode } from '../../../lib/themeMode';
+import { fontWeight, space } from '../../../lib/theme';
+import { useTheme } from '../../../lib/themeMode';
 
 // Same-sender messages within this window group into one visual run (tight spacing, tail
 // radius only on the last bubble, sender name only on the first) instead of every message
@@ -79,9 +79,12 @@ function formatDateChipLabel(iso: string) {
 }
 
 function DateChip({ label }: { label: string }) {
+  const theme = useTheme();
   return (
     <View style={styles.dateChipRow}>
-      <Text style={styles.dateChipText}>{label}</Text>
+      <Text style={[styles.dateChipText, { color: theme.textMuted, backgroundColor: theme.surface }]}>
+        {label}
+      </Text>
     </View>
   );
 }
@@ -129,7 +132,7 @@ export default function ThreadScreen() {
   const typingChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const typingClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTypingSentRef = useRef(0);
-  const { bg } = useThemeMode();
+  const theme = useTheme();
 
   useEffect(() => {
     if (pendingMessages.length === 0) return;
@@ -413,12 +416,13 @@ export default function ThreadScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.screen, { backgroundColor: bg }]}
+      style={[styles.screen, { backgroundColor: theme.bg }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={{ paddingTop: insets.top }}>
         <ScreenHeader
           title={title}
+          theme={theme}
           centerContent={
             <Pressable
               style={styles.headerCenter}
@@ -433,22 +437,35 @@ export default function ThreadScreen() {
             >
               <View>
                 <Avatar name={title} avatarUrl={isGroup ? null : otherMember?.avatar_url} size={32} />
-                {canSeePresence && otherMember?.is_online && <View style={styles.headerPresenceDot} />}
+                {canSeePresence && otherMember?.is_online && (
+                  <View
+                    style={[
+                      styles.headerPresenceDot,
+                      { backgroundColor: theme.success, borderColor: theme.bg },
+                    ]}
+                  />
+                )}
               </View>
               <View style={styles.headerTexts}>
-                <Text style={styles.headerTitle} numberOfLines={1}>
+                <Text style={[styles.headerTitle, { color: theme.text }]} numberOfLines={1}>
                   {title}
                 </Text>
-                <Text style={styles.headerSubtitle}>{subtitle}</Text>
+                <Text style={[styles.headerSubtitle, { color: theme.textMuted }]}>{subtitle}</Text>
               </View>
             </Pressable>
           }
           right={
-            <Pressable onPress={toggleMute} hitSlop={8}>
+            <Pressable
+              onPress={toggleMute}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={muted ? 'Unmute chat' : 'Mute chat'}
+              accessibilityState={{ selected: muted }}
+            >
               {muted ? (
-                <BellOffIcon size={20} color={colors.textMuted} />
+                <BellOffIcon size={20} color={theme.textMuted} />
               ) : (
-                <BellIcon size={20} color={colors.textMuted} />
+                <BellIcon size={20} color={theme.textMuted} />
               )}
             </Pressable>
           }
@@ -456,9 +473,14 @@ export default function ThreadScreen() {
       </View>
 
       {pinnedMessage && (
-        <View style={styles.pinnedBanner}>
+        <View
+          style={[
+            styles.pinnedBanner,
+            { backgroundColor: theme.surface, borderBottomColor: theme.divider },
+          ]}
+        >
           <Text style={styles.pinnedGlyph}>📌</Text>
-          <Text style={styles.pinnedText} numberOfLines={1}>
+          <Text style={[styles.pinnedText, { color: theme.textMuted }]} numberOfLines={1}>
             {previewFor(pinnedMessage)}
           </Text>
         </View>
@@ -613,7 +635,6 @@ const styles = StyleSheet.create({
   },
   screen: {
     flex: 1,
-    backgroundColor: colors.bg,
   },
   headerCenter: {
     flex: 1,
@@ -631,17 +652,13 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 999,
-    backgroundColor: colors.success,
     borderWidth: 2,
-    borderColor: colors.bg,
   },
   headerTitle: {
-    color: colors.text,
     fontSize: 16,
     fontWeight: fontWeight.medium,
   },
   headerSubtitle: {
-    color: colors.textMuted,
     fontSize: 12,
   },
   dateChipRow: {
@@ -649,10 +666,8 @@ const styles = StyleSheet.create({
     marginVertical: space[3],
   },
   dateChipText: {
-    color: colors.textMuted,
     fontSize: 11,
     fontWeight: fontWeight.semibold,
-    backgroundColor: colors.surface,
     paddingHorizontal: space[3],
     paddingVertical: 4,
     borderRadius: 999,
@@ -663,15 +678,12 @@ const styles = StyleSheet.create({
     gap: space[2],
     paddingHorizontal: space[4],
     paddingVertical: space[2],
-    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
   },
   pinnedGlyph: {
     fontSize: 13,
   },
   pinnedText: {
-    color: colors.textMuted,
     fontSize: 13,
     flex: 1,
   },

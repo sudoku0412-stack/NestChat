@@ -1,7 +1,8 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Avatar } from './Avatar';
 import { useAccentTheme } from '../lib/accentTheme';
-import { colors, fontWeight, radius, space } from '../lib/theme';
+import { useTheme } from '../lib/themeMode';
+import { fontWeight, radius, space } from '../lib/theme';
 import type { Member } from '../lib/types';
 
 interface MemberRowProps {
@@ -16,24 +17,26 @@ interface MemberRowProps {
 
 export function MemberRow({ member, onPress, checkbox, trailing }: MemberRowProps) {
   const { colors: accentColors } = useAccentTheme();
+  const theme = useTheme();
   return (
-    <Pressable style={styles.row} onPress={onPress}>
+    <Pressable style={[styles.row, { borderBottomColor: theme.divider }]} onPress={onPress}>
       {checkbox && (
         <Pressable
           style={[
             styles.checkbox,
+            { borderColor: theme.textMuted },
             checkbox.checked && { backgroundColor: accentColors.accent, borderColor: accentColors.accent },
           ]}
           onPress={checkbox.onToggle}
           hitSlop={8}
         >
-          {checkbox.checked && <Text style={styles.checkmark}>✓</Text>}
+          {checkbox.checked && <Text style={[styles.checkmark, { color: theme.bg }]}>✓</Text>}
         </Pressable>
       )}
       <Avatar name={member.display_name} avatarUrl={member.avatar_url} size={40} />
       <View style={styles.info}>
-        <Text style={styles.name}>{member.display_name}</Text>
-        {member.role === 'admin' && <Text style={styles.roleTag}>Admin</Text>}
+        <Text style={[styles.name, { color: theme.text }]}>{member.display_name}</Text>
+        {member.role === 'admin' && <Text style={[styles.roleTag, { color: theme.textMuted }]}>Admin</Text>}
       </View>
       {trailing}
     </Pressable>
@@ -48,19 +51,16 @@ const styles = StyleSheet.create({
     paddingVertical: space[3],
     gap: space[4],
     borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
   },
   checkbox: {
     width: 22,
     height: 22,
     borderRadius: radius.sm,
     borderWidth: 1.5,
-    borderColor: colors.textMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkmark: {
-    color: colors.bg,
     fontSize: 13,
     fontWeight: fontWeight.semibold,
   },
@@ -68,12 +68,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   name: {
-    color: colors.text,
     fontSize: 15,
     fontWeight: fontWeight.medium,
   },
   roleTag: {
-    color: colors.textMuted,
     fontSize: 12,
     marginTop: 2,
   },

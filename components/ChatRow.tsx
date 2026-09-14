@@ -2,8 +2,9 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Avatar, GroupAvatarStack } from './Avatar';
 import { SwipeableRow } from './SwipeableRow';
 import { BellOffIcon, StarIcon } from './icons';
+import { useTheme } from '../lib/themeMode';
 import { useAccentTheme } from '../lib/accentTheme';
-import { colors, fontWeight, radius, space } from '../lib/theme';
+import { fontWeight, radius, space } from '../lib/theme';
 import type { ChatListItem } from '../lib/types';
 
 function formatTimestamp(iso: string | null) {
@@ -53,6 +54,7 @@ export function ChatRow({
   selected = false,
   showPresence = false,
 }: ChatRowProps) {
+  const theme = useTheme();
   const { colors: accentColors } = useAccentTheme();
   return (
     <SwipeableRow
@@ -74,10 +76,11 @@ export function ChatRow({
           <View
             style={[
               styles.checkCircle,
+              { borderColor: theme.divider },
               selected && { backgroundColor: accentColors.accent, borderColor: accentColors.accent },
             ]}
           >
-            {selected && <Text style={styles.checkGlyph}>✓</Text>}
+            {selected && <Text style={[styles.checkGlyph, { color: '#FFFFFF' }]}>✓</Text>}
           </View>
         )}
 
@@ -86,7 +89,11 @@ export function ChatRow({
         ) : (
           <View>
             <Avatar name={chat.title} avatarUrl={chat.avatarMembers[0]?.avatar_url} />
-            {showPresence && <View style={styles.presenceDot} />}
+            {showPresence && (
+              <View
+                style={[styles.presenceDot, { backgroundColor: theme.success, borderColor: theme.bg }]}
+              />
+            )}
           </View>
         )}
 
@@ -94,20 +101,33 @@ export function ChatRow({
           <View style={styles.titleLine}>
             <View style={styles.titleRow}>
               {chat.favorite && <StarIcon size={13} color={accentColors.accent} filled />}
-              <Text style={[styles.title, chat.unreadCount > 0 && styles.titleUnread]} numberOfLines={1}>
+              <Text
+                style={[
+                  styles.title,
+                  { color: theme.text },
+                  chat.unreadCount > 0 && styles.titleUnread,
+                ]}
+                numberOfLines={1}
+              >
                 {chat.title}
               </Text>
             </View>
-            <Text style={styles.timestamp}>{formatTimestamp(chat.lastMessageAt)}</Text>
+            <Text style={[styles.timestamp, { color: theme.textMuted }]}>
+              {formatTimestamp(chat.lastMessageAt)}
+            </Text>
           </View>
           <View style={styles.previewLine}>
             <Text
-              style={[styles.preview, chat.unreadCount > 0 && styles.previewUnread]}
+              style={[
+                styles.preview,
+                { color: theme.textMuted },
+                chat.unreadCount > 0 && { color: theme.text },
+              ]}
               numberOfLines={1}
             >
               {chat.lastMessagePreview}
             </Text>
-            {chat.muted && <BellOffIcon size={13} color={colors.textMuted} />}
+            {chat.muted && <BellOffIcon size={13} color={theme.textMuted} />}
             {chat.unreadCount > 0 && (
               <View style={[styles.badge, { backgroundColor: accentColors.accent }]}>
                 <Text style={styles.badgeText}>{chat.unreadCount > 99 ? '99+' : chat.unreadCount}</Text>
@@ -134,12 +154,10 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: radius.full,
     borderWidth: 1.5,
-    borderColor: colors.divider,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkGlyph: {
-    color: colors.bg,
     fontSize: 12,
     fontWeight: fontWeight.semibold,
   },
@@ -150,9 +168,7 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: radius.full,
-    backgroundColor: colors.success,
     borderWidth: 2,
-    borderColor: colors.bg,
   },
   middle: {
     flex: 1,
@@ -169,7 +185,6 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   title: {
-    color: colors.text,
     fontSize: 16,
     fontWeight: fontWeight.medium,
     flexShrink: 1,
@@ -178,7 +193,6 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.bold,
   },
   timestamp: {
-    color: colors.textMuted,
     fontSize: 12,
     marginLeft: space[2],
   },
@@ -189,12 +203,8 @@ const styles = StyleSheet.create({
     gap: space[2],
   },
   preview: {
-    color: colors.textMuted,
     fontSize: 14,
     flex: 1,
-  },
-  previewUnread: {
-    color: colors.text,
   },
   badge: {
     borderRadius: radius.full,
@@ -205,7 +215,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   badgeText: {
-    color: colors.bg,
+    color: '#FFFFFF',
     fontSize: 11,
     fontWeight: fontWeight.bold,
   },

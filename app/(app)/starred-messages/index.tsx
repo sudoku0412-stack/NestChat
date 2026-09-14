@@ -9,7 +9,8 @@ import { decryptTextField, isEncryptedRow } from '../../../lib/crypto';
 import { ScreenHeader } from '../../../components/ScreenHeader';
 import { StarIcon } from '../../../components/icons';
 import { useAccentTheme } from '../../../lib/accentTheme';
-import { colors, space } from '../../../lib/theme';
+import { useTheme } from '../../../lib/themeMode';
+import { space } from '../../../lib/theme';
 
 interface StarredItem {
   message_id: string;
@@ -34,6 +35,7 @@ function formatTimestamp(iso: string) {
 // an aggregator on top of the same message_stars/decrypt machinery, not a second source of truth.
 export default function AllStarredMessagesScreen() {
   const { colors: accentColors } = useAccentTheme();
+  const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { profile } = useAuth();
   const [items, setItems] = useState<StarredItem[]>([]);
@@ -129,8 +131,8 @@ export default function AllStarredMessagesScreen() {
   }
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <ScreenHeader title="Starred messages" />
+    <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: theme.bg }]}>
+      <ScreenHeader title="Starred messages" theme={theme} />
 
       {loading ? (
         <View style={styles.centered}>
@@ -142,23 +144,34 @@ export default function AllStarredMessagesScreen() {
           keyExtractor={(item) => item.message_id}
           ListEmptyComponent={
             <View style={styles.centered}>
-              <Text style={styles.emptyText}>
+              <Text style={[styles.emptyText, { color: theme.textMuted }]}>
                 Long-press any message in any chat to star it, and it'll show up here.
               </Text>
             </View>
           }
           renderItem={({ item }) => (
-            <Pressable style={styles.row} onPress={() => router.push(`/(app)/chat/${item.chat_id}`)}>
+            <Pressable
+              style={[styles.row, { borderBottomColor: theme.divider }]}
+              onPress={() => router.push(`/(app)/chat/${item.chat_id}`)}
+            >
               <View style={styles.rowText}>
-                <Text style={styles.chatLabel}>
+                <Text style={[styles.chatLabel, { color: theme.textMuted }]}>
                   {chatLabelsById.get(item.chat_id) ?? '...'} · {namesById.get(item.sender_id) ?? 'Unknown'}
                 </Text>
-                <Text style={styles.preview} numberOfLines={2}>
+                <Text style={[styles.preview, { color: theme.text }]} numberOfLines={2}>
                   {previewFor(item)}
                 </Text>
-                <Text style={styles.timestamp}>{formatTimestamp(item.created_at)}</Text>
+                <Text style={[styles.timestamp, { color: theme.textMuted }]}>
+                  {formatTimestamp(item.created_at)}
+                </Text>
               </View>
-              <Pressable onPress={() => handleUnstar(item.message_id)} hitSlop={8} style={styles.starGlyph}>
+              <Pressable
+                onPress={() => handleUnstar(item.message_id)}
+                hitSlop={8}
+                style={styles.starGlyph}
+                accessibilityRole="button"
+                accessibilityLabel="Unstar message"
+              >
                 <StarIcon size={18} color={accentColors.accent} filled />
               </Pressable>
             </Pressable>
@@ -172,7 +185,6 @@ export default function AllStarredMessagesScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.bg,
   },
   centered: {
     flex: 1,
@@ -181,7 +193,6 @@ const styles = StyleSheet.create({
     padding: space[8],
   },
   emptyText: {
-    color: colors.textMuted,
     textAlign: 'center',
     fontSize: 14,
   },
@@ -193,22 +204,18 @@ const styles = StyleSheet.create({
     paddingVertical: space[4],
     gap: space[3],
     borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
   },
   rowText: {
     flex: 1,
   },
   chatLabel: {
-    color: colors.textMuted,
     fontSize: 12,
     marginBottom: space[1],
   },
   preview: {
-    color: colors.text,
     fontSize: 15,
   },
   timestamp: {
-    color: colors.textMuted,
     fontSize: 11,
     marginTop: space[1],
   },

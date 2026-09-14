@@ -1,5 +1,6 @@
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, fontWeight, radius, space } from '../lib/theme';
+import { useTheme } from '../lib/themeMode';
+import { fontWeight, radius, space } from '../lib/theme';
 import type { LiveLocationDuration } from '../lib/database.types';
 
 interface LocationDurationModalProps {
@@ -15,14 +16,15 @@ const OPTIONS: { duration: LiveLocationDuration; label: string }[] = [
 ];
 
 export function LocationDurationModal({ visible, onClose, onSelect }: LocationDurationModalProps) {
+  const theme = useTheme();
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <View style={styles.menu}>
-          <Text style={styles.title}>Share live location</Text>
+      <Pressable style={styles.backdrop} onPress={onClose} accessibilityViewIsModal>
+        <View style={[styles.menu, { backgroundColor: theme.surface }]}>
+          <Text style={[styles.title, { color: theme.textMuted }]}>Share live location</Text>
           {OPTIONS.map((opt, i) => (
             <View key={opt.duration}>
-              {i > 0 && <View style={styles.divider} />}
+              {i > 0 && <View style={[styles.divider, { backgroundColor: theme.divider }]} />}
               <Pressable
                 style={styles.item}
                 onPress={() => {
@@ -30,7 +32,7 @@ export function LocationDurationModal({ visible, onClose, onSelect }: LocationDu
                   onClose();
                 }}
               >
-                <Text style={styles.label}>{opt.label}</Text>
+                <Text style={[styles.label, { color: theme.text }]}>{opt.label}</Text>
               </Pressable>
             </View>
           ))}
@@ -49,12 +51,10 @@ const styles = StyleSheet.create({
   menu: {
     margin: space[4],
     marginBottom: space[8],
-    backgroundColor: colors.surface,
     borderRadius: radius.md,
     overflow: 'hidden',
   },
   title: {
-    color: colors.textMuted,
     fontSize: 12,
     textAlign: 'center',
     paddingTop: space[4],
@@ -65,13 +65,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[6],
   },
   label: {
-    color: colors.text,
     fontSize: 16,
     fontWeight: fontWeight.medium,
     textAlign: 'center',
   },
   divider: {
     height: 1,
-    backgroundColor: colors.divider,
   },
 });

@@ -6,12 +6,14 @@ import { supabase } from '../../lib/supabase';
 import { rotateChatKeyOnRemoval } from '../../lib/crypto';
 import { PinModal } from '../../components/PinModal';
 import { ScreenHeader } from '../../components/ScreenHeader';
+import { useTheme } from '../../lib/themeMode';
 import { useAccentTheme } from '../../lib/accentTheme';
-import { colors, fontWeight, space } from '../../lib/theme';
+import { fontWeight, space } from '../../lib/theme';
 
 export default function AccountScreen() {
   const insets = useSafeAreaInsets();
   const { profile, refreshProfile, setPin, signOut } = useAuth();
+  const theme = useTheme();
   const { colors: accentColors } = useAccentTheme();
   const [pinModalVisible, setPinModalVisible] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -91,26 +93,26 @@ export default function AccountScreen() {
   }
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <ScreenHeader title="Account" />
+    <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: theme.bg }]}>
+      <ScreenHeader title="Account" theme={theme} />
 
-      <View style={styles.row}>
-        <Text style={styles.rowLabelStatic}>Phone</Text>
-        <Text style={styles.rowValue}>{profile?.phone ?? '—'}</Text>
+      <View style={[styles.row, { borderBottomColor: theme.divider }]}>
+        <Text style={[styles.rowLabelStatic, { color: theme.text }]}>Phone</Text>
+        <Text style={[styles.rowValue, { color: theme.textMuted }]}>{profile?.phone ?? '—'}</Text>
       </View>
 
-      <Pressable style={styles.row} onPress={() => setPinModalVisible(true)}>
-        <Text style={styles.rowLabelStatic}>Recovery PIN</Text>
+      <Pressable style={[styles.row, { borderBottomColor: theme.divider }]} onPress={() => setPinModalVisible(true)}>
+        <Text style={[styles.rowLabelStatic, { color: theme.text }]}>Recovery PIN</Text>
         <Text style={[styles.rowValue, { color: accentColors.accent }]}>
           {profile?.pin_hash ? 'Change' : 'Set up'}
         </Text>
       </Pressable>
-      <Text style={styles.caption}>
+      <Text style={[styles.caption, { color: theme.textMuted }]}>
         Needed to get your chats back if you ever sign out or reinstall the app.
       </Text>
 
-      <Pressable style={styles.row} onPress={handleDeleteAccount} disabled={deleting}>
-        <Text style={[styles.rowLabelStatic, { color: colors.danger }]}>Delete my account</Text>
+      <Pressable style={[styles.row, { borderBottomColor: theme.divider }]} onPress={handleDeleteAccount} disabled={deleting}>
+        <Text style={[styles.rowLabelStatic, { color: theme.danger }]}>Delete my account</Text>
         {deleting && <ActivityIndicator color={accentColors.accent} />}
       </Pressable>
 
@@ -130,7 +132,6 @@ export default function AccountScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.bg,
   },
   row: {
     flexDirection: 'row',
@@ -139,18 +140,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[6],
     paddingVertical: space[4],
     borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
   },
   rowLabelStatic: {
-    color: colors.text,
     fontSize: 15,
   },
   rowValue: {
     fontSize: 15,
-    color: colors.textMuted,
   },
   caption: {
-    color: colors.textMuted,
     fontSize: 12,
     paddingHorizontal: space[6],
     paddingTop: space[2],

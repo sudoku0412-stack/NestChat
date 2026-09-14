@@ -17,8 +17,9 @@ import { sendBroadcastText } from '../../lib/broadcast';
 import { decryptTextField, isEncryptedRow } from '../../lib/crypto';
 import { MemberRow } from '../../components/MemberRow';
 import { ScreenHeader } from '../../components/ScreenHeader';
+import { useTheme } from '../../lib/themeMode';
 import { useAccentTheme } from '../../lib/accentTheme';
-import { colors, fontWeight, space } from '../../lib/theme';
+import { fontWeight, space } from '../../lib/theme';
 import type { BroadcastListsRow } from '../../lib/database.types';
 
 interface SendLogItem {
@@ -32,6 +33,7 @@ interface SendLogItem {
 export default function BroadcastScreen() {
   const insets = useSafeAreaInsets();
   const { profile } = useAuth();
+  const theme = useTheme();
   const { colors: accentColors } = useAccentTheme();
   const { members, loading: membersLoading } = useMembers(profile?.id);
   const [lists, setLists] = useState<BroadcastListsRow[]>([]);
@@ -168,8 +170,8 @@ export default function BroadcastScreen() {
   }
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <ScreenHeader title="Broadcast messages" />
+    <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: theme.bg }]}>
+      <ScreenHeader title="Broadcast messages" theme={theme} />
 
       <FlatList
         data={members}
@@ -178,7 +180,7 @@ export default function BroadcastScreen() {
           <>
             {lists.length > 0 && (
               <>
-                <Text style={styles.sectionLabel}>Send to a saved list</Text>
+                <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>Send to a saved list</Text>
                 <FlatList
                   horizontal
                   data={lists}
@@ -188,11 +190,12 @@ export default function BroadcastScreen() {
                     <Pressable
                       style={[
                         styles.chip,
+                        { borderColor: theme.divider },
                         selectedListId === item.id && { backgroundColor: accentColors.accent, borderColor: accentColors.accent },
                       ]}
                       onPress={() => selectList(item)}
                     >
-                      <Text style={[styles.chipLabel, selectedListId === item.id && { color: colors.text }]}>
+                      <Text style={[styles.chipLabel, { color: theme.text }, selectedListId === item.id && { color: theme.bg }]}>
                         {item.name}
                       </Text>
                     </Pressable>
@@ -200,7 +203,7 @@ export default function BroadcastScreen() {
                 />
               </>
             )}
-            <Text style={styles.sectionLabel}>Or pick people ({selected.size})</Text>
+            <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>Or pick people ({selected.size})</Text>
           </>
         }
         renderItem={({ item }) => (
@@ -212,11 +215,11 @@ export default function BroadcastScreen() {
         )}
         ListFooterComponent={
           <>
-            <View style={styles.composeRow}>
+            <View style={[styles.composeRow, { borderColor: theme.divider }]}>
               <TextInput
-                style={styles.composeInput}
+                style={[styles.composeInput, { color: theme.text }]}
                 placeholder="Message"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={theme.textMuted}
                 value={body}
                 onChangeText={setBody}
                 multiline
@@ -232,8 +235,7 @@ export default function BroadcastScreen() {
                   <Text
                     style={[
                       styles.sendLabel,
-                      { color: accentColors.accent },
-                      (!body.trim() || selected.size === 0) && styles.sendLabelDisabled,
+                      { color: !body.trim() || selected.size === 0 ? theme.textMuted : accentColors.accent },
                     ]}
                   >
                     Send
@@ -242,18 +244,18 @@ export default function BroadcastScreen() {
               </Pressable>
             </View>
 
-            <Text style={styles.sectionLabel}>Recent broadcasts</Text>
+            <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>Recent broadcasts</Text>
             {logLoading ? (
               <ActivityIndicator color={accentColors.accent} style={{ marginTop: space[4] }} />
             ) : log.length === 0 ? (
-              <Text style={styles.emptyText}>Nothing sent yet.</Text>
+              <Text style={[styles.emptyText, { color: theme.textMuted }]}>Nothing sent yet.</Text>
             ) : (
               log.map((item) => (
-                <View key={item.sendId} style={styles.logRow}>
-                  <Text style={styles.logLabel}>
+                <View key={item.sendId} style={[styles.logRow, { borderBottomColor: theme.divider }]}>
+                  <Text style={[styles.logLabel, { color: theme.textMuted }]}>
                     {item.listName ?? 'Ad-hoc'} · {item.recipientCount} recipient{item.recipientCount === 1 ? '' : 's'}
                   </Text>
-                  <Text style={styles.logPreview} numberOfLines={1}>
+                  <Text style={[styles.logPreview, { color: theme.text }]} numberOfLines={1}>
                     {item.preview}
                   </Text>
                 </View>
@@ -271,10 +273,8 @@ export default function BroadcastScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.bg,
   },
   sectionLabel: {
-    color: colors.textMuted,
     fontSize: 12,
     letterSpacing: 0.4,
     paddingHorizontal: space[6],
@@ -287,14 +287,12 @@ const styles = StyleSheet.create({
   },
   chip: {
     borderWidth: 1,
-    borderColor: colors.divider,
     borderRadius: 999,
     paddingHorizontal: space[4],
     paddingVertical: space[2],
     marginRight: space[2],
   },
   chipLabel: {
-    color: colors.text,
     fontSize: 14,
   },
   composeRow: {
@@ -305,11 +303,9 @@ const styles = StyleSheet.create({
     paddingVertical: space[4],
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: colors.divider,
   },
   composeInput: {
     flex: 1,
-    color: colors.text,
     fontSize: 15,
     maxHeight: 120,
     paddingVertical: space[2],
@@ -321,11 +317,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: fontWeight.semibold,
   },
-  sendLabelDisabled: {
-    color: colors.textMuted,
-  },
   emptyText: {
-    color: colors.textMuted,
     fontSize: 14,
     paddingHorizontal: space[6],
   },
@@ -333,14 +325,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[6],
     paddingVertical: space[3],
     borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
   },
   logLabel: {
-    color: colors.textMuted,
     fontSize: 12,
   },
   logPreview: {
-    color: colors.text,
     fontSize: 15,
     marginTop: 2,
   },

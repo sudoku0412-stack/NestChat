@@ -28,7 +28,7 @@ export function SettingsCard({ children, theme = colors }: SettingsCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: radius.lg,
+    borderRadius: radius.md,
     overflow: 'hidden',
   },
 });

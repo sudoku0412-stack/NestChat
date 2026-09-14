@@ -6,8 +6,9 @@ import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { ChevronRightIcon } from '../../components/icons';
+import { useTheme } from '../../lib/themeMode';
 import { useAccentTheme } from '../../lib/accentTheme';
-import { colors, fontWeight, space } from '../../lib/theme';
+import { fontWeight, space } from '../../lib/theme';
 import type { BroadcastListsRow } from '../../lib/database.types';
 
 interface ListRow extends BroadcastListsRow {
@@ -17,6 +18,7 @@ interface ListRow extends BroadcastListsRow {
 export default function ListsScreen() {
   const insets = useSafeAreaInsets();
   const { profile } = useAuth();
+  const theme = useTheme();
   const { colors: accentColors } = useAccentTheme();
   const [lists, setLists] = useState<ListRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,9 +46,10 @@ export default function ListsScreen() {
   }, [profile?.id]);
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
+    <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: theme.bg }]}>
       <ScreenHeader
         title="Lists"
+        theme={theme}
         right={
           // stale .expo/types/router.d.ts predates this route -- see settings.tsx's MENU_ROWS comment
           <Pressable onPress={() => router.push('/(app)/list-edit/new' as any)} hitSlop={8}>
@@ -63,18 +66,18 @@ export default function ListsScreen() {
           keyExtractor={(l) => l.id}
           ListEmptyComponent={
             <View style={styles.centered}>
-              <Text style={styles.emptyText}>
+              <Text style={[styles.emptyText, { color: theme.textMuted }]}>
                 Create a list to quickly broadcast one message to a saved group of people.
               </Text>
             </View>
           }
           renderItem={({ item }) => (
-            <Pressable style={styles.row} onPress={() => router.push(`/(app)/list-edit/${item.id}` as any)}>
+            <Pressable style={[styles.row, { borderBottomColor: theme.divider }]} onPress={() => router.push(`/(app)/list-edit/${item.id}` as any)}>
               <View>
-                <Text style={styles.rowLabel}>{item.name}</Text>
-                <Text style={styles.rowSub}>{item.memberCount} member{item.memberCount === 1 ? '' : 's'}</Text>
+                <Text style={[styles.rowLabel, { color: theme.text }]}>{item.name}</Text>
+                <Text style={[styles.rowSub, { color: theme.textMuted }]}>{item.memberCount} member{item.memberCount === 1 ? '' : 's'}</Text>
               </View>
-              <ChevronRightIcon size={18} color={colors.textMuted} />
+              <ChevronRightIcon size={18} color={theme.textMuted} />
             </Pressable>
           )}
         />
@@ -86,7 +89,6 @@ export default function ListsScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.bg,
   },
   action: {
     fontSize: 15,
@@ -97,7 +99,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    color: colors.textMuted,
     textAlign: 'center',
     fontSize: 14,
   },
@@ -108,14 +109,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[6],
     paddingVertical: space[4],
     borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
   },
   rowLabel: {
-    color: colors.text,
     fontSize: 16,
   },
   rowSub: {
-    color: colors.textMuted,
     fontSize: 13,
     marginTop: 2,
   },

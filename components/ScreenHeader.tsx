@@ -34,7 +34,13 @@ export function ScreenHeader({ title, subtitle, onBack, right, centerContent, th
   return (
     <View style={styles.row}>
       {handleBack ? (
-        <Pressable onPress={handleBack} hitSlop={8} style={styles.backBtn}>
+        <Pressable
+          onPress={handleBack}
+          hitSlop={8}
+          style={styles.backBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+        >
           <ChevronLeftIcon size={22} color={theme.text} />
         </Pressable>
       ) : (

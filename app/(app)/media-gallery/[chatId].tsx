@@ -16,8 +16,9 @@ import * as Sharing from 'expo-sharing';
 import { useAuth } from '../../../lib/auth';
 import { supabase } from '../../../lib/supabase';
 import { useDecryptedMediaUri } from '../../../lib/hooks/useDecryptedMediaUri';
-import { colors, space } from '../../../lib/theme';
+import { space } from '../../../lib/theme';
 import { ScreenHeader } from '../../../components/ScreenHeader';
+import { useTheme } from '../../../lib/themeMode';
 import { useAccentTheme } from '../../../lib/accentTheme';
 import type { MessageMediaRow } from '../../../lib/database.types';
 
@@ -39,10 +40,11 @@ async function openDocument(url: string) {
 
 function GridTile({ item, ownMessage, myUserId }: { item: GalleryItem; ownMessage: boolean; myUserId: string | null }) {
   const { url } = useDecryptedMediaUri(item, item.chat_id, item.message_id, item.key_id, myUserId);
+  const theme = useTheme();
   const { colors: accentColors } = useAccentTheme();
   return (
     <Pressable
-      style={styles.gridTile}
+      style={[styles.gridTile, { borderColor: theme.bg }]}
       onPress={() =>
         router.push({
           pathname: '/(app)/media-viewer',
@@ -53,21 +55,26 @@ function GridTile({ item, ownMessage, myUserId }: { item: GalleryItem; ownMessag
       {url ? (
         <Image source={{ uri: url }} style={styles.gridImage} contentFit="cover" />
       ) : (
-        <View style={styles.gridLoading}>
+        <View style={[styles.gridLoading, { backgroundColor: theme.surface }]}>
           <ActivityIndicator color={accentColors.accent} size="small" />
         </View>
       )}
-      {item.kind === 'video' && <Text style={styles.playGlyph}>▶</Text>}
+      {item.kind === 'video' && <Text style={[styles.playGlyph, { color: theme.text }]}>▶</Text>}
     </Pressable>
   );
 }
 
 function DocumentRow({ item, myUserId }: { item: GalleryItem; myUserId: string | null }) {
   const { url } = useDecryptedMediaUri(item, item.chat_id, item.message_id, item.key_id, myUserId);
+  const theme = useTheme();
   return (
-    <Pressable style={styles.documentRow} onPress={() => url && openDocument(url)} disabled={!url}>
+    <Pressable
+      style={[styles.documentRow, { borderBottomColor: theme.divider }]}
+      onPress={() => url && openDocument(url)}
+      disabled={!url}
+    >
       <Text style={styles.documentGlyph}>📄</Text>
-      <Text style={styles.documentName} numberOfLines={1}>
+      <Text style={[styles.documentName, { color: theme.text }]} numberOfLines={1}>
         {item.file_name || 'Document'}
       </Text>
     </Pressable>
@@ -76,6 +83,7 @@ function DocumentRow({ item, myUserId }: { item: GalleryItem; myUserId: string |
 
 export default function MediaGalleryScreen() {
   const { chatId } = useLocalSearchParams<{ chatId: string }>();
+  const theme = useTheme();
   const { colors: accentColors } = useAccentTheme();
   const insets = useSafeAreaInsets();
   const { profile } = useAuth();
@@ -107,8 +115,8 @@ export default function MediaGalleryScreen() {
   const documents = items.filter((i) => i.kind === 'document');
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <ScreenHeader title="Media, links and docs" />
+    <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: theme.bg }]}>
+      <ScreenHeader title="Media, links and docs" theme={theme} />
 
       {loading ? (
         <View style={styles.centered}>
@@ -116,7 +124,7 @@ export default function MediaGalleryScreen() {
         </View>
       ) : items.length === 0 ? (
         <View style={styles.centered}>
-          <Text style={styles.emptyText}>Nothing shared in this chat yet.</Text>
+          <Text style={[styles.emptyText, { color: theme.textMuted }]}>Nothing shared in this chat yet.</Text>
         </View>
       ) : (
         <FlatList
@@ -135,7 +143,7 @@ export default function MediaGalleryScreen() {
               />
             ) : (
               <View style={styles.documentsSection}>
-                <Text style={styles.sectionLabel}>Documents</Text>
+                <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>Documents</Text>
                 {documents.map((doc) => (
                   <DocumentRow key={doc.id} item={doc} myUserId={profile?.id ?? null} />
                 ))}
@@ -151,7 +159,6 @@ export default function MediaGalleryScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.bg,
   },
   centered: {
     flex: 1,
@@ -159,7 +166,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emptyText: {
-    color: colors.textMuted,
     textAlign: 'center',
     paddingHorizontal: space[8],
   },
@@ -167,7 +173,6 @@ const styles = StyleSheet.create({
     width: TILE_SIZE,
     height: TILE_SIZE,
     borderWidth: 0.5,
-    borderColor: colors.bg,
   },
   gridImage: {
     width: '100%',
@@ -177,7 +182,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
   },
   playGlyph: {
     position: 'absolute',
@@ -185,7 +189,6 @@ const styles = StyleSheet.create({
     left: '50%',
     marginTop: -12,
     marginLeft: -8,
-    color: colors.text,
     fontSize: 20,
     textShadowColor: 'rgba(0,0,0,0.6)',
     textShadowRadius: 6,
@@ -194,7 +197,6 @@ const styles = StyleSheet.create({
     padding: space[4],
   },
   sectionLabel: {
-    color: colors.textMuted,
     fontSize: 12,
     letterSpacing: 0.4,
     paddingBottom: space[2],
@@ -205,13 +207,11 @@ const styles = StyleSheet.create({
     gap: space[3],
     paddingVertical: space[3],
     borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
   },
   documentGlyph: {
     fontSize: 22,
   },
   documentName: {
-    color: colors.text,
     fontSize: 14,
     flex: 1,
   },

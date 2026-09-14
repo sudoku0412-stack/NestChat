@@ -17,10 +17,12 @@ import { sendTextMessage } from '../../lib/chatActions';
 import { MemberRow } from '../../components/MemberRow';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { useAccentTheme } from '../../lib/accentTheme';
-import { colors, fontWeight, space } from '../../lib/theme';
+import { fontWeight, space } from '../../lib/theme';
+import { useTheme } from '../../lib/themeMode';
 
 export default function NewGroupScreen() {
   const { colors: accentColors } = useAccentTheme();
+  const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { profile } = useAuth();
   const { memberIds } = useLocalSearchParams<{ memberIds?: string }>();
@@ -74,31 +76,40 @@ export default function NewGroupScreen() {
   }
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
+    <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: theme.bg }]}>
       <ScreenHeader
         title="New group"
+        theme={theme}
         right={
           <Pressable onPress={handleCreate} disabled={!canCreate} hitSlop={8}>
             {creating ? (
               <ActivityIndicator color={accentColors.accent} />
             ) : (
-              <Text style={[styles.action, { color: accentColors.accent }, !canCreate && styles.actionDisabled]}>Create</Text>
+              <Text
+                style={[
+                  styles.action,
+                  { color: accentColors.accent },
+                  !canCreate && { color: theme.textMuted },
+                ]}
+              >
+                Create
+              </Text>
             )}
           </Pressable>
         }
       />
 
-      <View style={styles.nameField}>
+      <View style={[styles.nameField, { borderBottomColor: theme.divider }]}>
         <TextInput
-          style={styles.nameInput}
+          style={[styles.nameInput, { color: theme.text }]}
           placeholder="Group name"
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={theme.textMuted}
           value={name}
           onChangeText={setName}
         />
       </View>
 
-      <Text style={styles.sectionLabel}>Add members ({selected.size})</Text>
+      <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>Add members ({selected.size})</Text>
 
       {loading ? (
         <ActivityIndicator color={accentColors.accent} style={{ marginTop: space[8] }} />
@@ -122,28 +133,21 @@ export default function NewGroupScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.bg,
   },
   action: {
     fontSize: 15,
     fontWeight: fontWeight.semibold,
   },
-  actionDisabled: {
-    color: colors.textMuted,
-  },
   nameField: {
     paddingHorizontal: space[6],
     paddingVertical: space[4],
     borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
   },
   nameInput: {
-    color: colors.text,
     fontSize: 17,
     paddingVertical: space[2],
   },
   sectionLabel: {
-    color: colors.textMuted,
     fontSize: 12,
     letterSpacing: 0.4,
     paddingHorizontal: space[6],

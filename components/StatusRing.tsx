@@ -1,7 +1,8 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Avatar } from './Avatar';
+import { useTheme } from '../lib/themeMode';
 import { useAccentTheme } from '../lib/accentTheme';
-import { colors, fontWeight, space } from '../lib/theme';
+import { fontWeight, space } from '../lib/theme';
 
 interface StatusRingProps {
   name: string;
@@ -12,7 +13,16 @@ interface StatusRingProps {
   onPress: () => void;
 }
 
+// Status-post ring (has an unviewed vs. already-viewed status) is intentionally a different
+// width AND color from the presence ring elsewhere in the app (see Avatar/ChatRow's presence
+// dot, which is a filled dot, not a ring, plus StatusRing itself is never used to show presence)
+// — a 3px gold ring for "unviewed" and a 2px neutral ring for "viewed" so the two states, and
+// this ring vs. any future presence ring, never read as the same affordance.
+const UNVIEWED_RING_WIDTH = 3;
+const VIEWED_RING_WIDTH = 2;
+
 export function StatusRing({ name, avatarUrl, hasStatus, hasUnviewed, isSelf, onPress }: StatusRingProps) {
+  const theme = useTheme();
   const { colors: accentColors } = useAccentTheme();
   return (
     <Pressable style={styles.container} onPress={onPress}>
@@ -20,18 +30,19 @@ export function StatusRing({ name, avatarUrl, hasStatus, hasUnviewed, isSelf, on
         style={[
           styles.ring,
           hasStatus && {
-            borderColor: hasUnviewed ? accentColors.accent : colors.neutral700,
+            borderColor: hasUnviewed ? theme.highlight : theme.divider,
+            borderWidth: hasUnviewed ? UNVIEWED_RING_WIDTH : VIEWED_RING_WIDTH,
           },
         ]}
       >
         <Avatar name={name} avatarUrl={avatarUrl} size={56} />
         {isSelf && !hasStatus && (
-          <View style={[styles.plusBadge, { backgroundColor: accentColors.accent }]}>
+          <View style={[styles.plusBadge, { backgroundColor: accentColors.accent, borderColor: theme.bg }]}>
             <Text style={styles.plusGlyph}>+</Text>
           </View>
         )}
       </View>
-      <Text style={styles.label} numberOfLines={1}>
+      <Text style={[styles.label, { color: theme.textMuted }]} numberOfLines={1}>
         {isSelf ? 'My status' : name}
       </Text>
     </Pressable>
@@ -65,16 +76,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: colors.bg,
   },
   plusGlyph: {
-    color: colors.bg,
+    color: '#FFFFFF',
     fontSize: 13,
     fontWeight: fontWeight.semibold,
     lineHeight: 14,
   },
   label: {
-    color: colors.textMuted,
     fontSize: 11,
     maxWidth: 72,
   },

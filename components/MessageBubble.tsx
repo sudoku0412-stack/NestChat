@@ -1,34 +1,58 @@
 import { Pressable, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native';
 import { MediaTile, PendingMediaTile } from './MediaTile';
 import { CheckIcon, DoubleCheckIcon, StarIcon } from './icons';
+import { useTheme } from '../lib/themeMode';
 import { useAccentTheme } from '../lib/accentTheme';
-import { colors, radius, space } from '../lib/theme';
+import { radius, space } from '../lib/theme';
 import type { MessageWithMedia } from '../lib/types';
+import type { Colors } from '../lib/theme';
+
+// The tail corner (the one corner that stays square-ish to read as a speech-bubble "tail") is a
+// tight 4px per the Hearth spec — every other corner uses the full radius.md rounding.
+const TAIL_RADIUS = 4;
 
 function ReactionRow({
   reactions,
   isOwn,
+  theme,
+  accentColors,
   onPress,
 }: {
   reactions: NonNullable<MessageWithMedia['reactions']>;
   isOwn: boolean;
+  theme: Colors;
+  accentColors: Colors;
   onPress?: (emoji: string) => void;
 }) {
-  const { colors: accentColors } = useAccentTheme();
   if (reactions.length === 0) return null;
   return (
-    <View style={[styles.reactionRow, isOwn ? styles.reactionRowOwn : styles.reactionRowOther]}>
+    <View
+      style={[
+        styles.reactionRow,
+        // Small pill that overlaps the bubble's bottom corner (bottom-right for sent, bottom-left
+        // for received) rather than sitting in normal flow below it — the negative top margin is
+        // what creates the overlap against the bubble above.
+        isOwn ? styles.reactionRowOwn : styles.reactionRowOther,
+      ]}
+    >
       {reactions.map((r) => (
         <Pressable
           key={r.emoji}
           style={[
             styles.reactionPill,
+            { backgroundColor: theme.surface, shadowColor: theme.text },
             r.reactedByMe && { borderColor: accentColors.accent, backgroundColor: accentColors.accent900 },
           ]}
           onPress={() => onPress?.(r.emoji)}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={
+            r.reactedByMe ? `Remove your ${r.emoji} reaction` : `React with ${r.emoji}`
+          }
+          accessibilityState={{ selected: r.reactedByMe }}
         >
           <Text style={styles.reactionPillGlyph}>{r.emoji}</Text>
-          {r.count > 1 && <Text style={styles.reactionPillCount}>{r.count}</Text>}
+          {r.count > 1 && <Text style={[styles.reactionPillCount, { color: theme.textMuted }]}>{r.count}</Text>}
         </Pressable>
       ))}
     </View>
@@ -71,7 +95,12 @@ export function MessageBubble({
   myUserId,
 }: MessageBubbleProps) {
   const isDeleted = !!message.deleted_at;
+  const theme = useTheme();
   const { colors: accentColors } = useAccentTheme();
+  // Sent bubbles always render white text/ticks against the accent fill (per spec); received
+  // bubbles read from the theme like any other surface text.
+  const sentTextColor = '#FFFFFF';
+  const sentMutedColor = 'rgba(255,255,255,0.72)';
 
   return (
     <Pressable
@@ -83,12 +112,12 @@ export function MessageBubble({
       onLongPress={(e: GestureResponderEvent) => onLongPress?.(e.nativeEvent.pageY)}
     >
       {showSenderName && !isOwn && (
-        <Text style={styles.senderName}>{message.sender?.display_name}</Text>
+        <Text style={[styles.senderName, { color: theme.textMuted }]}>{message.sender?.display_name}</Text>
       )}
 
       {isDeleted ? (
-        <View style={[styles.bubble, styles.bubbleOther]}>
-          <Text style={styles.deletedText}>This message was deleted</Text>
+        <View style={[styles.bubble, { backgroundColor: theme.bgDeep }]}>
+          <Text style={[styles.deletedText, { color: theme.textMuted }]}>This message was deleted</Text>
         </View>
       ) : (
         <View
@@ -96,18 +125,22 @@ export function MessageBubble({
             styles.bubble,
             isOwn
               ? [
-                  styles.bubbleOwn,
-                  { backgroundColor: accentColors.accent700 },
-                  { borderBottomRightRadius: isLastInGroup ? radius.sm : radius.xl },
+                  { backgroundColor: accentColors.accent },
+                  { borderBottomRightRadius: isLastInGroup ? TAIL_RADIUS : radius.md },
                 ]
-              : [styles.bubbleOther, { borderBottomLeftRadius: isLastInGroup ? radius.sm : radius.xl }],
+              : [
+                  { backgroundColor: theme.bgDeep },
+                  { borderBottomLeftRadius: isLastInGroup ? TAIL_RADIUS : radius.md },
+                ],
             message.media.length > 0 && styles.bubbleMedia,
           ]}
         >
           {replyTo && (
-            <View style={[styles.replyQuote, { borderLeftColor: accentColors.accent }]}>
-              <Text style={[styles.replyQuoteName, { color: accentColors.accent }]}>{replyTo.senderName}</Text>
-              <Text style={styles.replyQuotePreview} numberOfLines={1}>
+            <View style={[styles.replyQuote, { borderLeftColor: isOwn ? sentTextColor : accentColors.accent }]}>
+              <Text style={[styles.replyQuoteName, { color: isOwn ? sentTextColor : accentColors.accent }]}>
+                {replyTo.senderName}
+              </Text>
+              <Text style={[styles.replyQuotePreview, { color: isOwn ? sentMutedColor : theme.textMuted }]} numberOfLines={1}>
                 {replyTo.preview}
               </Text>
             </View>
@@ -131,7 +164,7 @@ export function MessageBubble({
             <Text
               style={[
                 styles.body,
-                isOwn && { color: accentColors.accent100 },
+                { color: isOwn ? sentTextColor : theme.text },
                 message.media.length > 0 && { marginTop: space[2] },
               ]}
             >
@@ -140,23 +173,35 @@ export function MessageBubble({
           ) : null}
 
           <View style={styles.metaRow}>
-            {isStarred && <StarIcon size={10} color={isOwn ? accentColors.accent100 : accentColors.accent} filled />}
-            <Text style={[styles.metaText, isOwn && { color: accentColors.accent200 }]}>
+            {isStarred && (
+              <StarIcon size={10} color={isOwn ? sentMutedColor : accentColors.accent} filled />
+            )}
+            <Text style={[styles.metaText, { color: isOwn ? sentMutedColor : theme.textMuted }]}>
               {formatTime(message.created_at)}
             </Text>
             {isOwn &&
               showReadReceipts &&
+              // Read-receipt ticks are always sage (theme.success), never the accent color — a
+              // dimmed version for "sent, not yet read" and full-strength for "read".
               (isRead ? (
-                <DoubleCheckIcon size={13} color={accentColors.accent100} />
+                <DoubleCheckIcon size={13} color={theme.success} />
               ) : (
-                <CheckIcon size={11} color={accentColors.accent200} />
+                <View style={{ opacity: 0.55 }}>
+                  <CheckIcon size={11} color={theme.success} strokeWidth={1.4} />
+                </View>
               ))}
           </View>
         </View>
       )}
 
       {!isDeleted && (
-        <ReactionRow reactions={message.reactions ?? []} isOwn={isOwn} onPress={onReactionPress} />
+        <ReactionRow
+          reactions={message.reactions ?? []}
+          isOwn={isOwn}
+          theme={theme}
+          accentColors={accentColors}
+          onPress={onReactionPress}
+        />
       )}
     </Pressable>
   );
@@ -177,22 +222,14 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   senderName: {
-    color: colors.textMuted,
     fontSize: 12,
     marginBottom: space[1],
     marginLeft: space[1],
   },
   bubble: {
-    borderRadius: radius.xl,
+    borderRadius: radius.md,
     paddingHorizontal: space[4],
     paddingVertical: space[3],
-  },
-  bubbleOwn: {
-    // Tail radius (tighter on the last bubble of a group) is applied inline, not here — it
-    // depends on isLastInGroup, which this static stylesheet has no way to express.
-  },
-  bubbleOther: {
-    backgroundColor: colors.surface,
   },
   bubbleMedia: {
     gap: space[2],
@@ -207,16 +244,13 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   replyQuotePreview: {
-    color: colors.textMuted,
     fontSize: 12,
   },
   body: {
-    color: colors.text,
     fontSize: 15,
     lineHeight: 20,
   },
   deletedText: {
-    color: colors.textMuted,
     fontSize: 14,
     fontStyle: 'italic',
   },
@@ -228,38 +262,43 @@ const styles = StyleSheet.create({
     marginTop: space[1],
   },
   metaText: {
-    color: colors.textMuted,
     fontSize: 11,
   },
   reactionRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: space[1],
-    marginTop: space[1],
+    // Negative top margin overlaps the pill up onto the bubble's bottom corner instead of
+    // sitting in plain flow beneath it.
+    marginTop: -space[2],
     marginHorizontal: space[1],
   },
   reactionRowOwn: {
     justifyContent: 'flex-end',
+    marginRight: space[1],
   },
   reactionRowOther: {
     justifyContent: 'flex-start',
+    marginLeft: space[1],
   },
   reactionPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space[1],
     borderWidth: 1,
-    borderColor: colors.divider,
-    backgroundColor: colors.surface,
+    borderColor: 'transparent',
     borderRadius: radius.full,
     paddingHorizontal: space[2],
     paddingVertical: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 3,
+    elevation: 2,
   },
   reactionPillGlyph: {
     fontSize: 13,
   },
   reactionPillCount: {
-    color: colors.textMuted,
     fontSize: 11,
   },
 });

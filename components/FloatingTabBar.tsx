@@ -54,8 +54,10 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
         ]}
       >
         {segmentWidth > 0 ? (
+          // 12% opacity accent-primary wash behind the active icon, not a solid fill — the
+          // active icon itself is what carries the full-strength accent tint.
           <Animated.View
-            style={[styles.indicator, indicatorStyle, { backgroundColor: theme.accent }]}
+            style={[styles.indicator, indicatorStyle, { backgroundColor: theme.accent + '1F' }]}
           />
         ) : null}
 
@@ -63,7 +65,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
           const { options } = descriptors[route.key];
           const focused = state.index === index;
           const label = options.title ?? route.name;
-          const tintColor = focused ? '#fff' : theme.textMuted;
+          const tintColor = focused ? theme.accent : theme.textMuted;
 
           function handlePress() {
             const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });

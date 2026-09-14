@@ -8,8 +8,8 @@ import { supabase } from '../../../lib/supabase';
 import { ChatRow } from '../../../components/ChatRow';
 import { CloseIcon, PlusIcon, SearchIcon } from '../../../components/icons';
 import { useAccentTheme } from '../../../lib/accentTheme';
-import { colors, fonts, fontWeight, radius, space } from '../../../lib/theme';
-import { useThemeMode } from '../../../lib/themeMode';
+import { fonts, fontWeight, radius, space } from '../../../lib/theme';
+import { useTheme } from '../../../lib/themeMode';
 
 type Filter = 'all' | 'unread' | 'groups' | 'favorites';
 
@@ -31,7 +31,7 @@ export default function ChatListScreen() {
   const [filter, setFilter] = useState<Filter>('all');
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const { bg } = useThemeMode();
+  const theme = useTheme();
 
   async function handleMuteToggle(chatId: string, muted: boolean) {
     if (!profile) return;
@@ -115,13 +115,13 @@ export default function ChatListScreen() {
   });
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: bg }]}>
+    <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: theme.bg }]}>
       {selectMode ? (
         <View style={styles.header}>
-          <Pressable onPress={exitSelectMode} hitSlop={8}>
-            <CloseIcon size={20} color={colors.text} />
+          <Pressable onPress={exitSelectMode} hitSlop={8} accessibilityRole="button" accessibilityLabel="Cancel selection">
+            <CloseIcon size={20} color={theme.text} />
           </Pressable>
-          <Text style={styles.selectCount}>{selectedIds.size} selected</Text>
+          <Text style={[styles.selectCount, { color: theme.text }]}>{selectedIds.size} selected</Text>
           <View style={styles.headerActions}>
             <Pressable onPress={() => bulkApply({ muted: true })} hitSlop={8}>
               <Text style={[styles.selectAction, { color: accentColors.accent }]}>Mute</Text>
@@ -130,13 +130,13 @@ export default function ChatListScreen() {
               <Text style={[styles.selectAction, { color: accentColors.accent }]}>Archive</Text>
             </Pressable>
             <Pressable onPress={() => bulkApply('delete')} hitSlop={8}>
-              <Text style={[styles.selectAction, styles.selectActionDanger]}>Delete</Text>
+              <Text style={[styles.selectAction, { color: theme.danger }]}>Delete</Text>
             </Pressable>
           </View>
         </View>
       ) : (
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Chats</Text>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>Chats</Text>
         </View>
       )}
 
@@ -147,26 +147,31 @@ export default function ChatListScreen() {
         onRefresh={refresh}
         ListHeaderComponent={
           <View>
-            <View style={styles.searchRow}>
-              <SearchIcon size={16} color={colors.textMuted} />
+            <View style={[styles.searchRow, { backgroundColor: theme.surface }]}>
+              <SearchIcon size={16} color={theme.textMuted} />
               <TextInput
-                style={styles.search}
+                style={[styles.search, { color: theme.text }]}
                 value={query}
                 onChangeText={setQuery}
                 placeholder="Search chats"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={theme.textMuted}
               />
             </View>
             <View style={styles.chipsRow}>
               {FILTERS.map((f) => (
                 <Pressable
                   key={f.key}
-                  style={[styles.chip, filter === f.key && { backgroundColor: accentColors.accent }]}
+                  style={[
+                    styles.chip,
+                    { backgroundColor: theme.surface },
+                    filter === f.key && { backgroundColor: accentColors.accent },
+                  ]}
                   onPress={() => setFilter(f.key)}
                 >
                   <Text
                     style={[
                       styles.chipLabel,
+                      { color: theme.textMuted },
                       filter === f.key && [styles.chipLabelActive, { color: accentColors.accent100 }],
                     ]}
                   >
@@ -176,9 +181,12 @@ export default function ChatListScreen() {
               ))}
             </View>
             {archivedChats.length > 0 && (
-              <Pressable style={styles.archivedRow} onPress={() => router.push('/(app)/archived-chats')}>
-                <Text style={styles.archivedLabel}>Archived</Text>
-                <Text style={styles.archivedCount}>{archivedChats.length}</Text>
+              <Pressable
+                style={[styles.archivedRow, { borderBottomColor: theme.divider }]}
+                onPress={() => router.push('/(app)/archived-chats')}
+              >
+                <Text style={[styles.archivedLabel, { color: theme.text }]}>Archived</Text>
+                <Text style={[styles.archivedCount, { color: theme.textMuted }]}>{archivedChats.length}</Text>
               </Pressable>
             )}
           </View>
@@ -207,7 +215,7 @@ export default function ChatListScreen() {
         ListEmptyComponent={
           !loading ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>
+              <Text style={[styles.emptyText, { color: theme.textMuted }]}>
                 {query || filter !== 'all'
                   ? 'No chats match.'
                   : 'No chats yet. Tap the + button to message a household member.'}
@@ -221,6 +229,8 @@ export default function ChatListScreen() {
         <Pressable
           style={[styles.fab, { backgroundColor: accentColors.accent }]}
           onPress={() => router.push('/(app)/members')}
+          accessibilityRole="button"
+          accessibilityLabel="New chat"
         >
           <PlusIcon size={22} color={accentColors.accent100} />
         </Pressable>
@@ -232,7 +242,6 @@ export default function ChatListScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.bg,
   },
   header: {
     flexDirection: 'row',
@@ -242,7 +251,6 @@ const styles = StyleSheet.create({
     paddingVertical: space[4],
   },
   headerTitle: {
-    color: colors.text,
     fontSize: 28,
     fontFamily: fonts.display,
   },
@@ -252,14 +260,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   selectCount: {
-    color: colors.text,
     fontSize: 15,
   },
   selectAction: {
     fontSize: 14,
-  },
-  selectActionDanger: {
-    color: colors.danger,
   },
   searchRow: {
     flexDirection: 'row',
@@ -268,13 +272,11 @@ const styles = StyleSheet.create({
     marginHorizontal: space[6],
     marginTop: space[4],
     paddingHorizontal: space[4],
-    backgroundColor: colors.surface,
     borderRadius: radius.xl,
   },
   search: {
     flex: 1,
     paddingVertical: space[3],
-    color: colors.text,
     fontSize: 15,
   },
   chipsRow: {
@@ -287,10 +289,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[4],
     paddingVertical: space[2],
     borderRadius: radius.full,
-    backgroundColor: colors.surface,
   },
   chipLabel: {
-    color: colors.textMuted,
     fontSize: 13,
   },
   chipLabelActive: {
@@ -302,14 +302,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[6],
     paddingVertical: space[3],
     borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
   },
   archivedLabel: {
-    color: colors.text,
     fontSize: 15,
   },
   archivedCount: {
-    color: colors.textMuted,
     fontSize: 14,
   },
   empty: {
@@ -317,7 +314,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    color: colors.textMuted,
     textAlign: 'center',
     fontSize: 14,
   },

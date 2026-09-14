@@ -10,7 +10,8 @@ import { OutlineButton } from '../../../components/OutlineButton';
 import { WallpaperPickerModal } from '../../../components/WallpaperPickerModal';
 import { ScreenHeader } from '../../../components/ScreenHeader';
 import { useAccentTheme } from '../../../lib/accentTheme';
-import { colors, fonts, space } from '../../../lib/theme';
+import { useTheme } from '../../../lib/themeMode';
+import { fonts, space } from '../../../lib/theme';
 import type { Member } from '../../../lib/types';
 
 function formatLastSeen(iso: string | null) {
@@ -21,6 +22,7 @@ function formatLastSeen(iso: string | null) {
 
 export default function ContactInfoScreen() {
   const { id, chatId } = useLocalSearchParams<{ id: string; chatId?: string }>();
+  const theme = useTheme();
   const { colors: accentColors } = useAccentTheme();
   const insets = useSafeAreaInsets();
   const { profile } = useAuth();
@@ -111,7 +113,7 @@ export default function ContactInfoScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.screen, styles.centered]}>
+      <View style={[styles.screen, styles.centered, { backgroundColor: theme.bg }]}>
         <ActivityIndicator color={accentColors.accent} />
       </View>
     );
@@ -119,74 +121,74 @@ export default function ContactInfoScreen() {
 
   if (!member) {
     return (
-      <View style={[styles.screen, styles.centered]}>
-        <Text style={styles.statusText}>This contact couldn't be found.</Text>
+      <View style={[styles.screen, styles.centered, { backgroundColor: theme.bg }]}>
+        <Text style={[styles.statusText, { color: theme.textMuted }]}>This contact couldn't be found.</Text>
       </View>
     );
   }
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <ScreenHeader title="Contact info" />
+    <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: theme.bg }]}>
+      <ScreenHeader title="Contact info" theme={theme} />
 
       <View style={styles.summary}>
         <Avatar name={member.display_name} avatarUrl={member.avatar_url} size={96} />
-        <Text style={styles.name}>{member.display_name}</Text>
+        <Text style={[styles.name, { color: theme.text }]}>{member.display_name}</Text>
         {member.role === 'admin' && <Text style={[styles.badge, { color: accentColors.accent }]}>Household admin</Text>}
         {/* Mutual, like WhatsApp: only shown if both people have "Read receipts & online
             status" on — matches the gate in app/(app)/chat/[id].tsx. */}
         {!!profile?.show_read_receipts && !!member.show_read_receipts && (
-          <Text style={styles.statusText}>
+          <Text style={[styles.statusText, { color: theme.textMuted }]}>
             {member.is_online ? 'Online' : formatLastSeen(member.last_seen_at)}
           </Text>
         )}
       </View>
 
       {member.phone && (
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Phone</Text>
-          <Text style={styles.sectionValue}>{member.phone}</Text>
+        <View style={[styles.section, { borderTopColor: theme.divider }]}>
+          <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>Phone</Text>
+          <Text style={[styles.sectionValue, { color: theme.text }]}>{member.phone}</Text>
         </View>
       )}
 
       {chatId && (
         <>
           <Pressable
-            style={[styles.section, styles.row]}
+            style={[styles.section, styles.row, { borderTopColor: theme.divider }]}
             onPress={() => router.push({ pathname: '/(app)/media-gallery/[chatId]', params: { chatId } })}
           >
-            <Text style={styles.rowLabel}>Media, links and docs</Text>
-            <Text style={styles.rowValue}>{mediaCount}</Text>
+            <Text style={[styles.rowLabel, { color: theme.text }]}>Media, links and docs</Text>
+            <Text style={[styles.rowValue, { color: theme.textMuted }]}>{mediaCount}</Text>
           </Pressable>
 
           <Pressable
-            style={[styles.section, styles.row]}
+            style={[styles.section, styles.row, { borderTopColor: theme.divider }]}
             onPress={() => router.push({ pathname: '/(app)/starred-messages/[chatId]', params: { chatId } })}
           >
-            <Text style={styles.rowLabel}>Starred messages</Text>
-            <Text style={styles.rowValue}>{starredCount}</Text>
+            <Text style={[styles.rowLabel, { color: theme.text }]}>Starred messages</Text>
+            <Text style={[styles.rowValue, { color: theme.textMuted }]}>{starredCount}</Text>
           </Pressable>
 
-          <View style={[styles.section, styles.row]}>
-            <Text style={styles.rowLabel}>Mute notifications</Text>
+          <View style={[styles.section, styles.row, { borderTopColor: theme.divider }]}>
+            <Text style={[styles.rowLabel, { color: theme.text }]}>Mute notifications</Text>
             <Switch
               value={muted}
               onValueChange={toggleMute}
-              trackColor={{ true: accentColors.accent700, false: colors.neutral800 }}
-              thumbColor={colors.text}
+              trackColor={{ true: accentColors.accent700, false: theme.neutral800 }}
+              thumbColor={theme.text}
             />
           </View>
 
-          <Pressable style={[styles.section, styles.row]} onPress={() => setWallpaperModalVisible(true)}>
-            <Text style={styles.rowLabel}>Chat wallpaper</Text>
-            <Text style={styles.rowValue}>{wallpaperPath ? 'Custom' : 'Default'}</Text>
+          <Pressable style={[styles.section, styles.row, { borderTopColor: theme.divider }]} onPress={() => setWallpaperModalVisible(true)}>
+            <Text style={[styles.rowLabel, { color: theme.text }]}>Chat wallpaper</Text>
+            <Text style={[styles.rowValue, { color: theme.textMuted }]}>{wallpaperPath ? 'Custom' : 'Default'}</Text>
           </Pressable>
 
-          <Pressable style={[styles.section, styles.row]} onPress={handleCreateGroup}>
-            <Text style={styles.rowLabel}>Create a group with {member.display_name}</Text>
+          <Pressable style={[styles.section, styles.row, { borderTopColor: theme.divider }]} onPress={handleCreateGroup}>
+            <Text style={[styles.rowLabel, { color: theme.text }]}>Create a group with {member.display_name}</Text>
           </Pressable>
 
-          <View style={styles.section}>
+          <View style={[styles.section, { borderTopColor: theme.divider }]}>
             <OutlineButton label="Clear chat" onPress={handleClearChat} variant="danger" />
           </View>
 
@@ -207,7 +209,6 @@ export default function ContactInfoScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.bg,
   },
   centered: {
     alignItems: 'center',
@@ -219,7 +220,6 @@ const styles = StyleSheet.create({
     gap: space[2],
   },
   name: {
-    color: colors.text,
     fontSize: 24,
     fontFamily: fonts.display,
     marginTop: space[2],
@@ -229,14 +229,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   statusText: {
-    color: colors.textMuted,
     fontSize: 13,
   },
   section: {
     paddingHorizontal: space[6],
     paddingVertical: space[4],
     borderTopWidth: 1,
-    borderTopColor: colors.divider,
   },
   row: {
     flexDirection: 'row',
@@ -244,22 +242,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   rowLabel: {
-    color: colors.text,
     fontSize: 15,
     flex: 1,
   },
   rowValue: {
-    color: colors.textMuted,
     fontSize: 14,
   },
   sectionLabel: {
-    color: colors.textMuted,
     fontSize: 12,
     letterSpacing: 0.4,
     marginBottom: space[1],
   },
   sectionValue: {
-    color: colors.text,
     fontSize: 16,
   },
 });

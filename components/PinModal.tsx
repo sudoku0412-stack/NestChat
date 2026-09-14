@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { colors, fontWeight, radius, space } from '../lib/theme';
+import { useTheme } from '../lib/themeMode';
+import { fontWeight, radius, space } from '../lib/theme';
 import { OutlineButton } from './OutlineButton';
 
 interface PinModalProps {
@@ -14,6 +15,7 @@ function isPlausiblePin(value: string) {
 }
 
 export function PinModal({ visible, onClose, onSubmit }: PinModalProps) {
+  const theme = useTheme();
   const [pin, setPin] = useState('');
   const [pinConfirm, setPinConfirm] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -61,33 +63,34 @@ export function PinModal({ visible, onClose, onSubmit }: PinModalProps) {
           reset();
           onClose();
         }}
+        accessibilityViewIsModal
       >
-        <Pressable style={styles.menu} onPress={(e) => e.stopPropagation()}>
-          <Text style={styles.title}>Recovery PIN</Text>
-          <Text style={styles.caption}>
+        <Pressable style={[styles.menu, { backgroundColor: theme.surface }]} onPress={(e) => e.stopPropagation()}>
+          <Text style={[styles.title, { color: theme.text }]}>Recovery PIN</Text>
+          <Text style={[styles.caption, { color: theme.textMuted }]}>
             This lets you get your chats back if you ever sign out or reinstall.
           </Text>
 
           <TextInput
-            style={styles.input}
+            style={[styles.input, { borderColor: theme.divider, color: theme.text, backgroundColor: theme.bg }]}
             value={pin}
             onChangeText={setPin}
             secureTextEntry
             keyboardType="number-pad"
             placeholder="New PIN"
-            placeholderTextColor={colors.textMuted}
+            placeholderTextColor={theme.textMuted}
           />
           <TextInput
-            style={styles.input}
+            style={[styles.input, { borderColor: theme.divider, color: theme.text, backgroundColor: theme.bg }]}
             value={pinConfirm}
             onChangeText={setPinConfirm}
             secureTextEntry
             keyboardType="number-pad"
             placeholder="Confirm PIN"
-            placeholderTextColor={colors.textMuted}
+            placeholderTextColor={theme.textMuted}
           />
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {error ? <Text style={[styles.error, { color: theme.danger }]}>{error}</Text> : null}
 
           <View style={{ marginTop: space[4] }}>
             <OutlineButton label="Save PIN" onPress={handleSubmit} loading={submitting} />
@@ -106,35 +109,28 @@ const styles = StyleSheet.create({
   },
   menu: {
     margin: space[6],
-    backgroundColor: colors.surface,
     borderRadius: radius.md,
     padding: space[6],
   },
   title: {
-    color: colors.text,
     fontSize: 17,
     fontWeight: fontWeight.heading,
     marginBottom: space[2],
   },
   caption: {
-    color: colors.textMuted,
     fontSize: 12,
     marginBottom: space[4],
     lineHeight: 17,
   },
   input: {
     borderWidth: 1,
-    borderColor: colors.divider,
     borderRadius: radius.md,
     paddingHorizontal: space[4],
     paddingVertical: space[3],
-    color: colors.text,
     fontSize: 16,
-    backgroundColor: colors.bg,
     marginBottom: space[3],
   },
   error: {
-    color: colors.danger,
     fontSize: 13,
     marginTop: space[1],
   },

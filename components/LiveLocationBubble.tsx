@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAccentTheme } from '../lib/accentTheme';
-import { colors, fontWeight, radius, space } from '../lib/theme';
+import { useTheme } from '../lib/themeMode';
+import { fontWeight, radius, space } from '../lib/theme';
 import { stopLiveLocationShare } from '../lib/liveLocation';
 import type { LiveLocationsRow } from '../lib/database.types';
 
@@ -36,27 +37,30 @@ export function LiveLocationBubble({ location, isOwn }: LiveLocationBubbleProps)
 
   const mapsUrl = `https://maps.google.com/?q=${location.lat},${location.lng}`;
   const { colors: accentColors } = useAccentTheme();
+  const theme = useTheme();
 
   return (
     <View
       style={[
         styles.bubble,
-        isOwn ? [styles.bubbleOwn, { backgroundColor: accentColors.accent900, borderColor: accentColors.accent }] : styles.bubbleOther,
+        isOwn
+          ? [styles.bubbleOwn, { backgroundColor: accentColors.accent900, borderColor: accentColors.accent }]
+          : [styles.bubbleOther, { backgroundColor: theme.surface }],
       ]}
     >
       <View style={styles.header}>
         <Text style={styles.glyph}>📍</Text>
-        <Text style={styles.title}>{active ? 'Live location' : 'Live location ended'}</Text>
+        <Text style={[styles.title, { color: theme.text }]}>{active ? 'Live location' : 'Live location ended'}</Text>
       </View>
-      <Text style={styles.meta}>
+      <Text style={[styles.meta, { color: theme.textMuted }]}>
         {active ? `Updated ${timeAgo(location.updated_at)}` : `Last seen ${timeAgo(location.updated_at)}`}
       </Text>
       <Pressable onPress={() => Linking.openURL(mapsUrl)}>
         <Text style={[styles.link, { color: accentColors.accent }]}>Open in Maps</Text>
       </Pressable>
       {isOwn && active && (
-        <Pressable style={styles.stopButton} onPress={() => stopLiveLocationShare(location.id)}>
-          <Text style={styles.stopLabel}>Stop sharing</Text>
+        <Pressable style={[styles.stopButton, { borderColor: theme.danger }]} onPress={() => stopLiveLocationShare(location.id)}>
+          <Text style={[styles.stopLabel, { color: theme.danger }]}>Stop sharing</Text>
         </Pressable>
       )}
     </View>
@@ -74,9 +78,7 @@ const styles = StyleSheet.create({
   bubbleOwn: {
     borderWidth: 1,
   },
-  bubbleOther: {
-    backgroundColor: colors.surface,
-  },
+  bubbleOther: {},
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -86,12 +88,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   title: {
-    color: colors.text,
     fontSize: 15,
     fontWeight: fontWeight.medium,
   },
   meta: {
-    color: colors.textMuted,
     fontSize: 12,
   },
   link: {
@@ -103,13 +103,11 @@ const styles = StyleSheet.create({
     marginTop: space[2],
     alignSelf: 'flex-start',
     borderWidth: 1,
-    borderColor: colors.danger,
     borderRadius: radius.full,
     paddingHorizontal: space[4],
     paddingVertical: space[1],
   },
   stopLabel: {
-    color: colors.danger,
     fontSize: 12,
     fontWeight: fontWeight.medium,
   },

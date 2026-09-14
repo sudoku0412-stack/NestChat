@@ -18,20 +18,24 @@ import { pickFromCamera, pickFromLibrary, type PickedAsset } from '../../../lib/
 import { postMediaStatus, postTextStatus } from '../../../lib/statusActions';
 import { CloseIcon } from '../../../components/icons';
 import { useAccentTheme } from '../../../lib/accentTheme';
-import { colors, fontWeight, space } from '../../../lib/theme';
-
-const BACKGROUND_COLORS = [
-  colors.accent700,
-  colors.accent900,
-  colors.neutral800,
-  colors.accent600,
-  colors.neutral900,
-];
+import { fontWeight, space } from '../../../lib/theme';
+import { useTheme } from '../../../lib/themeMode';
 
 type Mode = 'choose' | 'text' | 'media';
 
 export default function NewStatusScreen() {
   const { colors: accentColors } = useAccentTheme();
+  const theme = useTheme();
+  // Swatch palette for text-status backgrounds — derived from the active theme (not the frozen
+  // `colors` alias) since these values are rendered AND persisted with the posted status, and
+  // must match whichever mode (light/dark) the user was in when they picked one.
+  const BACKGROUND_COLORS = [
+    theme.accent700,
+    theme.accent900,
+    theme.neutral800,
+    theme.accent600,
+    theme.neutral900,
+  ];
   const insets = useSafeAreaInsets();
   const { profile } = useAuth();
   const [mode, setMode] = useState<Mode>('choose');
@@ -68,35 +72,47 @@ export default function NewStatusScreen() {
 
   if (mode === 'choose') {
     return (
-      <View style={[styles.screen, { paddingTop: insets.top }]}>
+      <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: theme.bg }]}>
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} hitSlop={8} style={styles.close}>
-            <CloseIcon size={20} color={colors.text} />
+          <Pressable
+            onPress={() => router.back()}
+            hitSlop={8}
+            style={styles.close}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+          >
+            <CloseIcon size={20} color={theme.text} />
           </Pressable>
-          <Text style={styles.title}>New status</Text>
+          <Text style={[styles.title, { color: theme.text }]}>New status</Text>
           <View style={{ width: 24 }} />
         </View>
 
         <View style={styles.chooseBody}>
-          <Pressable style={styles.chooseOption} onPress={() => setMode('text')}>
-            <Text style={styles.chooseGlyph}>Aa</Text>
-            <Text style={styles.chooseLabel}>Write a status</Text>
+          <Pressable
+            style={[styles.chooseOption, { borderColor: theme.divider, backgroundColor: theme.surface }]}
+            onPress={() => setMode('text')}
+          >
+            <Text style={[styles.chooseGlyph, { color: theme.text }]}>Aa</Text>
+            <Text style={[styles.chooseLabel, { color: theme.text }]}>Write a status</Text>
           </Pressable>
-          <Pressable style={styles.chooseOption} onPress={() => setAttachMenuOpen(true)}>
+          <Pressable
+            style={[styles.chooseOption, { borderColor: theme.divider, backgroundColor: theme.surface }]}
+            onPress={() => setAttachMenuOpen(true)}
+          >
             <Text style={styles.chooseGlyph}>📷</Text>
-            <Text style={styles.chooseLabel}>Photo or video</Text>
+            <Text style={[styles.chooseLabel, { color: theme.text }]}>Photo or video</Text>
           </Pressable>
         </View>
 
         <Modal visible={attachMenuOpen} transparent animationType="fade" onRequestClose={() => setAttachMenuOpen(false)}>
           <Pressable style={styles.backdrop} onPress={() => setAttachMenuOpen(false)}>
-            <View style={styles.menu}>
+            <View style={[styles.menu, { backgroundColor: theme.surface }]}>
               <Pressable style={styles.menuItem} onPress={() => handlePick('camera')}>
-                <Text style={styles.menuLabel}>Camera</Text>
+                <Text style={[styles.menuLabel, { color: theme.text }]}>Camera</Text>
               </Pressable>
-              <View style={styles.menuDivider} />
+              <View style={[styles.menuDivider, { backgroundColor: theme.divider }]} />
               <Pressable style={styles.menuItem} onPress={() => handlePick('library')}>
-                <Text style={styles.menuLabel}>Photo & Video Library</Text>
+                <Text style={[styles.menuLabel, { color: theme.text }]}>Photo & Video Library</Text>
               </Pressable>
             </View>
           </Pressable>
@@ -109,21 +125,42 @@ export default function NewStatusScreen() {
     return (
       <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: BACKGROUND_COLORS[bgIndex] }]}>
         <View style={styles.header}>
-          <Pressable onPress={() => setMode('choose')} hitSlop={8} style={styles.close}>
-            <CloseIcon size={20} color={colors.text} />
+          <Pressable
+            onPress={() => setMode('choose')}
+            hitSlop={8}
+            style={styles.close}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+          >
+            <CloseIcon size={20} color={theme.text} />
           </Pressable>
           {posting ? (
-            <ActivityIndicator color={colors.text} />
+            <ActivityIndicator color={theme.text} />
           ) : (
-            <Pressable onPress={handlePost} disabled={!text.trim()} hitSlop={8}>
-              <Text style={[styles.post, { color: accentColors.accent }, !text.trim() && styles.postDisabled]}>Post</Text>
+            <Pressable
+              onPress={handlePost}
+              disabled={!text.trim()}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Post status"
+              accessibilityState={{ disabled: !text.trim() }}
+            >
+              <Text
+                style={[
+                  styles.post,
+                  { color: accentColors.accent },
+                  !text.trim() && { color: theme.textMuted },
+                ]}
+              >
+                Post
+              </Text>
             </Pressable>
           )}
         </View>
 
         <View style={styles.textBody}>
           <TextInput
-            style={styles.textInput}
+            style={[styles.textInput, { color: theme.text }]}
             value={text}
             onChangeText={setText}
             placeholder="Type a status…"
@@ -137,7 +174,11 @@ export default function NewStatusScreen() {
           {BACKGROUND_COLORS.map((c, i) => (
             <Pressable
               key={c}
-              style={[styles.swatch, { backgroundColor: c }, i === bgIndex && styles.swatchActive]}
+              style={[
+                styles.swatch,
+                { backgroundColor: c },
+                i === bgIndex && { borderColor: theme.text },
+              ]}
               onPress={() => setBgIndex(i)}
             />
           ))}
@@ -148,16 +189,22 @@ export default function NewStatusScreen() {
 
   // mode === 'media'
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
+    <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: theme.bg }]}>
       <View style={styles.header}>
-        <Pressable onPress={() => setMode('choose')} hitSlop={8} style={styles.close}>
-          <CloseIcon size={20} color={colors.text} />
+        <Pressable
+          onPress={() => setMode('choose')}
+          hitSlop={8}
+          style={styles.close}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
+        >
+          <CloseIcon size={20} color={theme.text} />
         </Pressable>
         {posting ? (
-          <ActivityIndicator color={colors.text} />
+          <ActivityIndicator color={theme.text} />
         ) : (
-          <Pressable onPress={handlePost} hitSlop={8}>
-            <Text style={styles.post}>Post</Text>
+          <Pressable onPress={handlePost} hitSlop={8} accessibilityRole="button" accessibilityLabel="Post status">
+            <Text style={[styles.post, { color: theme.text }]}>Post</Text>
           </Pressable>
         )}
       </View>
@@ -167,11 +214,11 @@ export default function NewStatusScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={[styles.captionRow, { paddingBottom: insets.bottom + space[4] }]}>
           <TextInput
-            style={styles.captionInput}
+            style={[styles.captionInput, { color: theme.text }]}
             value={caption}
             onChangeText={setCaption}
             placeholder="Add a caption…"
-            placeholderTextColor={colors.textMuted}
+            placeholderTextColor={theme.textMuted}
             multiline
           />
         </View>
@@ -183,7 +230,6 @@ export default function NewStatusScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.bg,
   },
   header: {
     flexDirection: 'row',
@@ -196,16 +242,12 @@ const styles = StyleSheet.create({
     width: 24,
   },
   title: {
-    color: colors.text,
     fontSize: 17,
     fontWeight: fontWeight.medium,
   },
   post: {
     fontSize: 15,
     fontWeight: fontWeight.semibold,
-  },
-  postDisabled: {
-    color: colors.textMuted,
   },
   chooseBody: {
     flex: 1,
@@ -215,19 +257,15 @@ const styles = StyleSheet.create({
   },
   chooseOption: {
     borderWidth: 1,
-    borderColor: colors.divider,
     borderRadius: 12,
     paddingVertical: space[8],
     alignItems: 'center',
     gap: space[3],
-    backgroundColor: colors.surface,
   },
   chooseGlyph: {
     fontSize: 32,
-    color: colors.text,
   },
   chooseLabel: {
-    color: colors.text,
     fontSize: 15,
     fontWeight: fontWeight.medium,
   },
@@ -237,7 +275,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[8],
   },
   textInput: {
-    color: colors.text,
     fontSize: 26,
     fontWeight: fontWeight.medium,
     textAlign: 'center',
@@ -255,9 +292,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'transparent',
   },
-  swatchActive: {
-    borderColor: colors.text,
-  },
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
@@ -266,7 +300,6 @@ const styles = StyleSheet.create({
   menu: {
     margin: space[4],
     marginBottom: space[8],
-    backgroundColor: colors.surface,
     borderRadius: 8,
     overflow: 'hidden',
   },
@@ -275,13 +308,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[6],
   },
   menuLabel: {
-    color: colors.text,
     fontSize: 16,
     textAlign: 'center',
   },
   menuDivider: {
     height: 1,
-    backgroundColor: colors.divider,
   },
   mediaPreviewWrap: {
     flex: 1,
@@ -296,7 +327,6 @@ const styles = StyleSheet.create({
     paddingTop: space[3],
   },
   captionInput: {
-    color: colors.text,
     fontSize: 16,
     backgroundColor: 'rgba(255,255,255,0.12)',
     borderRadius: 20,

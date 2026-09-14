@@ -19,9 +19,10 @@ import { supabase } from '../../../lib/supabase';
 import { getSignedStatusMediaUrl } from '../../../lib/media';
 import { deleteStatus, getStatusViewers, markStatusViewed, type StatusViewer } from '../../../lib/statusActions';
 import { Avatar } from '../../../components/Avatar';
-import { colors, fontWeight, space } from '../../../lib/theme';
+import { fontWeight, space } from '../../../lib/theme';
 import { CloseIcon } from '../../../components/icons';
 import { useAccentTheme } from '../../../lib/accentTheme';
+import { useTheme } from '../../../lib/themeMode';
 import type { StatusesRow } from '../../../lib/database.types';
 
 const DEFAULT_DURATION_MS = 5000;
@@ -37,6 +38,7 @@ export default function StatusViewerScreen() {
   const insets = useSafeAreaInsets();
   const { profile } = useAuth();
   const { colors: accentColors } = useAccentTheme();
+  const theme = useTheme();
   const [statuses, setStatuses] = useState<StatusesRow[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [userName, setUserName] = useState('');
@@ -141,7 +143,7 @@ export default function StatusViewerScreen() {
   }
 
   return (
-    <View style={[styles.screen, current.type === 'text' ? { backgroundColor: current.background_color ?? colors.bg } : null]}>
+    <View style={[styles.screen, current.type === 'text' ? { backgroundColor: current.background_color ?? theme.bg } : null]}>
       <View style={[styles.progressRow, { top: insets.top + space[2] }]}>
         {statuses.map((s, i) => (
           <View key={s.id} style={styles.progressTrack}>
@@ -165,22 +167,22 @@ export default function StatusViewerScreen() {
       <View style={[styles.header, { top: insets.top + space[6] }]}>
         <Avatar name={userName} size={32} />
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerName}>{isOwn ? 'My status' : userName}</Text>
+          <Text style={[styles.headerName, { color: theme.text }]}>{isOwn ? 'My status' : userName}</Text>
           <Text style={styles.headerTime}>{timeAgo(current.created_at)}</Text>
         </View>
         {isOwn && (
-          <Pressable onPress={handleDelete} hitSlop={8}>
+          <Pressable onPress={handleDelete} hitSlop={8} accessibilityRole="button" accessibilityLabel="Delete status">
             <Text style={styles.trash}>🗑</Text>
           </Pressable>
         )}
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <CloseIcon size={20} color={colors.text} />
+        <Pressable onPress={() => router.back()} hitSlop={8} accessibilityRole="button" accessibilityLabel="Close">
+          <CloseIcon size={20} color={theme.text} />
         </Pressable>
       </View>
 
       <View style={styles.content}>
         {current.type === 'text' ? (
-          <Text style={styles.textContent}>{current.text_content}</Text>
+          <Text style={[styles.textContent, { color: theme.text }]}>{current.text_content}</Text>
         ) : !mediaUrl ? (
           <ActivityIndicator color={accentColors.accent} />
         ) : current.type === 'video' ? (
@@ -203,25 +205,27 @@ export default function StatusViewerScreen() {
 
       {isOwn && (
         <Pressable style={[styles.viewersBar, { paddingBottom: insets.bottom + space[3] }]} onPress={openViewers}>
-          <Text style={styles.viewersText}>👁 Viewed by ‧ tap to see who</Text>
+          <Text style={[styles.viewersText, { color: theme.text }]}>👁 Viewed by ‧ tap to see who</Text>
         </Pressable>
       )}
 
       <Modal visible={viewersOpen} transparent animationType="slide" onRequestClose={() => setViewersOpen(false)}>
         <Pressable style={styles.viewersBackdrop} onPress={() => setViewersOpen(false)}>
-          <View style={styles.viewersSheet}>
-            <Text style={styles.viewersTitle}>Viewed by ({viewers.length})</Text>
+          <View style={[styles.viewersSheet, { backgroundColor: theme.surface }]}>
+            <Text style={[styles.viewersTitle, { color: theme.text }]}>Viewed by ({viewers.length})</Text>
             <FlatList
               data={viewers}
               keyExtractor={(v) => v.id}
               renderItem={({ item }) => (
                 <View style={styles.viewerRow}>
                   <Avatar name={item.display_name} avatarUrl={item.avatar_url} size={36} />
-                  <Text style={styles.viewerName}>{item.display_name}</Text>
-                  <Text style={styles.viewerTime}>{timeAgo(item.viewed_at)}</Text>
+                  <Text style={[styles.viewerName, { color: theme.text }]}>{item.display_name}</Text>
+                  <Text style={[styles.viewerTime, { color: theme.textMuted }]}>{timeAgo(item.viewed_at)}</Text>
                 </View>
               )}
-              ListEmptyComponent={<Text style={styles.emptyText}>No one has viewed this yet.</Text>}
+              ListEmptyComponent={
+                <Text style={[styles.emptyText, { color: theme.textMuted }]}>No one has viewed this yet.</Text>
+              }
             />
           </View>
         </Pressable>
@@ -276,7 +280,6 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   headerName: {
-    color: colors.text,
     fontSize: 14,
     fontWeight: fontWeight.medium,
   },
@@ -294,7 +297,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[8],
   },
   textContent: {
-    color: colors.text,
     fontSize: 28,
     fontWeight: fontWeight.medium,
     textAlign: 'center',
@@ -319,7 +321,6 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   captionText: {
-    color: colors.text,
     fontSize: 15,
     textAlign: 'center',
     backgroundColor: 'rgba(0,0,0,0.45)',
@@ -337,7 +338,6 @@ const styles = StyleSheet.create({
     paddingTop: space[3],
   },
   viewersText: {
-    color: colors.text,
     fontSize: 13,
   },
   viewersBackdrop: {
@@ -346,14 +346,12 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   viewersSheet: {
-    backgroundColor: colors.surface,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     padding: space[6],
     maxHeight: '60%',
   },
   viewersTitle: {
-    color: colors.text,
     fontSize: 15,
     fontWeight: fontWeight.medium,
     marginBottom: space[4],
@@ -365,16 +363,13 @@ const styles = StyleSheet.create({
     paddingVertical: space[2],
   },
   viewerName: {
-    color: colors.text,
     fontSize: 14,
     flex: 1,
   },
   viewerTime: {
-    color: colors.textMuted,
     fontSize: 12,
   },
   emptyText: {
-    color: colors.textMuted,
     textAlign: 'center',
     paddingVertical: space[6],
   },

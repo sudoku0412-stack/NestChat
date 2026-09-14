@@ -33,8 +33,9 @@ import {
   StatusRingIcon,
   type IconProps,
 } from '../../components/icons';
+import { useTheme } from '../../lib/themeMode';
 import { useAccentTheme } from '../../lib/accentTheme';
-import { colors, fontWeight, radius, space } from '../../lib/theme';
+import { fontWeight, radius, space } from '../../lib/theme';
 
 // `.expo/types/router.d.ts` is stale (predates these routes) and only regenerates during a real
 // Metro bundle, which this project's TestFlight-only workflow doesn't run locally -- it'll
@@ -55,6 +56,7 @@ const MENU_ROWS: { label: string; href: any; Icon: (props: IconProps) => React.R
 
 export default function EditProfileScreen() {
   const { profile, refreshProfile } = useAuth();
+  const theme = useTheme();
   const { colors: accentColors } = useAccentTheme();
   const insets = useSafeAreaInsets();
   const [name, setName] = useState(profile?.display_name ?? '');
@@ -101,10 +103,10 @@ export default function EditProfileScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.screen, { paddingTop: insets.top }]}
+      style={[styles.screen, { paddingTop: insets.top, backgroundColor: theme.bg }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScreenHeader title="Edit profile" />
+      <ScreenHeader title="Edit profile" theme={theme} />
 
       <ScrollView
         style={styles.content}
@@ -120,28 +122,28 @@ export default function EditProfileScreen() {
           <Text style={[styles.avatarLabel, { color: accentColors.accent }]}>Change photo</Text>
         </Pressable>
 
-        <Text style={styles.fieldLabel}>Your name</Text>
+        <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>Your name</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { borderColor: theme.divider, color: theme.text, backgroundColor: theme.surface }]}
           value={name}
           onChangeText={setName}
           placeholder="Jamie"
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={theme.textMuted}
         />
 
-        <Text style={styles.fieldLabel}>Email (optional)</Text>
+        <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>Email (optional)</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { borderColor: theme.divider, color: theme.text, backgroundColor: theme.surface }]}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
           autoCorrect={false}
           keyboardType="email-address"
           placeholder="you@example.com"
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={theme.textMuted}
         />
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {error ? <Text style={[styles.error, { color: theme.danger }]}>{error}</Text> : null}
 
         <View style={{ marginTop: space[6] }}>
           {saving ? (
@@ -152,17 +154,14 @@ export default function EditProfileScreen() {
         </View>
 
         <View style={styles.menu}>
-          <SettingsCard>
+          <SettingsCard theme={theme}>
             {MENU_ROWS.map((row) => (
               <SettingsRow
                 key={row.label}
                 label={row.label}
                 onPress={() => router.push(row.href)}
-                icon={
-                  <View style={[styles.menuIconBg, { backgroundColor: accentColors.accent100 }]}>
-                    <row.Icon size={16} color={accentColors.accent700} strokeWidth={1.7} />
-                  </View>
-                }
+                theme={theme}
+                icon={<row.Icon size={16} color={accentColors.accent700} strokeWidth={1.7} />}
               />
             ))}
           </SettingsCard>
@@ -175,20 +174,12 @@ export default function EditProfileScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.bg,
   },
   content: {
     padding: space[8],
   },
   menu: {
     marginTop: space[8],
-  },
-  menuIconBg: {
-    width: 30,
-    height: 30,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   avatarPicker: {
     alignItems: 'center',
@@ -200,7 +191,6 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
   },
   fieldLabel: {
-    color: colors.textMuted,
     fontSize: 12,
     letterSpacing: 0.4,
     marginBottom: space[2],
@@ -208,16 +198,12 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: colors.divider,
     borderRadius: radius.md,
     paddingHorizontal: space[4],
     paddingVertical: space[4],
-    color: colors.text,
     fontSize: 16,
-    backgroundColor: colors.surface,
   },
   error: {
-    color: colors.danger,
     marginTop: space[4],
     fontSize: 13,
   },

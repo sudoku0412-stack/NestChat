@@ -5,8 +5,9 @@ import { router } from 'expo-router';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import { ScreenHeader } from '../../components/ScreenHeader';
+import { useTheme } from '../../lib/themeMode';
 import { useAccentTheme } from '../../lib/accentTheme';
-import { colors, space } from '../../lib/theme';
+import { space } from '../../lib/theme';
 
 interface ChatUsage {
   chatId: string;
@@ -22,6 +23,7 @@ function formatBytes(bytes: number) {
 export default function StorageAndDataScreen() {
   const insets = useSafeAreaInsets();
   const { profile, refreshProfile } = useAuth();
+  const theme = useTheme();
   const { colors: accentColors } = useAccentTheme();
   const [usage, setUsage] = useState<ChatUsage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,24 +87,24 @@ export default function StorageAndDataScreen() {
   const totalBytes = usage.reduce((sum, u) => sum + u.bytes, 0);
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <ScreenHeader title="Storage and data" />
+    <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: theme.bg }]}>
+      <ScreenHeader title="Storage and data" theme={theme} />
 
-      <View style={styles.settingRow}>
-        <Text style={styles.settingLabel}>Auto-download media</Text>
+      <View style={[styles.settingRow, { borderBottomColor: theme.divider }]}>
+        <Text style={[styles.settingLabel, { color: theme.text }]}>Auto-download media</Text>
         <Switch
           value={autodownload}
           onValueChange={toggleAutodownload}
-          trackColor={{ true: accentColors.accent700, false: colors.neutral800 }}
-          thumbColor={colors.text}
+          trackColor={{ true: accentColors.accent700, false: theme.neutral800 }}
+          thumbColor={theme.text}
         />
       </View>
-      <Text style={styles.caption}>
+      <Text style={[styles.caption, { color: theme.textMuted }]}>
         When off, photos, videos and documents wait for a tap before downloading and decrypting --
         manual viewing always still works.
       </Text>
 
-      <Text style={styles.sectionLabel}>
+      <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>
         Media storage {loading ? '' : `(${formatBytes(totalBytes)} total)`}
       </Text>
 
@@ -111,12 +113,12 @@ export default function StorageAndDataScreen() {
           <ActivityIndicator color={accentColors.accent} />
         </View>
       ) : usage.length === 0 ? (
-        <Text style={styles.caption}>No media sent or received yet.</Text>
+        <Text style={[styles.caption, { color: theme.textMuted }]}>No media sent or received yet.</Text>
       ) : (
         usage.map((u) => (
-          <Pressable key={u.chatId} style={styles.row} onPress={() => router.push(`/(app)/media-gallery/${u.chatId}`)}>
-            <Text style={styles.rowLabel}>{u.label}</Text>
-            <Text style={styles.rowValue}>{formatBytes(u.bytes)}</Text>
+          <Pressable key={u.chatId} style={[styles.row, { borderBottomColor: theme.divider }]} onPress={() => router.push(`/(app)/media-gallery/${u.chatId}`)}>
+            <Text style={[styles.rowLabel, { color: theme.text }]}>{u.label}</Text>
+            <Text style={[styles.rowValue, { color: theme.textMuted }]}>{formatBytes(u.bytes)}</Text>
           </Pressable>
         ))
       )}
@@ -127,7 +129,6 @@ export default function StorageAndDataScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.bg,
   },
   centered: {
     padding: space[8],
@@ -140,21 +141,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[6],
     paddingVertical: space[4],
     borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
   },
   settingLabel: {
-    color: colors.text,
     fontSize: 15,
   },
   caption: {
-    color: colors.textMuted,
     fontSize: 12,
     paddingHorizontal: space[6],
     paddingTop: space[2],
     lineHeight: 17,
   },
   sectionLabel: {
-    color: colors.textMuted,
     fontSize: 12,
     letterSpacing: 0.4,
     paddingHorizontal: space[6],
@@ -168,14 +165,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[6],
     paddingVertical: space[3],
     borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
   },
   rowLabel: {
-    color: colors.text,
     fontSize: 15,
   },
   rowValue: {
-    color: colors.textMuted,
     fontSize: 14,
   },
 });

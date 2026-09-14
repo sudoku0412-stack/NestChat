@@ -10,7 +10,8 @@ import {
 import { Redirect, router } from 'expo-router';
 import { useAuth } from '../lib/auth';
 import { useAccentTheme } from '../lib/accentTheme';
-import { colors, fonts, radius, space } from '../lib/theme';
+import { fonts, radius, space } from '../lib/theme';
+import { useTheme } from '../lib/themeMode';
 import { OutlineButton } from '../components/OutlineButton';
 
 function isPlausiblePhone(value: string) {
@@ -29,6 +30,7 @@ type Step = 'phone' | 'create_pin' | 'enter_pin' | 'set_recovery_pin';
 export default function LoginScreen() {
   const { session, profile, checkPhone, claimPhone, recoverAccount } = useAuth();
   const { colors: accentColors } = useAccentTheme();
+  const theme = useTheme();
   const [step, setStep] = useState<Step>('phone');
   const [phone, setPhone] = useState('');
   const [pin, setPin] = useState('');
@@ -103,24 +105,28 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.screen}
+      style={[styles.screen, { backgroundColor: theme.bg }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.content}>
-        <View style={styles.chip}>
-          <Text style={styles.chipText}>HOUSEHOLD MEMBERS ONLY</Text>
+        <View style={[styles.chip, { borderColor: theme.divider }]}>
+          <Text style={[styles.chipText, { color: theme.textMuted }]}>HOUSEHOLD MEMBERS ONLY</Text>
         </View>
 
-        <Text style={styles.wordmark}>NestChat</Text>
+        <Text style={[styles.wordmark, { color: theme.text }]}>NestChat</Text>
         <View style={[styles.underline, { backgroundColor: accentColors.accent }]} />
 
         {step === 'phone' && (
           <>
-            <Text style={styles.tagline}>Enter your phone number to sign in or join.</Text>
+            <Text style={[styles.headline, { color: theme.text }]}>Your household, and only your household.</Text>
+            <Text style={[styles.tagline, { color: theme.textMuted }]}>
+              No public feed, no strangers, no algorithm — just the people who live here. Sign in
+              with your phone number to get inside.
+            </Text>
             <View style={styles.form}>
-              <Text style={styles.fieldLabel}>Phone number</Text>
+              <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>Phone number</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { borderColor: theme.divider, color: theme.text, backgroundColor: theme.surface }]}
                 value={phone}
                 onChangeText={setPhone}
                 autoCapitalize="none"
@@ -128,14 +134,14 @@ export default function LoginScreen() {
                 keyboardType="phone-pad"
                 textContentType="telephoneNumber"
                 placeholder="+15551234567"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={theme.textMuted}
               />
-              <Text style={styles.hint}>
-                Include your country code (e.g. +1 for US/Canada). No code is sent — this just
-                identifies you.
+              <Text style={[styles.hint, { color: theme.textMuted }]}>
+                Include your country code (e.g. +1 for US/Canada). We use your number just to
+                recognize you — no texts, no calls, nothing shared outside this house.
               </Text>
 
-              {error ? <Text style={styles.error}>{error}</Text> : null}
+              {error ? <Text style={[styles.error, { color: theme.danger }]}>{error}</Text> : null}
 
               <View style={{ marginTop: space[6] }}>
                 <OutlineButton
@@ -151,33 +157,33 @@ export default function LoginScreen() {
 
         {step === 'create_pin' && (
           <>
-            <Text style={styles.tagline}>
+            <Text style={[styles.tagline, { color: theme.textMuted }]}>
               Create a recovery PIN. You'll need it to get your chats back if you ever sign out
               or reinstall.
             </Text>
             <View style={styles.form}>
-              <Text style={styles.fieldLabel}>4-6 digit PIN</Text>
+              <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>4-6 digit PIN</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { borderColor: theme.divider, color: theme.text, backgroundColor: theme.surface }]}
                 value={pin}
                 onChangeText={setPin}
                 secureTextEntry
                 keyboardType="number-pad"
                 placeholder="••••"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={theme.textMuted}
               />
-              <Text style={styles.fieldLabel}>Confirm PIN</Text>
+              <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>Confirm PIN</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { borderColor: theme.divider, color: theme.text, backgroundColor: theme.surface }]}
                 value={pinConfirm}
                 onChangeText={setPinConfirm}
                 secureTextEntry
                 keyboardType="number-pad"
                 placeholder="••••"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={theme.textMuted}
               />
 
-              {error ? <Text style={styles.error}>{error}</Text> : null}
+              {error ? <Text style={[styles.error, { color: theme.danger }]}>{error}</Text> : null}
 
               <View style={{ marginTop: space[6] }}>
                 <OutlineButton
@@ -193,22 +199,22 @@ export default function LoginScreen() {
 
         {step === 'enter_pin' && (
           <>
-            <Text style={styles.tagline}>
+            <Text style={[styles.tagline, { color: theme.textMuted }]}>
               This number already has an account. Enter your PIN to get your chats back.
             </Text>
             <View style={styles.form}>
-              <Text style={styles.fieldLabel}>PIN</Text>
+              <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>PIN</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { borderColor: theme.divider, color: theme.text, backgroundColor: theme.surface }]}
                 value={pin}
                 onChangeText={setPin}
                 secureTextEntry
                 keyboardType="number-pad"
                 placeholder="••••"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={theme.textMuted}
               />
 
-              {error ? <Text style={styles.error}>{error}</Text> : null}
+              {error ? <Text style={[styles.error, { color: theme.danger }]}>{error}</Text> : null}
 
               <View style={{ marginTop: space[6] }}>
                 <OutlineButton
@@ -224,33 +230,33 @@ export default function LoginScreen() {
 
         {step === 'set_recovery_pin' && (
           <>
-            <Text style={styles.tagline}>
+            <Text style={[styles.tagline, { color: theme.textMuted }]}>
               This number already has an account, but it doesn't have a recovery PIN yet. Set one
               now to get your chats back — you'll use it next time too.
             </Text>
             <View style={styles.form}>
-              <Text style={styles.fieldLabel}>4-6 digit PIN</Text>
+              <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>4-6 digit PIN</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { borderColor: theme.divider, color: theme.text, backgroundColor: theme.surface }]}
                 value={pin}
                 onChangeText={setPin}
                 secureTextEntry
                 keyboardType="number-pad"
                 placeholder="••••"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={theme.textMuted}
               />
-              <Text style={styles.fieldLabel}>Confirm PIN</Text>
+              <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>Confirm PIN</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { borderColor: theme.divider, color: theme.text, backgroundColor: theme.surface }]}
                 value={pinConfirm}
                 onChangeText={setPinConfirm}
                 secureTextEntry
                 keyboardType="number-pad"
                 placeholder="••••"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={theme.textMuted}
               />
 
-              {error ? <Text style={styles.error}>{error}</Text> : null}
+              {error ? <Text style={[styles.error, { color: theme.danger }]}>{error}</Text> : null}
 
               <View style={{ marginTop: space[6] }}>
                 <OutlineButton
@@ -271,7 +277,6 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.bg,
   },
   content: {
     flex: 1,
@@ -281,19 +286,16 @@ const styles = StyleSheet.create({
   chip: {
     alignSelf: 'flex-start',
     borderWidth: 1,
-    borderColor: colors.divider,
     borderRadius: radius.sm,
     paddingHorizontal: space[3],
     paddingVertical: space[2],
     marginBottom: space[8],
   },
   chipText: {
-    color: colors.textMuted,
     fontSize: 11,
     letterSpacing: 0.6,
   },
   wordmark: {
-    color: colors.text,
     fontSize: 42,
     fontFamily: fonts.display,
   },
@@ -303,8 +305,12 @@ const styles = StyleSheet.create({
     marginTop: space[2],
     marginBottom: space[4],
   },
+  headline: {
+    fontSize: 22,
+    fontFamily: fonts.display,
+    marginBottom: space[2],
+  },
   tagline: {
-    color: colors.textMuted,
     fontSize: 15,
     marginBottom: space[8],
   },
@@ -312,7 +318,6 @@ const styles = StyleSheet.create({
     marginTop: space[4],
   },
   fieldLabel: {
-    color: colors.textMuted,
     fontSize: 12,
     letterSpacing: 0.4,
     marginBottom: space[2],
@@ -320,21 +325,16 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: colors.divider,
     borderRadius: radius.md,
     paddingHorizontal: space[4],
     paddingVertical: space[4],
-    color: colors.text,
     fontSize: 16,
-    backgroundColor: colors.surface,
   },
   hint: {
-    color: colors.textMuted,
     fontSize: 12,
     marginTop: space[2],
   },
   error: {
-    color: colors.danger,
     marginTop: space[4],
     fontSize: 13,
   },

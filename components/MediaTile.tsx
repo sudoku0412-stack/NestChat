@@ -13,7 +13,8 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { useDecryptedMediaUri } from '../lib/hooks/useDecryptedMediaUri';
 import { useAuth } from '../lib/auth';
-import { colors, radius, space } from '../lib/theme';
+import { useTheme } from '../lib/themeMode';
+import { radius, space } from '../lib/theme';
 import { useAccentTheme } from '../lib/accentTheme';
 import type { MessageMediaRow } from '../lib/database.types';
 
@@ -56,6 +57,7 @@ export function MediaTile({ media, chatId, messageId, keyId, myUserId, ownMessag
   const autoLoad = profile?.media_autodownload !== 'never';
   const { url, load } = useDecryptedMediaUri(media, chatId, messageId, keyId, myUserId, autoLoad);
   const { colors: accentColors } = useAccentTheme();
+  const theme = useTheme();
   const [fetching, setFetching] = useState(false);
 
   function handleLongPress(e: GestureResponderEvent) {
@@ -75,7 +77,7 @@ export function MediaTile({ media, chatId, messageId, keyId, myUserId, ownMessag
   if (media.kind === 'document') {
     return (
       <Pressable
-        style={styles.documentTile}
+        style={[styles.documentTile, { backgroundColor: theme.bgDeep }]}
         onPress={async () => {
           const resolved = await ensureLoaded();
           if (resolved) openDocument(resolved);
@@ -85,10 +87,10 @@ export function MediaTile({ media, chatId, messageId, keyId, myUserId, ownMessag
       >
         <Text style={styles.documentGlyph}>📄</Text>
         <View style={styles.documentInfo}>
-          <Text style={styles.documentName} numberOfLines={1}>
+          <Text style={[styles.documentName, { color: theme.text }]} numberOfLines={1}>
             {media.file_name || 'Document'}
           </Text>
-          <Text style={styles.documentMeta}>{formatFileSize(media.file_size)}</Text>
+          <Text style={[styles.documentMeta, { color: theme.textMuted }]}>{formatFileSize(media.file_size)}</Text>
         </View>
       </Pressable>
     );
@@ -96,7 +98,7 @@ export function MediaTile({ media, chatId, messageId, keyId, myUserId, ownMessag
 
   return (
     <Pressable
-      style={styles.tile}
+      style={[styles.tile, { backgroundColor: theme.surface }]}
       onPress={async () => {
         // Not loaded yet (auto-download off) -- first tap fetches the thumbnail instead of
         // jumping straight to the viewer, matching a familiar "tap to download" affordance.
@@ -115,8 +117,8 @@ export function MediaTile({ media, chatId, messageId, keyId, myUserId, ownMessag
         <Image source={{ uri: url }} style={styles.image} contentFit="cover" />
       ) : !autoLoad && !fetching ? (
         <View style={styles.loading}>
-          <Text style={styles.downloadGlyph}>⬇</Text>
-          <Text style={styles.downloadLabel}>Tap to download</Text>
+          <Text style={[styles.downloadGlyph, { color: theme.textMuted }]}>⬇</Text>
+          <Text style={[styles.downloadLabel, { color: theme.textMuted }]}>Tap to download</Text>
         </View>
       ) : (
         <View style={styles.loading}>
@@ -125,7 +127,7 @@ export function MediaTile({ media, chatId, messageId, keyId, myUserId, ownMessag
       )}
       {media.kind === 'video' && (
         <View style={styles.playBadge}>
-          <Text style={styles.playGlyph}>▶</Text>
+          <Text style={[styles.playGlyph, { color: theme.text }]}>▶</Text>
         </View>
       )}
     </Pressable>
@@ -134,8 +136,9 @@ export function MediaTile({ media, chatId, messageId, keyId, myUserId, ownMessag
 
 export function PendingMediaTile() {
   const { colors: accentColors } = useAccentTheme();
+  const theme = useTheme();
   return (
-    <View style={styles.tile}>
+    <View style={[styles.tile, { backgroundColor: theme.surface }]}>
       <View style={styles.loading}>
         <ActivityIndicator color={accentColors.accent} />
       </View>
@@ -151,7 +154,6 @@ const styles = StyleSheet.create({
     width: 220,
     padding: space[3],
     borderRadius: radius.md,
-    backgroundColor: colors.bgDeep,
   },
   documentGlyph: {
     fontSize: 28,
@@ -160,12 +162,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   documentName: {
-    color: colors.text,
     fontSize: 14,
     fontWeight: '500',
   },
   documentMeta: {
-    color: colors.textMuted,
     fontSize: 12,
     marginTop: 2,
   },
@@ -174,7 +174,6 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: radius.sm,
     overflow: 'hidden',
-    backgroundColor: colors.surface,
   },
   image: {
     width: '100%',
@@ -186,11 +185,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   downloadGlyph: {
-    color: colors.textMuted,
     fontSize: 22,
   },
   downloadLabel: {
-    color: colors.textMuted,
     fontSize: 12,
     marginTop: space[1],
   },
@@ -204,7 +201,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   playGlyph: {
-    color: colors.text,
     fontSize: 28,
     textShadowColor: 'rgba(0,0,0,0.6)',
     textShadowRadius: 6,

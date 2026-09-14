@@ -1,5 +1,6 @@
 import { Image, StyleSheet, Text, View } from 'react-native';
-import { colorForName, colors, initials } from '../lib/theme';
+import { useTheme } from '../lib/themeMode';
+import { colorForName, initials } from '../lib/theme';
 
 interface AvatarProps {
   name: string;
@@ -11,11 +12,17 @@ interface AvatarProps {
 }
 
 export function Avatar({ name, avatarUrl, size = 44, ringColor }: AvatarProps) {
+  const theme = useTheme();
   const style = { width: size, height: size, borderRadius: size / 2 };
   const ringStyle = ringColor ? { borderWidth: 1.5, borderColor: ringColor } : null;
 
   if (avatarUrl) {
-    return <Image source={{ uri: avatarUrl }} style={[styles.image, style, ringStyle]} />;
+    return (
+      <Image
+        source={{ uri: avatarUrl }}
+        style={[styles.image, style, { backgroundColor: theme.surface }, ringStyle]}
+      />
+    );
   }
 
   return (
@@ -27,6 +34,7 @@ export function Avatar({ name, avatarUrl, size = 44, ringColor }: AvatarProps) {
 
 // Offset 3-up stack of monogram squares, used for group chat rows/headers.
 export function GroupAvatarStack({ members, size = 44 }: { members: { display_name: string; avatar_url?: string | null }[]; size?: number }) {
+  const theme = useTheme();
   const shown = members.slice(0, 3);
   const stackSize = size * 0.72;
   const offset = size * 0.16;
@@ -42,7 +50,7 @@ export function GroupAvatarStack({ members, size = 44 }: { members: { display_na
             top: i * offset,
           }}
         >
-          <Avatar name={m.display_name} avatarUrl={m.avatar_url} size={stackSize} ringColor={colors.bg} />
+          <Avatar name={m.display_name} avatarUrl={m.avatar_url} size={stackSize} ringColor={theme.bg} />
         </View>
       ))}
     </View>
@@ -54,11 +62,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  image: {
-    backgroundColor: colors.surface,
-  },
+  image: {},
+  // Avatar-initials text is always white regardless of theme — the monogram background is
+  // always one of the fixed `avatarPalette` hues (mid lightness/saturation, chosen specifically
+  // so white text stays legible on every one), never a theme-reactive ground color.
   initials: {
-    color: colors.text,
+    color: '#FFFFFF',
     fontWeight: '600',
   },
 });

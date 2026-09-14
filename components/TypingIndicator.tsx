@@ -10,7 +10,8 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { colors, radius, space } from '../lib/theme';
+import { useTheme } from '../lib/themeMode';
+import { radius, space } from '../lib/theme';
 
 function useBounce(delay: number) {
   const value = useSharedValue(0);
@@ -39,16 +40,17 @@ function useBounce(delay: number) {
 // Same grouped-bubble shape as a real message from the other side, so the indicator reads as
 // "someone is about to send a message here" instead of a floating, differently-styled widget.
 export function TypingIndicator() {
+  const theme = useTheme();
   const dot1Style = useBounce(0);
   const dot2Style = useBounce(150);
   const dot3Style = useBounce(300);
 
   return (
     <View style={styles.container}>
-      <View style={styles.bubble}>
-        <Animated.View style={[styles.dot, dot1Style]} />
-        <Animated.View style={[styles.dot, dot2Style]} />
-        <Animated.View style={[styles.dot, dot3Style]} />
+      <View style={[styles.bubble, { backgroundColor: theme.surface }]}>
+        <Animated.View style={[styles.dot, { backgroundColor: theme.textMuted }, dot1Style]} />
+        <Animated.View style={[styles.dot, { backgroundColor: theme.textMuted }, dot2Style]} />
+        <Animated.View style={[styles.dot, { backgroundColor: theme.textMuted }, dot3Style]} />
       </View>
     </View>
   );
@@ -63,7 +65,6 @@ const styles = StyleSheet.create({
   bubble: {
     flexDirection: 'row',
     gap: space[1],
-    backgroundColor: colors.surface,
     borderRadius: radius.xl,
     borderBottomLeftRadius: radius.sm,
     paddingHorizontal: space[4],
@@ -73,6 +74,5 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: radius.full,
-    backgroundColor: colors.textMuted,
   },
 });

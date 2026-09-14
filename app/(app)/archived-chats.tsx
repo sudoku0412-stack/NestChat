@@ -7,10 +7,12 @@ import { useChatList } from '../../lib/hooks/useChatList';
 import { supabase } from '../../lib/supabase';
 import { ChatRow } from '../../components/ChatRow';
 import { ScreenHeader } from '../../components/ScreenHeader';
-import { colors, space } from '../../lib/theme';
+import { space } from '../../lib/theme';
+import { useTheme } from '../../lib/themeMode';
 
 export default function ArchivedChatsScreen() {
   const insets = useSafeAreaInsets();
+  const theme = useTheme();
   const { profile } = useAuth();
   const { chats, loading, refresh } = useChatList(profile?.id ?? null, { archived: true });
   const [openRowId, setOpenRowId] = useState<string | null>(null);
@@ -48,8 +50,8 @@ export default function ArchivedChatsScreen() {
   }
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <ScreenHeader title="Archived" />
+    <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: theme.bg }]}>
+      <ScreenHeader title="Archived" theme={theme} />
 
       <FlatList
         data={chats}
@@ -78,7 +80,7 @@ export default function ArchivedChatsScreen() {
         ListEmptyComponent={
           !loading ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>No archived chats.</Text>
+              <Text style={[styles.emptyText, { color: theme.textMuted }]}>No archived chats.</Text>
             </View>
           ) : null
         }
@@ -90,14 +92,12 @@ export default function ArchivedChatsScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.bg,
   },
   empty: {
     padding: space[8],
     alignItems: 'center',
   },
   emptyText: {
-    color: colors.textMuted,
     textAlign: 'center',
     fontSize: 14,
   },

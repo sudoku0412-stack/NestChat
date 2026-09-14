@@ -11,10 +11,12 @@ import { MemberRow } from '../../../components/MemberRow';
 import { ScreenHeader } from '../../../components/ScreenHeader';
 import { CloseIcon } from '../../../components/icons';
 import { useAccentTheme } from '../../../lib/accentTheme';
-import { colors, fontWeight, space } from '../../../lib/theme';
+import { useTheme } from '../../../lib/themeMode';
+import { fontWeight, space } from '../../../lib/theme';
 import type { Member } from '../../../lib/types';
 
 export default function GroupInfoScreen() {
+  const theme = useTheme();
   const { colors: accentColors } = useAccentTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
@@ -80,31 +82,31 @@ export default function GroupInfoScreen() {
   }
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <ScreenHeader title="Group info" />
+    <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: theme.bg }]}>
+      <ScreenHeader title="Group info" theme={theme} />
 
       <View style={styles.summary}>
         <GroupAvatarStack members={groupMembers} size={64} />
-        <Text style={styles.groupName}>{groupName}</Text>
-        <Text style={styles.memberCount}>{groupMembers.length} members</Text>
+        <Text style={[styles.groupName, { color: theme.text }]}>{groupName}</Text>
+        <Text style={[styles.memberCount, { color: theme.textMuted }]}>{groupMembers.length} members</Text>
       </View>
 
       {adding ? (
         <>
-          <Text style={styles.sectionLabel}>Add a member</Text>
+          <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>Add a member</Text>
           <FlatList
             data={addable}
             keyExtractor={(m) => m.id}
             renderItem={({ item }) => <MemberRow member={item} onPress={() => addMember(item.id)} />}
-            ListEmptyComponent={<Text style={styles.emptyText}>Everyone is already in this group.</Text>}
+            ListEmptyComponent={<Text style={[styles.emptyText, { color: theme.textMuted }]}>Everyone is already in this group.</Text>}
           />
           <Pressable style={styles.cancelAdd} onPress={() => setAdding(false)}>
-            <Text style={styles.cancelAddText}>Cancel</Text>
+            <Text style={[styles.cancelAddText, { color: theme.textMuted }]}>Cancel</Text>
           </Pressable>
         </>
       ) : (
         <>
-          <Text style={styles.sectionLabel}>Members ({groupMembers.length})</Text>
+          <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>Members ({groupMembers.length})</Text>
           <FlatList
             data={groupMembers}
             keyExtractor={(m) => m.id}
@@ -113,8 +115,13 @@ export default function GroupInfoScreen() {
                 member={item}
                 trailing={
                   item.id !== profile?.id ? (
-                    <Pressable onPress={() => removeMember(item.id)} hitSlop={8}>
-                      <CloseIcon size={16} color={colors.danger} />
+                    <Pressable
+                      onPress={() => removeMember(item.id)}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Remove ${item.display_name}`}
+                    >
+                      <CloseIcon size={16} color={theme.danger} />
                     </Pressable>
                   ) : null
                 }
@@ -133,7 +140,6 @@ export default function GroupInfoScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.bg,
   },
   centered: {
     alignItems: 'center',
@@ -145,16 +151,13 @@ const styles = StyleSheet.create({
     gap: space[2],
   },
   groupName: {
-    color: colors.text,
     fontSize: 20,
     fontWeight: fontWeight.heading,
   },
   memberCount: {
-    color: colors.textMuted,
     fontSize: 13,
   },
   sectionLabel: {
-    color: colors.textMuted,
     fontSize: 12,
     letterSpacing: 0.4,
     paddingHorizontal: space[6],
@@ -173,12 +176,10 @@ const styles = StyleSheet.create({
     paddingVertical: space[4],
   },
   cancelAddText: {
-    color: colors.textMuted,
     fontSize: 15,
     textAlign: 'center',
   },
   emptyText: {
-    color: colors.textMuted,
     textAlign: 'center',
     padding: space[6],
   },

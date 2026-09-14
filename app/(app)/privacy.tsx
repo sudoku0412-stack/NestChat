@@ -4,12 +4,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import { ScreenHeader } from '../../components/ScreenHeader';
+import { useTheme } from '../../lib/themeMode';
 import { useAccentTheme } from '../../lib/accentTheme';
-import { colors, space } from '../../lib/theme';
+import { space } from '../../lib/theme';
 
 export default function PrivacyScreen() {
   const insets = useSafeAreaInsets();
   const { profile, refreshProfile } = useAuth();
+  const theme = useTheme();
   const { colors: accentColors } = useAccentTheme();
   const [readReceipts, setReadReceipts] = useState(profile?.show_read_receipts ?? true);
 
@@ -21,19 +23,19 @@ export default function PrivacyScreen() {
   }
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <ScreenHeader title="Privacy" />
+    <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: theme.bg }]}>
+      <ScreenHeader title="Privacy" theme={theme} />
 
-      <View style={styles.settingRow}>
-        <Text style={styles.settingLabel}>Read receipts & online status</Text>
+      <View style={[styles.settingRow, { borderBottomColor: theme.divider }]}>
+        <Text style={[styles.settingLabel, { color: theme.text }]}>Read receipts & online status</Text>
         <Switch
           value={readReceipts}
           onValueChange={toggleReadReceipts}
-          trackColor={{ true: accentColors.accent700, false: colors.neutral800 }}
-          thumbColor={colors.text}
+          trackColor={{ true: accentColors.accent700, false: theme.neutral800 }}
+          thumbColor={theme.text}
         />
       </View>
-      <Text style={styles.caption}>
+      <Text style={[styles.caption, { color: theme.textMuted }]}>
         Turning this off hides your read receipts and online status from others, and hides theirs
         from you. Per-chat muting lives on the chat list and thread header, not here.
       </Text>
@@ -44,7 +46,6 @@ export default function PrivacyScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.bg,
   },
   settingRow: {
     flexDirection: 'row',
@@ -53,16 +54,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[6],
     paddingVertical: space[4],
     borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
   },
   settingLabel: {
-    color: colors.text,
     fontSize: 15,
     flex: 1,
     paddingRight: space[4],
   },
   caption: {
-    color: colors.textMuted,
     fontSize: 12,
     paddingHorizontal: space[6],
     paddingTop: space[2],

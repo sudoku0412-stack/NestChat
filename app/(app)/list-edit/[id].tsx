@@ -7,10 +7,12 @@ import { useMembers } from '../../../lib/hooks/useMembers';
 import { supabase } from '../../../lib/supabase';
 import { MemberRow } from '../../../components/MemberRow';
 import { ScreenHeader } from '../../../components/ScreenHeader';
+import { useTheme } from '../../../lib/themeMode';
 import { useAccentTheme } from '../../../lib/accentTheme';
-import { colors, fontWeight, space } from '../../../lib/theme';
+import { fontWeight, space } from '../../../lib/theme';
 
 export default function ListEditScreen() {
+  const theme = useTheme();
   const { colors: accentColors } = useAccentTheme();
   const insets = useSafeAreaInsets();
   const { profile } = useAuth();
@@ -120,38 +122,39 @@ export default function ListEditScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.screen, styles.centered, { paddingTop: insets.top }]}>
+      <View style={[styles.screen, styles.centered, { paddingTop: insets.top, backgroundColor: theme.bg }]}>
         <ActivityIndicator color={accentColors.accent} />
       </View>
     );
   }
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
+    <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: theme.bg }]}>
       <ScreenHeader
         title={isNew ? 'New list' : 'Edit list'}
+        theme={theme}
         right={
           <Pressable onPress={handleSave} disabled={!canSave} hitSlop={8}>
             {saving ? (
               <ActivityIndicator color={accentColors.accent} />
             ) : (
-              <Text style={[styles.action, { color: accentColors.accent }, !canSave && styles.actionDisabled]}>Save</Text>
+              <Text style={[styles.action, { color: canSave ? accentColors.accent : theme.textMuted }]}>Save</Text>
             )}
           </Pressable>
         }
       />
 
-      <View style={styles.nameField}>
+      <View style={[styles.nameField, { borderBottomColor: theme.divider }]}>
         <TextInput
-          style={styles.nameInput}
+          style={[styles.nameInput, { color: theme.text }]}
           placeholder="List name"
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={theme.textMuted}
           value={name}
           onChangeText={setName}
         />
       </View>
 
-      <Text style={styles.sectionLabel}>Members ({selected.size})</Text>
+      <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>Members ({selected.size})</Text>
 
       {membersLoading ? (
         <ActivityIndicator color={accentColors.accent} style={{ marginTop: space[8] }} />
@@ -171,7 +174,7 @@ export default function ListEditScreen() {
 
       {!isNew && (
         <Pressable style={styles.deleteRow} onPress={handleDelete}>
-          <Text style={styles.deleteLabel}>Delete list</Text>
+          <Text style={[styles.deleteLabel, { color: theme.danger }]}>Delete list</Text>
         </Pressable>
       )}
     </View>
@@ -181,7 +184,6 @@ export default function ListEditScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.bg,
   },
   centered: {
     alignItems: 'center',
@@ -191,22 +193,16 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: fontWeight.semibold,
   },
-  actionDisabled: {
-    color: colors.textMuted,
-  },
   nameField: {
     paddingHorizontal: space[6],
     paddingVertical: space[4],
     borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
   },
   nameInput: {
-    color: colors.text,
     fontSize: 17,
     paddingVertical: space[2],
   },
   sectionLabel: {
-    color: colors.textMuted,
     fontSize: 12,
     letterSpacing: 0.4,
     paddingHorizontal: space[6],
@@ -219,7 +215,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   deleteLabel: {
-    color: colors.danger,
     fontSize: 15,
     fontWeight: fontWeight.medium,
   },

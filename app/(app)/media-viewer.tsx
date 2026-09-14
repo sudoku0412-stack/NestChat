@@ -9,8 +9,9 @@ import { getSignedMediaUrl } from '../../lib/media';
 import { softDeleteMessage } from '../../lib/chatActions';
 import { decryptTextField, getDecryptedMediaUri, isEncryptedRow } from '../../lib/crypto';
 import { useAuth } from '../../lib/auth';
-import { colors, fontWeight, space } from '../../lib/theme';
+import { fontWeight, space } from '../../lib/theme';
 import { CloseIcon } from '../../components/icons';
+import { useTheme } from '../../lib/themeMode';
 import { useAccentTheme } from '../../lib/accentTheme';
 import type { MediaKind } from '../../lib/database.types';
 
@@ -25,6 +26,7 @@ function VideoPlayerView({ uri }: { uri: string }) {
 }
 
 export default function MediaViewerScreen() {
+  const theme = useTheme();
   const { colors: accentColors } = useAccentTheme();
   const { messageId, mediaId, ownMessage } = useLocalSearchParams<{
     messageId: string;
@@ -100,14 +102,20 @@ export default function MediaViewerScreen() {
   return (
     <View style={styles.screen}>
       <View style={[styles.topBar, { paddingTop: insets.top + space[2] }]}>
-        <Pressable onPress={() => router.back()} hitSlop={8} style={styles.close}>
-          <CloseIcon size={20} color={colors.text} />
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={8}
+          style={styles.close}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
+        >
+          <CloseIcon size={20} color={theme.text} />
         </Pressable>
-        <Text style={styles.kindLabel}>
+        <Text style={[styles.kindLabel, { color: theme.text }]}>
           {kind === 'video' ? 'Video' : kind === 'gif' ? 'GIF' : kind === 'sticker' ? 'Sticker' : 'Photo'}
         </Text>
         {ownMessage === '1' ? (
-          <Pressable onPress={handleDelete} hitSlop={8}>
+          <Pressable onPress={handleDelete} hitSlop={8} accessibilityRole="button" accessibilityLabel="Delete message">
             <Text style={styles.trash}>🗑</Text>
           </Pressable>
         ) : (
@@ -126,8 +134,8 @@ export default function MediaViewerScreen() {
       </View>
 
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + space[4] }]}>
-        {caption ? <Text style={styles.caption}>{caption}</Text> : null}
-        <Text style={styles.metaLine}>
+        {caption ? <Text style={[styles.caption, { color: theme.text }]}>{caption}</Text> : null}
+        <Text style={[styles.metaLine, { color: theme.textMuted }]}>
           {senderName} · {createdAt ? new Date(createdAt).toLocaleString() : ''}
         </Text>
       </View>
@@ -151,7 +159,6 @@ const styles = StyleSheet.create({
     width: 24,
   },
   kindLabel: {
-    color: colors.text,
     fontSize: 14,
     fontWeight: fontWeight.medium,
   },
@@ -175,11 +182,9 @@ const styles = StyleSheet.create({
     gap: space[1],
   },
   caption: {
-    color: colors.text,
     fontSize: 15,
   },
   metaLine: {
-    color: colors.textMuted,
     fontSize: 12,
   },
 });

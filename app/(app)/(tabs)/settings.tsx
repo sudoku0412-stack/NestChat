@@ -5,18 +5,18 @@ import { useAuth } from '../../../lib/auth';
 import { useMembers } from '../../../lib/hooks/useMembers';
 import { supabase } from '../../../lib/supabase';
 import { rotateChatKeyOnRemoval } from '../../../lib/crypto';
-import { useThemeMode } from '../../../lib/themeMode';
+import { useTheme } from '../../../lib/themeMode';
 import { Avatar } from '../../../components/Avatar';
 import { MemberRow } from '../../../components/MemberRow';
 import { OutlineButton } from '../../../components/OutlineButton';
 import { CloseIcon } from '../../../components/icons';
-import { colors, fonts, fontWeight, radius, space } from '../../../lib/theme';
+import { fonts, fontWeight, radius, space } from '../../../lib/theme';
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { profile, signOut } = useAuth();
   const { members: others } = useMembers(profile?.id);
-  const { bg } = useThemeMode();
+  const theme = useTheme();
 
   const allMembers = profile ? [profile, ...others] : others;
 
@@ -67,25 +67,25 @@ export default function SettingsScreen() {
   }
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: bg }]}>
+    <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: theme.bg }]}>
       <View style={styles.header}>
-        <Text style={styles.title}>Settings</Text>
+        <Text style={[styles.title, { color: theme.text }]}>Settings</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {profile && (
-          <Pressable style={styles.profileCard} onPress={() => router.push('/(app)/edit-profile')}>
+          <Pressable style={[styles.profileCard, { backgroundColor: theme.surface }]} onPress={() => router.push('/(app)/edit-profile')}>
             <Avatar name={profile.display_name} avatarUrl={profile.avatar_url} size={56} />
             <View>
-              <Text style={styles.profileName}>{profile.display_name}</Text>
-              <Text style={styles.profileSub}>
+              <Text style={[styles.profileName, { color: theme.text }]}>{profile.display_name}</Text>
+              <Text style={[styles.profileSub, { color: theme.textMuted }]}>
                 {profile.role === 'admin' ? 'Admin' : 'Member'} · this device
               </Text>
             </View>
           </Pressable>
         )}
 
-        <Text style={styles.sectionLabel}>Contacts ({allMembers.length})</Text>
+        <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>Contacts ({allMembers.length})</Text>
         <View style={styles.contactsCard}>
           {allMembers.map((item) => (
             <MemberRow
@@ -93,8 +93,13 @@ export default function SettingsScreen() {
               member={item}
               trailing={
                 item.id !== profile?.id ? (
-                  <Pressable onPress={() => handleRemoveMember(item.id, item.display_name)} hitSlop={8}>
-                    <CloseIcon size={16} color={colors.danger} />
+                  <Pressable
+                    onPress={() => handleRemoveMember(item.id, item.display_name)}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove ${item.display_name}`}
+                  >
+                    <CloseIcon size={16} color={theme.danger} />
                   </Pressable>
                 ) : null
               }
@@ -113,14 +118,12 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.bg,
   },
   header: {
     paddingHorizontal: space[6],
     paddingVertical: space[4],
   },
   title: {
-    color: colors.text,
     fontSize: 28,
     fontWeight: fontWeight.heading,
     fontFamily: fonts.display,
@@ -136,20 +139,16 @@ const styles = StyleSheet.create({
     padding: space[6],
     marginBottom: space[6],
     borderRadius: radius.lg,
-    backgroundColor: colors.surface,
   },
   profileName: {
-    color: colors.text,
     fontSize: 18,
     fontWeight: fontWeight.heading,
   },
   profileSub: {
-    color: colors.textMuted,
     fontSize: 13,
     marginTop: 2,
   },
   sectionLabel: {
-    color: colors.textMuted,
     fontSize: 12,
     letterSpacing: 0.4,
     paddingBottom: space[2],

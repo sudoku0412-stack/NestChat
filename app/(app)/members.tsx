@@ -16,8 +16,9 @@ import { useAppContacts, type MatchedContact, type UnmatchedContact } from '../.
 import { supabase } from '../../lib/supabase';
 import { Avatar } from '../../components/Avatar';
 import { ScreenHeader } from '../../components/ScreenHeader';
+import { useTheme } from '../../lib/themeMode';
 import { useAccentTheme } from '../../lib/accentTheme';
-import { colors, fontWeight, radius, space } from '../../lib/theme';
+import { fontWeight, radius, space, type Colors } from '../../lib/theme';
 
 type Row =
   | { type: 'matched'; contact: MatchedContact }
@@ -31,6 +32,7 @@ export default function MembersScreen() {
   );
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [startingDm, setStartingDm] = useState<string | null>(null);
+  const theme = useTheme();
   const { colors: accentColors } = useAccentTheme();
 
   function toggle(id: string) {
@@ -69,9 +71,10 @@ export default function MembersScreen() {
   ].filter((s) => s.data.length > 0);
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
+    <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: theme.bg }]}>
       <ScreenHeader
         title="New Chat"
+        theme={theme}
         right={
           <Pressable onPress={goToNewGroup} hitSlop={8}>
             <Text style={[styles.action, { color: accentColors.accent }]}>
@@ -82,8 +85,8 @@ export default function MembersScreen() {
       />
 
       {permissionDenied && (
-        <View style={styles.permissionBanner}>
-          <Text style={styles.permissionText}>
+        <View style={[styles.permissionBanner, { backgroundColor: theme.surface, borderBottomColor: theme.divider }]}>
+          <Text style={[styles.permissionText, { color: theme.textMuted }]}>
             Enable Contacts access to see which household members are already on NestChat.
           </Text>
           <Pressable onPress={() => Linking.openSettings()}>
@@ -102,7 +105,7 @@ export default function MembersScreen() {
           sections={sections}
           keyExtractor={(row) => row.contact.key}
           renderSectionHeader={({ section }) => (
-            <Text style={styles.sectionLabel}>{section.title}</Text>
+            <Text style={[styles.sectionLabel, { color: theme.textMuted, backgroundColor: theme.bg }]}>{section.title}</Text>
           )}
           renderItem={({ item }) =>
             item.type === 'matched' ? (
@@ -112,6 +115,7 @@ export default function MembersScreen() {
                 onPress={() => startDirectMessage(item.contact.member.id)}
                 checked={selected.has(item.contact.member.id)}
                 onToggle={() => toggle(item.contact.member.id)}
+                theme={theme}
                 trailing={
                   startingDm === item.contact.member.id ? (
                     <ActivityIndicator color={accentColors.accent} />
@@ -122,12 +126,13 @@ export default function MembersScreen() {
               <ContactRow
                 name={item.contact.displayName}
                 onPress={() => handleInvite(item.contact.displayName)}
+                theme={theme}
                 muted
               />
             )
           }
           ListEmptyComponent={
-            <Text style={styles.emptyText}>
+            <Text style={[styles.emptyText, { color: theme.textMuted }]}>
               No contacts found. Household members you message will show up here once they're on
               NestChat.
             </Text>
@@ -146,26 +151,28 @@ interface ContactRowProps {
   onToggle?: () => void;
   trailing?: React.ReactNode;
   muted?: boolean;
+  theme: Colors;
 }
 
-function ContactRow({ name, avatarUrl, onPress, checked, onToggle, trailing, muted }: ContactRowProps) {
+function ContactRow({ name, avatarUrl, onPress, checked, onToggle, trailing, muted, theme }: ContactRowProps) {
   const { colors: accentColors } = useAccentTheme();
   return (
-    <Pressable style={styles.row} onPress={onPress}>
+    <Pressable style={[styles.row, { borderBottomColor: theme.divider }]} onPress={onPress}>
       {onToggle && (
         <Pressable
           style={[
             styles.checkbox,
+            { borderColor: theme.textMuted },
             checked && { backgroundColor: accentColors.accent, borderColor: accentColors.accent },
           ]}
           onPress={onToggle}
           hitSlop={8}
         >
-          {checked && <Text style={styles.checkmark}>✓</Text>}
+          {checked && <Text style={[styles.checkmark, { color: theme.bg }]}>✓</Text>}
         </Pressable>
       )}
       <Avatar name={name} avatarUrl={avatarUrl} size={40} />
-      <Text style={[styles.rowName, muted && styles.rowNameMuted]}>{name}</Text>
+      <Text style={[styles.rowName, { color: muted ? theme.textMuted : theme.text, fontWeight: muted ? fontWeight.body : fontWeight.medium }]}>{name}</Text>
       {trailing}
       {muted && <Text style={[styles.inviteLabel, { color: accentColors.accent }]}>Invite</Text>}
     </Pressable>
@@ -175,7 +182,6 @@ function ContactRow({ name, avatarUrl, onPress, checked, onToggle, trailing, mut
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.bg,
   },
   action: {
     fontSize: 14,
@@ -183,13 +189,10 @@ const styles = StyleSheet.create({
   },
   permissionBanner: {
     padding: space[4],
-    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
     gap: space[2],
   },
   permissionText: {
-    color: colors.textMuted,
     fontSize: 13,
   },
   permissionAction: {
@@ -197,10 +200,8 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
   },
   sectionLabel: {
-    color: colors.textMuted,
     fontSize: 12,
     letterSpacing: 0.4,
-    backgroundColor: colors.bg,
     paddingHorizontal: space[6],
     paddingTop: space[6],
     paddingBottom: space[2],
@@ -212,38 +213,28 @@ const styles = StyleSheet.create({
     paddingVertical: space[3],
     gap: space[4],
     borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
   },
   checkbox: {
     width: 22,
     height: 22,
     borderRadius: radius.sm,
     borderWidth: 1.5,
-    borderColor: colors.textMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkmark: {
-    color: colors.bg,
     fontSize: 13,
     fontWeight: fontWeight.semibold,
   },
   rowName: {
     flex: 1,
-    color: colors.text,
     fontSize: 15,
-    fontWeight: fontWeight.medium,
-  },
-  rowNameMuted: {
-    color: colors.textMuted,
-    fontWeight: fontWeight.body,
   },
   inviteLabel: {
     fontSize: 13,
     fontWeight: fontWeight.semibold,
   },
   emptyText: {
-    color: colors.textMuted,
     textAlign: 'center',
     padding: space[8],
   },

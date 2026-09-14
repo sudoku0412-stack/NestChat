@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
-import { colors, fontWeight, radius, space } from '../lib/theme';
+import { useTheme } from '../lib/themeMode';
+import { fontWeight, radius, space } from '../lib/theme';
 import { useAccentTheme } from '../lib/accentTheme';
 import {
   searchGifs,
@@ -26,6 +27,7 @@ const COLUMN_COUNT = 3;
 // bottom" rather than "a new screen slides up," matching WhatsApp/Telegram's sticker tray.
 export function GifStickerPanel({ open, onSelect }: GifStickerPanelProps) {
   const { colors: accentColors } = useAccentTheme();
+  const theme = useTheme();
   const [tab, setTab] = useState<Tab>('gif');
   const [query, setQuery] = useState('');
   const [items, setItems] = useState<GiphyItem[]>([]);
@@ -69,20 +71,28 @@ export function GifStickerPanel({ open, onSelect }: GifStickerPanelProps) {
   if (!open) return null;
 
   return (
-    <View style={styles.panel}>
+    <View style={[styles.panel, { backgroundColor: theme.bg }]}>
       <View style={styles.segmentWrapper}>
-        <View style={styles.segment}>
+        <View style={[styles.segment, { backgroundColor: theme.bgDeep }]}>
           <Pressable
             style={[styles.segmentHalf, tab === 'gif' && { backgroundColor: accentColors.accent }]}
             onPress={() => setTab('gif')}
           >
-            <Text style={[styles.segmentLabel, tab === 'gif' && styles.segmentLabelActive]}>GIF</Text>
+            <Text style={[styles.segmentLabel, { color: theme.textMuted }, tab === 'gif' && { color: theme.text }]}>
+              GIF
+            </Text>
           </Pressable>
           <Pressable
             style={[styles.segmentHalf, tab === 'sticker' && { backgroundColor: accentColors.accent }]}
             onPress={() => setTab('sticker')}
           >
-            <Text style={[styles.segmentLabel, tab === 'sticker' && styles.segmentLabelActive]}>
+            <Text
+              style={[
+                styles.segmentLabel,
+                { color: theme.textMuted },
+                tab === 'sticker' && { color: theme.text },
+              ]}
+            >
               Stickers
             </Text>
           </Pressable>
@@ -90,17 +100,17 @@ export function GifStickerPanel({ open, onSelect }: GifStickerPanelProps) {
       </View>
 
       <TextInput
-        style={styles.search}
+        style={[styles.search, { color: theme.text, backgroundColor: theme.bgDeep }]}
         value={query}
         onChangeText={setQuery}
         placeholder={tab === 'gif' ? 'Search GIFs' : 'Search stickers'}
-        placeholderTextColor={colors.textMuted}
+        placeholderTextColor={theme.textMuted}
       />
 
       {loading ? (
         <ActivityIndicator color={accentColors.accent} style={styles.loading} />
       ) : items.length === 0 ? (
-        <Text style={styles.empty}>
+        <Text style={[styles.empty, { color: theme.textMuted }]}>
           {query.trim() ? 'No results.' : 'Nothing trending right now — try a search.'}
         </Text>
       ) : (
@@ -112,7 +122,7 @@ export function GifStickerPanel({ open, onSelect }: GifStickerPanelProps) {
           contentContainerStyle={styles.grid}
           keyboardShouldPersistTaps="handled"
           renderItem={({ item }) => (
-            <Pressable style={styles.cell} onPress={() => onSelect(item, tab === 'gif' ? 'gif' : 'sticker')}>
+            <Pressable style={[styles.cell, { backgroundColor: theme.bgDeep }]} onPress={() => onSelect(item, tab === 'gif' ? 'gif' : 'sticker')}>
               <Image source={{ uri: item.previewUrl }} style={styles.cellImage} contentFit="cover" />
             </Pressable>
           )}
@@ -125,7 +135,6 @@ export function GifStickerPanel({ open, onSelect }: GifStickerPanelProps) {
 const styles = StyleSheet.create({
   panel: {
     flex: 1,
-    backgroundColor: colors.bg,
   },
   segmentWrapper: {
     alignItems: 'center',
@@ -134,7 +143,6 @@ const styles = StyleSheet.create({
   },
   segment: {
     flexDirection: 'row',
-    backgroundColor: colors.bgDeep,
     borderRadius: radius.full,
     padding: 3,
   },
@@ -144,28 +152,21 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
   },
   segmentLabel: {
-    color: colors.textMuted,
     fontSize: 14,
     fontWeight: fontWeight.medium,
-  },
-  segmentLabelActive: {
-    color: colors.text,
   },
   search: {
     marginHorizontal: space[4],
     marginBottom: space[3],
-    color: colors.text,
     fontSize: 15,
     paddingHorizontal: space[4],
     paddingVertical: space[3],
-    backgroundColor: colors.bgDeep,
     borderRadius: radius.xl,
   },
   loading: {
     paddingVertical: space[8],
   },
   empty: {
-    color: colors.textMuted,
     fontSize: 14,
     textAlign: 'center',
     paddingHorizontal: space[6],
@@ -181,7 +182,6 @@ const styles = StyleSheet.create({
     margin: space[1],
     borderRadius: radius.sm,
     overflow: 'hidden',
-    backgroundColor: colors.bgDeep,
   },
   cellImage: {
     width: '100%',

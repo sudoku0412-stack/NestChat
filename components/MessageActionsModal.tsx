@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Dimensions, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useAccentTheme } from '../lib/accentTheme';
-import { colors, radius, space } from '../lib/theme';
+import { useTheme } from '../lib/themeMode';
+import { radius, space } from '../lib/theme';
 import { getRecentEmojis } from '../lib/recentEmojis';
 import { CopyIcon, PersonIcon, PinIcon, PlusIcon, ReplyIcon, StarIcon, TrashIcon, type IconProps } from './icons';
 
@@ -68,6 +69,7 @@ export function MessageActionsModal({
   onOpenFullEmojiPicker,
 }: MessageActionsModalProps) {
   const { colors: accentColors } = useAccentTheme();
+  const theme = useTheme();
   const [recentEmojis, setRecentEmojis] = useState<string[]>([]);
 
   useEffect(() => {
@@ -126,10 +128,11 @@ export function MessageActionsModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
+      <Pressable style={styles.backdrop} onPress={onClose} accessibilityViewIsModal>
         <View
           style={[
             styles.reactionBar,
+            { backgroundColor: theme.neutral900 },
             { top, left: reactionLeft, width: REACTION_BAR_WIDTH, height: REACTION_BAR_HEIGHT },
           ]}
         >
@@ -142,26 +145,49 @@ export function MessageActionsModal({
             {recentEmojis.map((emoji) => (
               <Pressable
                 key={emoji}
-                style={[styles.reactionCell, currentReaction === emoji && styles.reactionCellActive]}
+                style={[
+                  styles.reactionCell,
+                  currentReaction === emoji && { backgroundColor: theme.neutral700 },
+                ]}
                 onPress={() => handleReact(emoji)}
+                hitSlop={4}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  currentReaction === emoji ? `Remove your ${emoji} reaction` : `React with ${emoji}`
+                }
+                accessibilityState={{ selected: currentReaction === emoji }}
               >
                 <Text style={styles.reactionGlyph}>{emoji}</Text>
               </Pressable>
             ))}
-            <Pressable style={styles.reactionCell} onPress={handleOpenFullPicker}>
-              <PlusIcon size={18} color={colors.textMuted} />
+            <Pressable
+              style={styles.reactionCell}
+              onPress={handleOpenFullPicker}
+              hitSlop={4}
+              accessibilityRole="button"
+              accessibilityLabel="Open emoji picker"
+            >
+              <PlusIcon size={18} color={theme.textMuted} />
             </Pressable>
           </ScrollView>
         </View>
-        <View style={[styles.card, { top: top + REACTION_BAR_HEIGHT + space[2], left: cardLeft, width: CARD_WIDTH }]}>
+        <View
+          style={[
+            styles.card,
+            { backgroundColor: theme.neutral900 },
+            { top: top + REACTION_BAR_HEIGHT + space[2], left: cardLeft, width: CARD_WIDTH },
+          ]}
+        >
           {rows.map((row) => (
             <Pressable key={row.key} style={styles.row} onPress={row.onPress}>
               <row.Icon
                 size={20}
-                color={row.danger ? colors.danger : row.iconFilled ? accentColors.accent : colors.text}
+                color={row.danger ? theme.danger : row.iconFilled ? accentColors.accent : theme.text}
                 filled={row.iconFilled}
               />
-              <Text style={[styles.label, row.danger && styles.dangerText]}>{row.label}</Text>
+              <Text style={[styles.label, { color: theme.text }, row.danger && { color: theme.danger }]}>
+                {row.label}
+              </Text>
             </Pressable>
           ))}
         </View>
@@ -177,14 +203,12 @@ const styles = StyleSheet.create({
   },
   card: {
     position: 'absolute',
-    backgroundColor: colors.neutral900,
     borderRadius: radius.lg,
     paddingVertical: space[2],
     overflow: 'hidden',
   },
   reactionBar: {
     position: 'absolute',
-    backgroundColor: colors.neutral900,
     borderRadius: radius.full,
   },
   reactionScroll: {
@@ -203,9 +227,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  reactionCellActive: {
-    backgroundColor: colors.neutral700,
-  },
   reactionGlyph: {
     fontSize: 22,
   },
@@ -218,10 +239,6 @@ const styles = StyleSheet.create({
     height: ROW_HEIGHT,
   },
   label: {
-    color: colors.text,
     fontSize: 16,
-  },
-  dangerText: {
-    color: colors.danger,
   },
 });

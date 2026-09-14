@@ -12,7 +12,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { useAccentTheme } from '../lib/accentTheme';
-import { colors, fontWeight, radius, space } from '../lib/theme';
+import { useTheme } from '../lib/themeMode';
+import { fontWeight, radius, space } from '../lib/theme';
 import {
   CameraIcon,
   CloseIcon,
@@ -81,6 +82,7 @@ export function Composer({
   const sendAnim = useSharedValue(canSend ? 1 : 0);
   const inputRef = useRef<TextInput>(null);
   const { colors: accentColors } = useAccentTheme();
+  const theme = useTheme();
 
   useEffect(() => {
     sendAnim.value = withSpring(canSend ? 1 : 0, { damping: 16, stiffness: 220 });
@@ -105,11 +107,11 @@ export function Composer({
     return () => sub.remove();
   }, []);
   const tints: Record<(typeof MENU_META)[number]['key'], string> = {
-    camera: colors.neutral600,
+    camera: theme.neutral600,
     library: accentColors.accent500,
     document: accentColors.accent700,
-    contact: colors.neutral700,
-    location: colors.success,
+    contact: theme.neutral700,
+    location: theme.success,
   };
 
   // The drawer's height is a *layout* property — animating it frame-by-frame (as this used to,
@@ -198,51 +200,85 @@ export function Composer({
   }
 
   return (
-    <View style={[styles.wrapper, { paddingBottom: insets.bottom }]}>
+    <View style={[styles.wrapper, { backgroundColor: theme.bg, paddingBottom: insets.bottom }]}>
       {replyingTo && (
-        <View style={styles.replyStrip}>
+        <View style={[styles.replyStrip, { backgroundColor: theme.surface }]}>
           <View style={[styles.replyStripBar, { backgroundColor: accentColors.accent }]} />
           <View style={styles.replyStripTexts}>
             <Text style={[styles.replyStripName, { color: accentColors.accent }]}>{replyingTo.senderName}</Text>
-            <Text style={styles.replyStripPreview} numberOfLines={1}>
+            <Text style={[styles.replyStripPreview, { color: theme.textMuted }]} numberOfLines={1}>
               {replyingTo.preview}
             </Text>
           </View>
-          <Pressable onPress={onCancelReply} hitSlop={8} style={styles.replyStripClose}>
-            <CloseIcon size={16} color={colors.textMuted} />
+          <Pressable
+            onPress={onCancelReply}
+            hitSlop={8}
+            style={styles.replyStripClose}
+            accessibilityRole="button"
+            accessibilityLabel="Cancel reply"
+          >
+            <CloseIcon size={16} color={theme.textMuted} />
           </Pressable>
         </View>
       )}
-      <View style={styles.bar}>
-        <Pressable style={styles.attachButton} onPress={toggleMenu}>
-          <Animated.View style={plusStyle}>
-            <PlusIcon size={20} color={colors.text} />
-          </Animated.View>
-        </Pressable>
-        <TextInput
-          ref={inputRef}
-          style={styles.input}
-          value={value}
-          onChangeText={onChangeText}
-          onFocus={handleInputFocus}
-          placeholder="Message"
-          placeholderTextColor={colors.textMuted}
-          multiline
-        />
-        <Pressable style={styles.stickerButton} onPress={toggleSticker} hitSlop={8}>
-          {stickerOpen ? (
-            <KeyboardIcon size={22} color={colors.textMuted} />
-          ) : (
-            <StickerIcon size={22} color={colors.textMuted} />
-          )}
-        </Pressable>
-        <Pressable style={styles.sendButton} onPress={onSend} disabled={!canSend} hitSlop={8}>
-          <Animated.View
-            style={[styles.sendButtonInner, { backgroundColor: accentColors.accent }, sendButtonStyle]}
+      <View style={styles.barOuter}>
+        <View
+          style={[
+            styles.bar,
+            { backgroundColor: theme.surface, shadowColor: theme.text },
+          ]}
+        >
+          <Pressable
+            style={[styles.attachButton, { backgroundColor: theme.bgDeep }]}
+            onPress={toggleMenu}
+            hitSlop={6}
+            accessibilityRole="button"
+            accessibilityLabel={menuOpen ? 'Close attach menu' : 'Attach'}
+            accessibilityState={{ expanded: menuOpen }}
           >
-            <SendIcon size={16} color={accentColors.accent100} />
-          </Animated.View>
-        </Pressable>
+            <Animated.View style={plusStyle}>
+              <PlusIcon size={20} color={theme.text} />
+            </Animated.View>
+          </Pressable>
+          <TextInput
+            ref={inputRef}
+            style={[styles.input, { color: theme.text }]}
+            value={value}
+            onChangeText={onChangeText}
+            onFocus={handleInputFocus}
+            placeholder="Message"
+            placeholderTextColor={theme.textMuted}
+            multiline
+          />
+          <Pressable
+            style={styles.stickerButton}
+            onPress={toggleSticker}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={stickerOpen ? 'Show keyboard' : 'Open sticker picker'}
+          >
+            {stickerOpen ? (
+              <KeyboardIcon size={22} color={theme.textMuted} />
+            ) : (
+              <StickerIcon size={22} color={theme.textMuted} />
+            )}
+          </Pressable>
+          <Pressable
+            style={styles.sendButton}
+            onPress={onSend}
+            disabled={!canSend}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Send message"
+            accessibilityState={{ disabled: !canSend }}
+          >
+            <Animated.View
+              style={[styles.sendButtonInner, { backgroundColor: accentColors.accent }, sendButtonStyle]}
+            >
+              <SendIcon size={16} color="#FFFFFF" />
+            </Animated.View>
+          </Pressable>
+        </View>
       </View>
 
       <View
@@ -252,11 +288,17 @@ export function Composer({
         {menuOpen && (
           <View style={styles.grid}>
             {MENU_META.map((item) => (
-              <Pressable key={item.key} style={styles.cell} onPress={() => handleSelect(item.key)}>
+              <Pressable
+                key={item.key}
+                style={styles.cell}
+                onPress={() => handleSelect(item.key)}
+                accessibilityRole="button"
+                accessibilityLabel={item.label}
+              >
                 <View style={[styles.iconCircle, { backgroundColor: tints[item.key] }]}>
-                  <item.Icon size={22} color={colors.text} />
+                  <item.Icon size={22} color="#FFFFFF" />
                 </View>
-                <Text style={styles.cellLabel}>{item.label}</Text>
+                <Text style={[styles.cellLabel, { color: theme.textMuted }]}>{item.label}</Text>
               </Pressable>
             ))}
           </View>
@@ -269,16 +311,26 @@ export function Composer({
 
 const styles = StyleSheet.create({
   wrapper: {
-    borderTopWidth: 1,
-    borderTopColor: colors.divider,
-    backgroundColor: colors.bg,
+    // No hairline/border here anymore — the composer is a floating pill (its own shadow) over
+    // the thread, not a docked bar with a top divider.
+  },
+  barOuter: {
+    paddingHorizontal: space[3],
+    paddingTop: space[2],
+    paddingBottom: space[1],
   },
   bar: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    paddingHorizontal: space[4],
-    paddingVertical: space[3],
+    borderRadius: radius.lg,
+    paddingHorizontal: space[3],
+    paddingVertical: space[2],
     gap: space[2],
+    // Floating shadow lifting the composer above the thread content behind it.
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.14,
+    shadowRadius: 12,
+    elevation: 6,
   },
   stickerButton: {
     width: 36,
@@ -287,23 +339,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   attachButton: {
-    width: 36,
-    height: 36,
+    width: 32,
+    height: 32,
     borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.divider,
     alignItems: 'center',
     justifyContent: 'center',
   },
   input: {
     flex: 1,
-    color: colors.text,
     fontSize: 16,
     maxHeight: 120,
-    paddingHorizontal: space[4],
+    paddingHorizontal: space[3],
     paddingVertical: space[3],
-    backgroundColor: colors.surface,
-    borderRadius: radius.xl,
   },
   sendButton: {
     width: 36,
@@ -324,7 +371,6 @@ const styles = StyleSheet.create({
     gap: space[2],
     paddingHorizontal: space[4],
     paddingVertical: space[2],
-    backgroundColor: colors.surface,
   },
   replyStripBar: {
     width: 3,
@@ -339,7 +385,6 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
   },
   replyStripPreview: {
-    color: colors.textMuted,
     fontSize: 12,
   },
   replyStripClose: {
@@ -368,7 +413,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cellLabel: {
-    color: colors.textMuted,
     fontSize: 11,
     textAlign: 'center',
   },

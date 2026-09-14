@@ -15,6 +15,13 @@ export interface IconProps {
 }
 
 const DEFAULT_SIZE = 24;
+// Deliberate frozen fallback, same pattern as app/(app)/status/new.tsx's BACKGROUND_COLORS
+// comment: every current call site passes an explicit `color`, so this default is dead code
+// today, but it's kept (rather than removed / made required) as a safety net for any future
+// call site that forgets to pass one -- it'll render in the legacy dark-only text color instead
+// of silently picking up whatever the *current* theme's text color happens to be, which would be
+// a much harder-to-spot bug (right color in dark mode, wrong/invisible in light mode). A missing
+// `color` should still be treated as a bug to fix, not relied on -- this only bounds the damage.
 const DEFAULT_COLOR = colors.text;
 
 export function ChatBubbleIcon({

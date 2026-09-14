@@ -9,7 +9,8 @@ import { decryptTextField, isEncryptedRow } from '../../../lib/crypto';
 import { ScreenHeader } from '../../../components/ScreenHeader';
 import { StarIcon } from '../../../components/icons';
 import { useAccentTheme } from '../../../lib/accentTheme';
-import { colors, space } from '../../../lib/theme';
+import { useTheme } from '../../../lib/themeMode';
+import { space } from '../../../lib/theme';
 
 interface StarredItem {
   message_id: string;
@@ -30,6 +31,7 @@ function formatTimestamp(iso: string) {
 
 export default function StarredMessagesScreen() {
   const { colors: accentColors } = useAccentTheme();
+  const theme = useTheme();
   const { chatId } = useLocalSearchParams<{ chatId: string }>();
   const insets = useSafeAreaInsets();
   const { profile } = useAuth();
@@ -105,8 +107,8 @@ export default function StarredMessagesScreen() {
   }
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <ScreenHeader title="Starred messages" />
+    <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: theme.bg }]}>
+      <ScreenHeader title="Starred messages" theme={theme} />
 
       {loading ? (
         <View style={styles.centered}>
@@ -118,21 +120,34 @@ export default function StarredMessagesScreen() {
           keyExtractor={(item) => item.message_id}
           ListEmptyComponent={
             <View style={styles.centered}>
-              <Text style={styles.emptyText}>
+              <Text style={[styles.emptyText, { color: theme.textMuted }]}>
                 Long-press any message in this chat to star it, and it'll show up here.
               </Text>
             </View>
           }
           renderItem={({ item }) => (
-            <Pressable style={styles.row} onPress={() => router.push(`/(app)/chat/${chatId}`)}>
+            <Pressable
+              style={[styles.row, { borderBottomColor: theme.divider }]}
+              onPress={() => router.push(`/(app)/chat/${chatId}`)}
+            >
               <View style={styles.rowText}>
-                <Text style={styles.sender}>{namesById.get(item.sender_id) ?? 'Unknown'}</Text>
-                <Text style={styles.preview} numberOfLines={2}>
+                <Text style={[styles.sender, { color: theme.textMuted }]}>
+                  {namesById.get(item.sender_id) ?? 'Unknown'}
+                </Text>
+                <Text style={[styles.preview, { color: theme.text }]} numberOfLines={2}>
                   {previewFor(item)}
                 </Text>
-                <Text style={styles.timestamp}>{formatTimestamp(item.created_at)}</Text>
+                <Text style={[styles.timestamp, { color: theme.textMuted }]}>
+                  {formatTimestamp(item.created_at)}
+                </Text>
               </View>
-              <Pressable onPress={() => handleUnstar(item.message_id)} hitSlop={8} style={styles.starGlyph}>
+              <Pressable
+                onPress={() => handleUnstar(item.message_id)}
+                hitSlop={8}
+                style={styles.starGlyph}
+                accessibilityRole="button"
+                accessibilityLabel="Unstar message"
+              >
                 <StarIcon size={18} color={accentColors.accent} filled />
               </Pressable>
             </Pressable>
@@ -146,7 +161,6 @@ export default function StarredMessagesScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.bg,
   },
   centered: {
     flex: 1,
@@ -155,7 +169,6 @@ const styles = StyleSheet.create({
     padding: space[8],
   },
   emptyText: {
-    color: colors.textMuted,
     textAlign: 'center',
     fontSize: 14,
   },
@@ -167,22 +180,18 @@ const styles = StyleSheet.create({
     paddingVertical: space[4],
     gap: space[3],
     borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
   },
   rowText: {
     flex: 1,
   },
   sender: {
-    color: colors.textMuted,
     fontSize: 12,
     marginBottom: space[1],
   },
   preview: {
-    color: colors.text,
     fontSize: 15,
   },
   timestamp: {
-    color: colors.textMuted,
     fontSize: 11,
     marginTop: space[1],
   },

@@ -4,11 +4,12 @@ import { useAuth } from '../../lib/auth';
 import { usePresenceHeartbeat } from '../../lib/presence';
 import { usePushNotificationRegistration, usePushNotificationNavigation } from '../../lib/notifications';
 import { useAccentTheme } from '../../lib/accentTheme';
-import { colors } from '../../lib/theme';
+import { useTheme } from '../../lib/themeMode';
 
 export default function AppLayout() {
   const { session, profile, loading, needsOnboarding } = useAuth();
   const { colors: accentColors } = useAccentTheme();
+  const theme = useTheme();
 
   usePresenceHeartbeat(profile?.id ?? null, !!profile?.show_read_receipts);
   usePushNotificationRegistration(profile?.id ?? null);
@@ -16,7 +17,7 @@ export default function AppLayout() {
 
   if (loading || (session && !profile)) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ flex: 1, backgroundColor: theme.bg, alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator color={accentColors.accent} />
       </View>
     );
@@ -29,7 +30,7 @@ export default function AppLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: colors.bg },
+        contentStyle: { backgroundColor: theme.bg },
       }}
     >
       <Stack.Screen name="media-viewer" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />

@@ -6,8 +6,8 @@ import { useStatuses, type StatusGroup } from '../../../lib/hooks/useStatuses';
 import { Avatar } from '../../../components/Avatar';
 import { PlusIcon } from '../../../components/icons';
 import { useAccentTheme } from '../../../lib/accentTheme';
-import { colors, fontWeight, space } from '../../../lib/theme';
-import { useThemeMode } from '../../../lib/themeMode';
+import { fontWeight, space } from '../../../lib/theme';
+import { useTheme } from '../../../lib/themeMode';
 
 function timeAgo(iso: string) {
   const seconds = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
@@ -22,7 +22,7 @@ export default function StatusScreen() {
   const insets = useSafeAreaInsets();
   const { profile } = useAuth();
   const { groups, myStatuses, loading, refresh } = useStatuses(profile?.id ?? null);
-  const { bg } = useThemeMode();
+  const theme = useTheme();
   const { colors: accentColors } = useAccentTheme();
 
   function handleMyStatusPress() {
@@ -35,11 +35,17 @@ export default function StatusScreen() {
   }
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: bg }]}>
+    <View style={[styles.screen, { paddingTop: insets.top, backgroundColor: theme.bg }]}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Status</Text>
-        <Pressable style={styles.addButton} onPress={() => router.push('/(app)/status/new')} hitSlop={8}>
-          <PlusIcon size={20} color={colors.text} />
+        <Text style={[styles.headerTitle, { color: theme.text }]}>Status</Text>
+        <Pressable
+          style={styles.addButton}
+          onPress={() => router.push('/(app)/status/new')}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Add status update"
+        >
+          <PlusIcon size={20} color={theme.text} />
         </Pressable>
       </View>
 
@@ -52,27 +58,36 @@ export default function StatusScreen() {
           profile ? (
             <>
               <Pressable style={styles.row} onPress={handleMyStatusPress}>
-                <View style={[styles.ring, myStatuses.length > 0 && styles.ringViewed]}>
+                <View
+                  style={[
+                    styles.ring,
+                    myStatuses.length > 0 && { borderColor: theme.neutral700 },
+                  ]}
+                >
                   <Avatar name={profile.display_name} avatarUrl={profile.avatar_url} size={52} />
                   <Pressable
-                    style={[styles.plusBadge, { backgroundColor: accentColors.accent }]}
+                    style={[styles.plusBadge, { backgroundColor: accentColors.accent, borderColor: theme.bg }]}
                     onPress={(e) => {
                       e.stopPropagation();
                       router.push('/(app)/status/new');
                     }}
                     hitSlop={4}
+                    accessibilityRole="button"
+                    accessibilityLabel="Add status update"
                   >
-                    <PlusIcon size={13} color={colors.bg} strokeWidth={2.4} />
+                    <PlusIcon size={13} color={theme.bg} strokeWidth={2.4} />
                   </Pressable>
                 </View>
                 <View style={styles.rowTexts}>
-                  <Text style={styles.rowName}>My status</Text>
-                  <Text style={styles.rowSub}>
+                  <Text style={[styles.rowName, { color: theme.text }]}>My status</Text>
+                  <Text style={[styles.rowSub, { color: theme.textMuted }]}>
                     {myStatuses.length > 0 ? timeAgo(myStatuses[myStatuses.length - 1].created_at) : 'Tap to add status update'}
                   </Text>
                 </View>
               </Pressable>
-              {groups.length > 0 && <Text style={styles.sectionLabel}>Recent updates</Text>}
+              {groups.length > 0 && (
+                <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>Recent updates</Text>
+              )}
             </>
           ) : null
         }
@@ -81,21 +96,23 @@ export default function StatusScreen() {
             <View
               style={[
                 styles.ring,
-                item.hasUnviewed ? { borderColor: accentColors.accent } : styles.ringViewed,
+                { borderColor: item.hasUnviewed ? accentColors.accent : theme.neutral700 },
               ]}
             >
               <Avatar name={item.user.display_name} avatarUrl={item.user.avatar_url} size={52} />
             </View>
             <View style={styles.rowTexts}>
-              <Text style={styles.rowName}>{item.user.display_name}</Text>
-              <Text style={styles.rowSub}>{timeAgo(item.latestAt)}</Text>
+              <Text style={[styles.rowName, { color: theme.text }]}>{item.user.display_name}</Text>
+              <Text style={[styles.rowSub, { color: theme.textMuted }]}>{timeAgo(item.latestAt)}</Text>
             </View>
           </Pressable>
         )}
         ListEmptyComponent={
           !loading ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>No recent updates from your contacts.</Text>
+              <Text style={[styles.emptyText, { color: theme.textMuted }]}>
+                No recent updates from your contacts.
+              </Text>
             </View>
           ) : null
         }
@@ -109,7 +126,6 @@ const RING_SIZE = 60;
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.bg,
   },
   header: {
     flexDirection: 'row',
@@ -119,7 +135,6 @@ const styles = StyleSheet.create({
     paddingVertical: space[4],
   },
   headerTitle: {
-    color: colors.text,
     fontSize: 28,
     fontWeight: fontWeight.heading,
   },
@@ -145,9 +160,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'transparent',
   },
-  ringViewed: {
-    borderColor: colors.neutral700,
-  },
   plusBadge: {
     position: 'absolute',
     right: -2,
@@ -158,22 +170,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: colors.bg,
   },
   rowTexts: {
     flex: 1,
   },
   rowName: {
-    color: colors.text,
     fontSize: 16,
   },
   rowSub: {
-    color: colors.textMuted,
     fontSize: 13,
     marginTop: 2,
   },
   sectionLabel: {
-    color: colors.textMuted,
     fontSize: 12,
     letterSpacing: 0.4,
     paddingHorizontal: space[6],
@@ -185,7 +193,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    color: colors.textMuted,
     textAlign: 'center',
     fontSize: 14,
   },

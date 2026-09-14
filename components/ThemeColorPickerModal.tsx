@@ -12,7 +12,8 @@ import {
 } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { useAccentTheme } from '../lib/accentTheme';
-import { colors, fontWeight, hexToHsl, hslToHex, radius, space } from '../lib/theme';
+import { useTheme } from '../lib/themeMode';
+import { fontWeight, hexToHsl, hslToHex, radius, space } from '../lib/theme';
 
 interface ThemeColorPickerModalProps {
   visible: boolean;
@@ -35,6 +36,7 @@ function normalizeHex(input: string): string | null {
 
 export function ThemeColorPickerModal({ visible, onClose }: ThemeColorPickerModalProps) {
   const { accentHex, setAccentColor } = useAccentTheme();
+  const theme = useTheme();
   const [barWidth, setBarWidth] = useState(0);
   const [hue, setHue] = useState(0);
   const [hexInput, setHexInput] = useState(accentHex);
@@ -77,14 +79,14 @@ export function ThemeColorPickerModal({ visible, onClose }: ThemeColorPickerModa
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
-          <Text style={styles.title}>App theme color</Text>
+      <Pressable style={styles.backdrop} onPress={onClose} accessibilityViewIsModal>
+        <Pressable style={[styles.card, { backgroundColor: theme.surface }]} onPress={(e) => e.stopPropagation()}>
+          <Text style={[styles.title, { color: theme.text }]}>App theme color</Text>
 
           <View style={styles.previewRow}>
             <View style={[styles.swatch, { backgroundColor: previewHex }]} />
             <View style={[styles.previewBubble, { backgroundColor: previewHex }]}>
-              <Text style={styles.previewBubbleText}>Sample message</Text>
+              <Text style={[styles.previewBubbleText, { color: theme.text }]}>Sample message</Text>
             </View>
           </View>
 
@@ -121,6 +123,7 @@ export function ThemeColorPickerModal({ visible, onClose }: ThemeColorPickerModa
                       Math.min(barWidth - HANDLE_SIZE, (hue / 360) * barWidth - HANDLE_SIZE / 2)
                     ),
                     backgroundColor: previewHex,
+                    borderColor: theme.text,
                   },
                 ]}
               />
@@ -128,29 +131,29 @@ export function ThemeColorPickerModal({ visible, onClose }: ThemeColorPickerModa
           </View>
 
           <View style={styles.hexRow}>
-            <Text style={styles.hexLabel}>Hex</Text>
+            <Text style={[styles.hexLabel, { color: theme.textMuted }]}>Hex</Text>
             <TextInput
-              style={styles.hexInput}
+              style={[styles.hexInput, { borderColor: theme.divider, color: theme.text }]}
               value={hexInput}
               onChangeText={handleHexChange}
               autoCapitalize="none"
               autoCorrect={false}
               maxLength={7}
               placeholder="#D97B4F"
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor={theme.textMuted}
             />
           </View>
 
           <View style={styles.buttonsRow}>
-            <Pressable onPress={onClose} style={styles.cancelButton}>
-              <Text style={styles.cancelLabel}>Cancel</Text>
+            <Pressable onPress={onClose} style={[styles.cancelButton, { borderColor: theme.divider }]}>
+              <Text style={[styles.cancelLabel, { color: theme.textMuted }]}>Cancel</Text>
             </Pressable>
             <Pressable
               onPress={handleSave}
               disabled={saving}
               style={[styles.saveButton, { backgroundColor: previewHex, opacity: saving ? 0.7 : 1 }]}
             >
-              {saving ? <ActivityIndicator color={colors.bg} /> : <Text style={styles.saveLabel}>Save</Text>}
+              {saving ? <ActivityIndicator color={theme.bg} /> : <Text style={[styles.saveLabel, { color: theme.bg }]}>Save</Text>}
             </Pressable>
           </View>
         </Pressable>
@@ -168,13 +171,11 @@ const styles = StyleSheet.create({
   },
   card: {
     width: '86%',
-    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: space[6],
     gap: space[4],
   },
   title: {
-    color: colors.text,
     fontSize: 16,
     fontWeight: fontWeight.semibold,
     textAlign: 'center',
@@ -197,7 +198,6 @@ const styles = StyleSheet.create({
     paddingVertical: space[3],
   },
   previewBubbleText: {
-    color: colors.text,
     fontSize: 14,
   },
   hueBarWrap: {
@@ -210,7 +210,6 @@ const styles = StyleSheet.create({
     height: HANDLE_SIZE,
     borderRadius: HANDLE_SIZE / 2,
     borderWidth: 3,
-    borderColor: colors.text,
   },
   hexRow: {
     flexDirection: 'row',
@@ -218,17 +217,14 @@ const styles = StyleSheet.create({
     gap: space[3],
   },
   hexLabel: {
-    color: colors.textMuted,
     fontSize: 13,
   },
   hexInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: colors.divider,
     borderRadius: radius.md,
     paddingHorizontal: space[3],
     paddingVertical: space[2],
-    color: colors.text,
     fontSize: 15,
   },
   buttonsRow: {
@@ -243,10 +239,8 @@ const styles = StyleSheet.create({
     paddingVertical: space[3],
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.divider,
   },
   cancelLabel: {
-    color: colors.textMuted,
     fontSize: 15,
     fontWeight: fontWeight.medium,
   },
@@ -258,7 +252,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
   },
   saveLabel: {
-    color: colors.bg,
     fontSize: 15,
     fontWeight: fontWeight.semibold,
   },
